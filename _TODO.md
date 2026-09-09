@@ -45,9 +45,11 @@ related: [_DECISOES-PENDENTES.md, log.md, SESSION-ONBOARD-buscador.md]
       e TCU (`/busca?q=`) — todas são suposição do plano.
 - [ ] **Rodar contra um tema real** e medir o critério de sucesso nº 2 da spec: 100+ resultados
       triáveis em menos de 15 decisões.
-- [ ] **[HUMANO] Criar o remoto deste repo.** Hoje ele existe **só nesta máquina** — sem
-      remoto, um HD queimado leva spec, plano e ledgers junto. As outras soluções usam Gitea
-      CD (`Nuati-SECIN/*`) ou GitHub privado (`rodilpinto/*`).
+- [x] **2026-09-09 · Remoto criado**: `github.com/rodilpinto/buscador-normativos`, **privado**
+      (confirmado via `gh repo view --json visibility`). Segue a convenção dos outros repos
+      `rodilpinto/*`. ⚠ Exigiu instalar o **GitHub CLI** (`winget install --id GitHub.cli`),
+      que não existia nesta máquina — criar repositório é chamada de **API**, não operação
+      git, então o token do Credential Manager que faz o `push` funcionar não bastava.
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova em `solucoes/`,
       junto às outras (fica no repo-pai, não aqui).
 

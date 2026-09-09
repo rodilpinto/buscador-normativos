@@ -40,8 +40,8 @@ nenhum teste, nenhuma dependência instalada. ⚠ Da Task 1 do plano, **dois pas
 feitos**: o `git init` e o `.gitignore`. Falta `pyproject.toml`, `config.py` e o teste.
 
 ### Working tree
-Limpo em `1c04c2d`. ⚠ Este repo **não tem remoto** — existe só nesta máquina. Criar o remoto
-(Gitea CD ou GitHub privado, como as outras soluções) é item do `_TODO` §P3.
+Limpo. ✅ **Remoto criado em 2026-09-09**: `github.com/rodilpinto/buscador-normativos`
+(**privado**, confirmado via API), branch `master` rastreando `origin/master`.
 
 ## 3. Achados críticos (não perder)
 
