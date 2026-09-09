@@ -26,8 +26,13 @@ declarados projetos diferentes pelo Rodrigo em 08/09.
 ## 2. Estado na última pausa (2026-09-08/09)
 
 ### Feito e commitado
-- `1c04c2d` — spec de design, plano de implementação de **16 tasks**, ledgers, log, comando
-  de onboard, `CLAUDE.md` e `.gitignore`. **Commit inicial do repo.**
+Cadeia desta área (repo só desta área, então aqui o tip **é** o último commit dela):
+- `1c04c2d` — **commit inicial**: spec de design, plano de **16 tasks**, ledgers, log,
+  comando de onboard, `CLAUDE.md` e `.gitignore`.
+- `40d3242` — ajuste doc-only: registra que `git init` e `.gitignore` já estão feitos, e que
+  o repo não tem remoto.
+- → commit deste checkpoint. ⚠ **O SHA mais novo listado aqui está sempre um passo atrás do
+  commit que gravou este arquivo** — a cadeia real termina em `git log --oneline -3`.
 
 ### Fase
 🟡 **Planejamento concluído, ZERO linha de código escrita.** Nenhum módulo `buscador/`,
