@@ -12,8 +12,9 @@ related: [_DECISOES-PENDENTES.md, log.md, SESSION-ONBOARD-buscador.md]
 
 ## P0 — próximo movimento
 
-- [ ] **Task 1 · Fundação** (`pyproject.toml`, `.gitignore`, `config.py`, `tests/test_config.py`).
-      ⚠ **Pular o `git init` do Step 6** — o repo já está inicializado desde o checkpoint de 09/09.
+- [ ] **Task 1 · Fundação** (`pyproject.toml`, `config.py`, `tests/test_config.py`).
+      ⚠ **Dois passos já estão feitos** pelo checkpoint de 09/09: o `git init` (Step 6) e o
+      `.gitignore` (Step 1). Falta o `pyproject.toml`, o `config.py` e o teste.
 - [ ] **Task 2 · Banco SQLite** (schema com as constraints de procedência e dedup)
 - [ ] **Task 3 · Modelos e normalização** (`chave_dedup` — usada por todas as fontes)
 
@@ -44,6 +45,9 @@ related: [_DECISOES-PENDENTES.md, log.md, SESSION-ONBOARD-buscador.md]
       e TCU (`/busca?q=`) — todas são suposição do plano.
 - [ ] **Rodar contra um tema real** e medir o critério de sucesso nº 2 da spec: 100+ resultados
       triáveis em menos de 15 decisões.
+- [ ] **[HUMANO] Criar o remoto deste repo.** Hoje ele existe **só nesta máquina** — sem
+      remoto, um HD queimado leva spec, plano e ledgers junto. As outras soluções usam Gitea
+      CD (`Nuati-SECIN/*`) ou GitHub privado (`rodilpinto/*`).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova em `solucoes/`,
       junto às outras (fica no repo-pai, não aqui).
 

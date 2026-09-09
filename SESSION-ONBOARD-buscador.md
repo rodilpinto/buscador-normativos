@@ -26,15 +26,17 @@ declarados projetos diferentes pelo Rodrigo em 08/09.
 ## 2. Estado na última pausa (2026-09-08/09)
 
 ### Feito e commitado
-- Spec de design e plano de implementação de **16 tasks** — commit inicial deste repo.
+- `1c04c2d` — spec de design, plano de implementação de **16 tasks**, ledgers, log, comando
+  de onboard, `CLAUDE.md` e `.gitignore`. **Commit inicial do repo.**
 
 ### Fase
-🟡 **Planejamento concluído, ZERO linha de código escrita.** Nenhum módulo, nenhum teste,
-nenhuma dependência instalada. A Task 1 do plano começa do zero (mas o `git init` **já foi
-feito** — pule esse passo dela).
+🟡 **Planejamento concluído, ZERO linha de código escrita.** Nenhum módulo `buscador/`,
+nenhum teste, nenhuma dependência instalada. ⚠ Da Task 1 do plano, **dois passos já estão
+feitos**: o `git init` e o `.gitignore`. Falta `pyproject.toml`, `config.py` e o teste.
 
 ### Working tree
-Limpo no commit do checkpoint.
+Limpo em `1c04c2d`. ⚠ Este repo **não tem remoto** — existe só nesta máquina. Criar o remoto
+(Gitea CD ou GitHub privado, como as outras soluções) é item do `_TODO` §P3.
 
 ## 3. Achados críticos (não perder)
 
