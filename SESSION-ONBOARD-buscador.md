@@ -1,8 +1,8 @@
 ---
 title: Buscador de Base Normativa — state snapshot
 maintained_by: sessões do Claude Code; humanos podem editar
-last_updated: 2026-09-09
-related: [_TODO.md, _DECISOES-PENDENTES.md, log.md, docs/superpowers/specs/2026-09-08-buscador-normativos-design.md, docs/superpowers/plans/2026-09-08-buscador-normativos.md]
+last_updated: 2026-09-10
+related: [_TODO.md, _DECISOES-PENDENTES.md, log.md, spec/buscador/00-overview.md, docs/superpowers/specs/2026-09-08-buscador-normativos-design.md, docs/superpowers/plans/2026-09-08-buscador-normativos.md]
 ---
 
 # Buscador de Base Normativa — onboarding de sessão
@@ -23,7 +23,7 @@ próprio**, pela regra do projeto: cada solução vive em `~/Documents/solucoes/
 acervo pronto e conversa sobre ele; este **constrói** o acervo. Foram explicitamente
 declarados projetos diferentes pelo Rodrigo em 08/09.
 
-## 2. Estado na última pausa (2026-09-08/09)
+## 2. Estado na última pausa (2026-09-10)
 
 ### Feito e commitado
 Cadeia desta área (repo só desta área, então aqui o tip **é** o último commit dela):
@@ -36,7 +36,9 @@ Cadeia desta área (repo só desta área, então aqui o tip **é** o último com
 
 ### Fase
 🟡 **Planejamento concluído, ZERO linha de código escrita.** Nenhum módulo `buscador/`,
-nenhum teste, nenhuma dependência instalada. ⚠ Da Task 1 do plano, **dois passos já estão
+nenhum teste, nenhuma dependência instalada. ✅ **Split feito em 10/09**: as 16 tasks viraram
+arquivos verbatim em `spec/buscador/tasks/`, em 5 ondas e 7 trilhas, com colisão de arquivos
+checada (`spec/buscador/00-overview.md`). ⚠ Da Task 1 do plano, **dois passos já estão
 feitos**: o `git init` e o `.gitignore`. Falta `pyproject.toml`, `config.py` e o teste.
 
 ### Working tree
@@ -70,13 +72,14 @@ commitar. Retomar sempre com `/onboard-buscador`.
 
 ## 5. Próximo movimento (recomendação, não decidido)
 
-1. **Task 1 do plano** (fundação: `pyproject.toml`, `config.py`, teste) — ⚠ pular o `git init`.
-2. Tasks 2-3 (banco, modelos/dedup) — destravam todo o resto.
-3. Antes da Task 5, **decidir D-B1** (provedor da web aberta) não é necessário: a Task 7
-   recebe a função por injeção. Mas antes de *rodar de verdade* contra a web, é.
+**`/go build` na onda 1**: T1 (fundação) e depois T3 (modelos/normalização), nesta ordem.
+⚠ Pular os dois Steps já feitos da T1: o `git init` e o `.gitignore`.
 
-Execução sugerida: subagente por task com revisão entre elas, ou inline em lotes com
-checkpoint. O plano traz o handoff no fim.
+Fechada a onda 1, a onda 2 abre **4 trilhas paralelas** com colisão de arquivos já descartada
+(A dados · B fontes · C llm · D triagem-core). O mapa está em `spec/buscador/00-overview.md`.
+
+Nenhuma das duas decisões abertas trava escrever código: a D-B1 é resolvida por injeção na T7
+e a D-B2 é verificação, não escolha. As duas travam **rodar contra a web real**.
 
 ## 6. Ponteiros
 
@@ -84,7 +87,9 @@ checkpoint. O plano traz o handoff no fim.
 |---|---|
 | `docs/superpowers/specs/2026-09-08-buscador-normativos-design.md` | **spec**: problema, princípio, decisões B1-B5, riscos |
 | `docs/superpowers/plans/2026-09-08-buscador-normativos.md` | **plano**: 16 tasks com código e TDD |
-| `_TODO.md` | ledger de tarefas |
+| `spec/buscador/00-overview.md` | **ordenamento**: ondas, trilhas, colisões, ambiguidades |
+| `spec/buscador/tasks/NN-*.md` | cópia verbatim de uma task, para o agente de build |
+| `_TODO.md` | ledger de tarefas e **status** por task |
 | `_DECISOES-PENDENTES.md` | decisões abertas |
 | `log.md` | timeline |
 

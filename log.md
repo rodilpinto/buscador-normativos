@@ -2,6 +2,37 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-10] split | 16 tasks extraídas em arquivos, agrupadas em 5 ondas e 7 trilhas
+
+Fase `split` do `/go`. O plano tem **2641 linhas**: um agente de build que o lesse inteiro a
+cada task gastaria em leitura o contexto de que precisa para implementar. As 16 tasks foram
+cortadas **verbatim** (não reescritas) para `spec/buscador/tasks/NN-nome.md`, de 122 a 255
+linhas cada, e o material transversal (Global Constraints + File Structure + Tech Stack) foi
+para `spec/buscador/reference/global-constraints.md`, citado pelos headers.
+
+**O plano segue fonte de verdade do conteúdo.** Divergência entre plano e cópia: o plano ganha.
+Status por task continua só no `_TODO.md`; ordenamento em `spec/buscador/00-overview.md`.
+
+**Ondas e trilhas.** 5 ondas. A onda 2 tem 4 trilhas paralelas (A dados, B fontes, C llm,
+D triagem-core) com **interseção de arquivos vazia**, verificada listando os arquivos tocados
+por trilha e comparando, não por julgamento. A T3 foi puxada para o gate junto com a T1 porque
+`Resultado` e `normalizar_titulo` são consumidos por 3 das 4 trilhas.
+
+**Duas colisões reais encontradas, ambas serializadas:**
+- `buscador/web/app.py`: T14 cria, T15 modifica. Mesma trilha, nesta ordem, nunca em paralelo.
+- `README.md`: T1 e T16 listam as duas como "Create". Ondas distintas, mas a T16 sobrescreve.
+  **Ambiguidade do plano, não resolvida** (registrada no overview e no `_TODO.md` P3).
+
+**Verificação da extração** (feita por quem não extraiu): cobertura contígua das linhas
+53-2641 do plano sem buraco nem sobreposição, cercas de código pares em todos os 16 arquivos,
+nenhum truncamento, nenhum acento corrompido.
+
+**Lição de ambiente:** `python` nu não resolve nesta máquina (o alias do Microsoft Store
+intercepta e imprime instrução de instalação). Usar o caminho completo do plano,
+`C:\Users\P_8106\AppData\Local\Programs\Python\Python313\python.exe`, ou Bash puro.
+
+Nenhuma linha de código de produção foi escrita nesta fase.
+
 ## [2026-09-08] scaffold | Brainstorm, spec e plano de 16 tasks — projeto nasce
 
 Sessão de origem: área `ai-com-ia` do `projetos-nuati`, durante a ingestão dos Relatórios de
