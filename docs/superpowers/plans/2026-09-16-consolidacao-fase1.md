@@ -248,6 +248,165 @@ dizendo que informa **configuração, não alcançabilidade**, e (b) a mensagem 
 
 ---
 
+## Emendas da Rodada 2 — VINCULANTES, prevalecem sobre a Rodada 1 e sobre o corpo
+
+> **Data:** 2026-09-16 · **Método:** 5 revisores NOVOS, cegos entre si, com a missão explícita de
+> (a) verificar se as emendas A1-A21 são sólidas e (b) caçar bugs que **elas** introduziram.
+> **24 achados → 12 emendas. 24 de 24 eram `verified`** — nenhuma opinião.
+> **Precedência:** B > A > corpo.
+
+### ✅ O que a Rodada 2 CONFIRMOU como sólido
+
+Antes dos defeitos, o que aguentou ataque dirigido — isto importa tanto quanto o que falhou:
+
+- **A3 (hash de células) — VALIDADA POR EXECUÇÃO INDEPENDENTE.** Dois revisores rodaram o
+  `_sha_planilha` novo contra o `generate_excel` real: um obteve o mesmo hash em **3 execuções**
+  (`2b93075d…`), outro em **2** (`786c8af9…`), enquanto na mesma bancada o sha dos bytes crus
+  dava `9052f928…` e `d5ab4c0a…`. Premissa e cura, ambas confirmadas.
+- **A1 (reordenar)** — varrida passo a passo: entre a Task 3 e a Task 1 **nenhum byte de `.py`
+  muda**; o primeiro `.py` só muda na Task 5. Não existe ponto em que código é alterado antes de
+  existir golden-master.
+- **A4 (blocos nomeados)** — simulada em clone: o `gemini_client.py` resultante **importa e
+  passa** 41 + 98 + 53.
+- **A5 + A9 + A19** — compõem sem conflito no mesmo runner (aspectos disjuntos: exit code ×
+  contagem × procedimento).
+- **A12** — os critérios (`ratio ≥ 0,85`, `≥ 60 chars`) **batem com o `deduplicator.py` real**.
+- **A14** — conserta de fato a mutação in-place, confirmado por trace linha a linha.
+- **A7, A8, A13** — verificadas por execução.
+
+### BLOCKERS — bugs que as emendas da Rodada 1 introduziram
+
+**B1 · A emenda A6 quebra o `test_llm_phase3.py`.** ✅ [convergente: 4 lentes, todas por EXECUÇÃO]
+A A6 mandava **trocar** a linha 14. Essa linha é a **única atribuição de `_original_key`**, que as
+linhas 297-298 leem para restaurar o ambiente. Quatro revisores aplicaram a substituição literal
+num clone e rodaram: a suíte imprime `Total: 53 | PASS: 53 | FAIL: 0` e **em seguida morre** com
+`NameError: name '_original_key' is not defined`, **exit 1**.
+
+> **Ironia registrada:** a emenda **A5** descreve exatamente este cenário como *hipótese*
+> ("se essa linha levantar"). A **A6** transformou a hipótese em **certeza**. Com a A5 aplicada,
+> todos os gates seguintes (Task 6 Step 4, Task 8 Step 3, critérios de pronto) reportariam
+> `HOUVE FALHA` com as quatro suítes verdes — mandando o executor depurar o lugar errado.
+
+**Emenda:** **acrescentar, não substituir.** A A6 passa a ser:
+
+```python
+_original_key = os.environ.pop("GEMINI_API_KEY", None)   # linha 14, PRESERVADA
+for _v in ("BUSCADOR_LLM_BASE_URL", "BUSCADOR_LLM_API_KEY"):
+    os.environ.pop(_v, None)
+```
+
+O fim do arquivo continua válido sem tocar em nada.
+
+**B2 · A emenda A10 trava o runner três tasks antes da hora.** ✅ [convergente: 4 lentes, medido]
+A A10 mandava escrever `SUITES_PYTEST = ["test_phase4.py", "test_backends.py"]` e
+`BASELINE["test_backends.py"] = 10` no runner — que nasce na **Task 2**. Mas `test_backends.py`
+só é criado na **Task 5**. Na ordem nova da A1 (3→1→2→4→5), o runner roda **duas vezes** antes
+disso (Task 2 Step 2 e Task 4 Step 3).
+**Medido:** `python -m pytest test_backends.py -q` com o arquivo ausente →
+`ERROR: file or directory not found`, **exit 4** → `falhou = True` → `HOUVE FALHA`.
+Consequência: o executor trava no primeiro gate do runner e conclui que **o merge regrediu algo** —
+precisamente o falso-positivo que a A1 existe para evitar.
+**Emenda:** o runner nasce na Task 2 com `SUITES_PYTEST = ["test_phase4.py"]` e `BASELINE` **sem**
+a entrada. A Task 6 ganha um **Step 4b** de duas linhas: acrescentar `"test_backends.py"` a
+`SUITES_PYTEST` e `"test_backends.py": 10` a `BASELINE`, commitado junto com o backend.
+
+**B3 · A emenda A9 transforma o runner num portão que barra evolução legítima.** ✅ [convergente: 2 lentes]
+A A9 manda falhar quando `passed != BASELINE[nome]` — **igualdade**. Dois defeitos medidos:
+(a) qualquer teste **novo e legítimo** dispara o gate, e a Fase 2 acrescenta testes **por
+desenho** (7 features); (b) `BASELINE[s]` com indexação direta levanta `KeyError` quando uma
+suíte futura for registrada sem entrada correspondente.
+**Emenda:** piso, não igualdade, e `.get()` em vez de indexação:
+
+```python
+esperado = BASELINE.get(nome)
+if esperado is not None and passed < esperado:
+    print(f"[ERRO] {nome} encolheu: baseline {esperado}, agora {passed}")
+    falhou = True
+```
+
+E uma linha de prosa em "O que a Fase 2 recebe": **mudança intencional de composição atualiza o
+`BASELINE` no mesmo commit que acrescenta o teste.**
+
+### ALTOS
+
+**B4 · A prova da A19 é vácua enquanto o B2 não for corrigido.** ✅
+A A19 manda injetar um `assert False` e confirmar `HOUVE FALHA`. Mas na Task 2 o runner **já está
+vermelho** por causa do bug da A10: o executor injeta, vê vermelho, desfaz, vê vermelho de novo, e
+conclui que o runner detecta falha quando ele está **preso em vermelho por outro motivo**.
+**Emenda:** além de corrigir o B2, a A19 vira **bidirecional**: confirmar `TUDO VERDE` + exit 0
+**antes** de injetar, `HOUVE FALHA` + exit 1 depois, e `TUDO VERDE` + exit 0 de novo ao desfazer.
+Sem o antes/depois, a prova não distingue detecção de vermelho permanente.
+
+**B5 · O critério de pronto fica desatualizado pela própria A10.** ✅ [convergente: 2 lentes]
+O critério exige `205 passed`. Com `test_backends.py` no runner (10 testes, **contados e
+rodados**: 8 da Task 5 + 2 da Task 6 = `10 passed in 0.23s`), o total ao fim da Fase 1 é **215**.
+O executor leria 215, conferiria com 205 e ou acusaria regressão inexistente ou "consertaria"
+tirando a suíte nova — desfazendo a A10.
+**Emenda:** `215 passed e 0 failed (13 + 53 + 98 + 41 + 10)`.
+
+### MÉDIOS e BAIXOS
+
+**B6 · A faixa da A4 deixa de pé o cabeçalho que ela existe para apagar.** ✅ [convergente: 4 lentes]
+A prosa da A4 manda apagar "o bloco `# Lazy Singleton Client`", mas a faixa que ela fixa é
+`74-153`. As linhas **70-73** são o banner `# ---` / `# Lazy Singleton Client` / `# ---`. Simulada
+a remoção pela faixa, sobra um cabeçalho descrevendo comportamento apagado — **exatamente o
+defeito (b) que a própria A4 acusa nas faixas antigas**.
+**Emenda:** a faixa passa a ser `29-68 e 70-153`. Melhor ainda, e coerente com a própria A4: **não
+citar faixa nenhuma**, só os nomes dos blocos.
+
+**B7 · A A11 conserta a docstring errada — e o gate da A8 é cego para a certa.** ✅ [convergente: 2 lentes]
+A A11 reescreve `gemini_client.py:1-14`. Mas o ponto de entrada **público** do pacote é
+`llm/__init__.py`: `app.py` e `test_llm_phase3.py:37` fazem `from llm import is_available, …`.
+Essa docstring diz "LLM integration module for **Gemini Flash**" e "degrade gracefully when the
+**Gemini API key** is not configured" — falso depois da Task 6, e é o arquivo que o consumidor
+abre primeiro.
+⚠ **Ponto cego do meu próprio gate:** a A8 usa `git diff … | grep '^-'`. Como `llm/__init__.py`
+**não é modificado**, ele **não aparece no diff** — o gate não pode pegar esta perda de contrato.
+**Emenda:** acrescentar `llm/__init__.py` aos Files da Task 6 e corrigir duas linhas: título para
+"LLM integration module (backend configurável — ver `llm/backends.py`)" e a frase de degradação
+para "when no LLM backend is configured or reachable". **E registrar a limitação do gate A8:** ele
+só vê arquivos tocados; doc que mente sem ser tocada exige varredura própria.
+
+**B8 · O `MEMORY.md` que a A17 manda editar não existe.** ✅
+**Medido:** `~/Documents/projetos-nuati/MEMORY.md` → *No such file or directory*. O MEMORY.md real
+é a **auto-memória** em `~/.claude/projects/C--Users-Rodrigo-Documents-projetos-nuati/memory/`.
+**Emenda:** corrigir o caminho na A17 **e** marcar o item como ⛔ **bloqueado em autorização**: a
+regra global `memory-write-policy` proíbe criar ou editar auto-memória sem autorização explícita
+do Rodrigo. O step passa a ser "perguntar antes", não "editar".
+
+**B9 · O teste da A7 não trava o que a A7 conserta.** ✅
+O teste de payload captura `url` e `json` e **ignora `timeout`**; o `post_fake` aceita o kwarg só
+para não quebrar. Uma edição futura que volte ao escalar passa com 10/10 verdes e **ressuscita os
+11 minutos de hang**.
+**Emenda:** capturar `timeout` no `post_fake` e afirmar `capturado["timeout"] == (3.05, 60)`.
+
+**B10 · O `log.md` prescreve um caminho de Python que é falso nesta máquina.** ✅
+A entrada de 10/09 afirma que `python` nu não resolve (alias da Microsoft Store) e prescreve
+`C:\Users\P_8106\AppData\Local\Programs\Python\Python313\python.exe` — perfil de **outro usuário**.
+**Medido agora:** `python --version` → `Python 3.13.7`, funcionando. Doc estale que mandaria o
+executor usar um caminho inexistente.
+**Emenda:** a Task 7 corrige essa linha com a medição e a data (regra `verify-stale-docs`).
+
+**B11 · A A3 troca instabilidade por sensibilidade de ambiente.** 📝
+O hash agora depende do que o **leitor** do openpyxl devolve, e o leitor coage tipo. Uma troca de
+versão do openpyxl pode mudar o hash sem nada ter regredido.
+**Emenda:** uma frase na Task 4 Step 3 registrando a versão de openpyxl usada no congelamento, e
+a nota de que divergência após upgrade da biblioteca é **recongelar**, não investigar regressão.
+
+**B12 · A A12 não cabe no orçamento de 12 itens.** ✅
+O Step 1 pede exatamente 12 itens e já mandata 6 casos específicos; a A12 acrescenta mais 2 pares
+(4 itens), estourando.
+**Emenda:** o corpus sobe para **14 itens**. O golden-master congela o que for gerado, então o
+tamanho exato não é contrato — a cobertura das 3 estratégias é.
+
+### REJEITADOS na Rodada 2
+
+| Achado | Por que |
+|---|---|
+| `KeyError` do `BASELINE` como item separado | Já coberto pelo `.get()` do **B3**. Registrar duas vezes o mesmo conserto infla a contagem. |
+
+---
+
 ## Global Constraints
 
 - **Texto normativo NUNCA é parafraseado.** Título e ementa são copiados literalmente da fonte;
