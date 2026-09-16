@@ -407,6 +407,117 @@ tamanho exato não é contrato — a cobertura das 3 estratégias é.
 
 ---
 
+## Emendas da Rodada 3 — VINCULANTES, prevalecem sobre tudo acima
+
+> **Data:** 2026-09-16 · **Escopo deliberadamente estreito:** 3 lentes sobre as 3 emendas da
+> Rodada 2 que tocam código executável (B1, B2, B3). **6 achados → 5 emendas.**
+> **ZERO bloqueadores, ZERO altos** — a rodada convergiu.
+> **Precedência:** C > B > A > corpo.
+
+### ✅ As três emendas foram validadas POR EXECUÇÃO pelas três lentes
+
+- **B1 — SÓLIDA.** Aplicada literalmente num clone do código real e executada: `53 | PASS: 53 |
+  FAIL: 0`, **exit 0**, tanto sem quanto **com** `BUSCADOR_LLM_BASE_URL` e `BUSCADOR_LLM_API_KEY`
+  setadas — que é o cenário que a A6 existia para cobrir. Sem `NameError`.
+- **B2 — SÓLIDA** no diagnóstico e na cura: runner sem a suíte na Task 2 dá 205/exit 0; com o
+  Step 4b e um stub de 10 testes dá **215/exit 0**, batendo com o total que a B5 previu.
+- **B3 — SÓLIDA na lógica:** piso + `.get()` compõem sem conflito com A5 (exit code) e A9
+  (contagem) no mesmo bloco, verificado por execução do laço final.
+
+> **A assimetria que eu havia levantado no B1 foi investigada e NÃO morde.** Eu suspeitava que
+> restaurar `GEMINI_API_KEY` mas não as duas variáveis novas fosse problema. A lente de efeito
+> colateral verificou: o runner usa `subprocess.run`, e mudança em `os.environ` **nunca sobe para
+> o processo pai** — então a restauração da linha 298 já era decorativa fora do processo. E não
+> existe consumidor in-process, porque `pytest` nu no diretório do app já morre com
+> `INTERNALERROR` antes, por causa do `sys.exit` em nível de módulo do `test_comprehensive.py:1291`.
+> Preocupação legítima, resolvida por medição, sem custo.
+
+### MÉDIOS
+
+**C1 · O `.get()` do B3 troca duas falhas ruidosas por silêncio permanente.** ✅ [lente efeito-colateral, por execução]
+O piso está certo — o gate de igualdade barrava evolução legítima. Mas o `.get()` silencia dois
+casos, ambos medidos:
+(a) **Suíte registrada sem entrada no `BASELINE`.** O Step 4b do B2 edita **dois** lugares; se o
+executor fizer só o primeiro, a A9 original levantava `KeyError` (barulho imediato), e com
+`.get()` o runner fica **mudo para sempre** naquela suíte. Rodado: suíte encolhida de 41 para 13
+sem entrada no BASELINE → `TUDO VERDE`, exit 0. E a suíte sem rede seria justamente a
+`test_backends.py` — "a única que cobre a troca de transporte, o refactor mais arriscado da fase",
+nas palavras da própria A10.
+(b) **Crescimento não sinalizado faz o `BASELINE` apodrecer.** Medido: BASELINE defasado em 30
+contra suíte de 41 → `TUDO VERDE`, sem uma palavra.
+
+> **O argumento que me convenceu:** a igualdade da A9 era uma **função-forçante** — qualquer
+> mudança de composição ficava vermelha até alguém atualizar o número, então o `BASELINE` estava
+> correto **por construção**. O piso remove a forçante e a substitui por uma linha de prosa, isto
+> é, por **memória humana** — que é literalmente o que a A9 existe para eliminar.
+
+**Emenda:** manter o piso, mas não deixar os dois casos mudos. O trecho do B3 passa de 3 para 6 linhas:
+
+```python
+esperado = BASELINE.get(nome)
+if esperado is None:
+    print(f"[ERRO] {nome} esta no runner mas nao tem entrada no BASELINE — sem protecao contra encolhimento")
+    falhou = True
+elif passed < esperado:
+    print(f"[ERRO] {nome} encolheu: baseline {esperado}, agora {passed}")
+    falhou = True
+elif passed > esperado:
+    print(f"[AVISO] {nome} cresceu: baseline {esperado} -> {passed}; atualize o BASELINE neste commit")
+```
+
+O ramo `is None` devolve o barulho que o `.get()` tirou, sem o `KeyError` feio; o ramo de
+crescimento **mecaniza** a regra de prosa em vez de confiá-la à memória.
+
+**C2 · O B2 muda a forma da saída do runner e três textos a jusante não acompanham.** ✅ [convergente: 2 lentes]
+A partir do Step 4b o runner imprime 5 linhas e 215, não 4 e 205. A B5 corrigiu **um** lugar (os
+critérios de pronto). Ficaram três:
+1. **Task 8 Step 3 — é um GATE que o executor roda**, e diz *"com os mesmos números da Task 2"*
+   (= 205). Ele conferiria 215 contra 205 num gate de fechamento de fase e cairia no mesmo poço
+   que a B5 descreve: acusar regressão inexistente, ou "consertar" tirando a suíte nova.
+   ⚠ A frase idêntica na Task 6 Step 4 está **correta**, porque roda antes do Step 4b.
+2. **Docstring do runner:** `"""Roda as 4 suites do app…"""` — fica falsa e nenhum step a toca.
+   O gate da A8 também não pega (só vê `*.py` no diff contra a tag, e `tools/` não existia em A).
+3. **Tabela de comandos do `CLAUDE.md`,** escrita na Task 7 — que é **depois** da Task 6, então
+   **nasce já mentindo**.
+
+⚠ **Efeito secundário do mesmo Step 4b:** ele edita o runner e **ninguém o executa em seguida**.
+A primeira execução do runner editado seria a Task 8 Step 3 — uma task e um push depois, no mesmo
+passo em que o caminho do app muda de `levantamento-normativos` para `buscador`: **duas mudanças
+não verificadas ao mesmo tempo.**
+
+**Emenda:** o Step 4b ganha uma **terceira** linha: re-rodar `tools/run_all_tests.py` ali mesmo,
+esperando **5 linhas e 215** — valida a edição no ato e estabelece a nova referência. Trocar, na
+Task 8 Step 3, *"com os mesmos números da Task 2"* por *"com 215 passed (13 + 53 + 98 + 41 + 10)"*.
+Trocar `4 suites` por `5 suites` na docstring do runner, e a tabela do `CLAUDE.md` nasce com
+`roda as 5 suítes`.
+
+### BAIXOS
+
+**C3 · O trecho do B3 usa uma variável que não está ligada onde ele entraria.** ✅
+O código do B3 usa `nome`, mas os dois laços que coletam usam `s`
+(`for s, padrao in SUITES_SCRIPT.items()` e `for s in SUITES_PYTEST`); `nome` só existe no laço de
+impressão da tabela (`for nome, p, f in linhas:`). Colado literalmente num dos laços de coleta,
+o runner levanta **`NameError: name 'nome' is not defined`** na primeira execução — que é o gate
+da Task 2.
+**Emenda:** a B3 passa a dizer **onde** o trecho entra: *no laço de impressão
+`for nome, p, f in linhas:`, antes do print do veredito* — ali `nome` já está ligado e as suítes
+são cobertas de uma vez só.
+
+**C4 · O `git add` da Task 6 Step 5 não inclui o runner.** ✅
+A B2 diz que a entrada nova é "commitada junto com o backend", mas o comando é explícito por
+caminho e lista só `gemini_client.py` e `test_backends.py`. A edição do runner ficaria na árvore
+de trabalho até o `git add -A` da Task 8, sendo commitada sob a mensagem errada
+("refactor: renomeia…").
+**Emenda:** acrescentar `tools/run_all_tests.py` ao `git add` da Task 6 Step 5.
+
+**C5 · O step do B1 não tem posição na Task 6.** ✅
+A B1 reescreve o **conteúdo** do step herdado da A6, mas não lhe dá número — e a A6 também não
+dava. Não há colisão (só a B2 nomeia um número), mas há risco de **ordem**.
+**Emenda:** numerar como **Step 2b, antes do Step 3** — ou, equivalente: *aplicar antes de
+qualquer step que rode o runner*.
+
+---
+
 ## Global Constraints
 
 - **Texto normativo NUNCA é parafraseado.** Título e ementa são copiados literalmente da fonte;
