@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Fill with the board's own filename (board-<YYYY-MM-DD>-<HHMM>-<assunto>.html). The copy
+     button prefixes it to the answer so the string can never be decoded against another board.
+     Used as the fallback when the page is served from a route instead of a file (hub). -->
+<meta name="board-id" content="board-2026-09-16-1610-consolidacao-buscador.html">
+<title>Consolidação do Buscador de Base Normativa</title>
+<style>
+  /* Embed a font as data URI if fidelity matters (see SKILL.md); else system stack is fine. */
+  /* @font-face { font-family:'BoardFont'; src:url(data:font/woff2;base64,__FONT_B64__) format('woff2');
+                  font-weight:100 900; font-display:swap; } */
+  :root{
+    --bg:#0D1117; --panel:#141A22; --panel2:#1A222C; --line:#26303B;
+    --ink:#F0F6FC; --muted:#9BA3AD; --dim:#6E7681;
+    --accent:#E8B84B; --accent2:#2EA77A;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg); color:var(--ink);
+       font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+       margin:0; padding:0 20px 140px; line-height:1.5;}
+  .wrap{max-width:1000px; margin:0 auto;}
+  header{padding:44px 0 10px;}
+  header h1{font-size:30px; font-weight:800; margin:0 0 6px; text-wrap:balance;}
+  header p{color:var(--muted); max-width:64ch; margin:0 0 4px; font-size:15px;}
+  .howto{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent);
+         border-radius:10px; padding:12px 18px; margin:18px 0 8px; font-size:14.5px; color:var(--muted);}
+  .howto b{color:var(--accent); font-weight:700;}
+  section{margin-top:44px;}
+  .dhead{display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:6px;}
+  .dnum{font-size:40px; font-weight:850; color:var(--accent); line-height:1; font-variant-numeric:tabular-nums;}
+  .dhead h2{font-size:20px; font-weight:750; margin:0; text-wrap:balance;}
+  .dcode{font-size:11.5px; letter-spacing:1.2px; color:var(--accent2); font-weight:700; text-transform:uppercase;
+         border:1px solid var(--accent2); border-radius:99px; padding:2px 10px; white-space:nowrap;}
+  .dsub{color:var(--muted); font-size:14px; margin:8px 0 18px; max-width:74ch;}
+  .dsub b{color:var(--ink); font-weight:650;}
+  .multi{color:var(--accent); font-weight:650;}
+  .opts{display:grid; gap:16px;}
+  .opts.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));}
+  .opts.g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+  .opt{background:var(--panel); border:1.5px solid var(--line); border-radius:14px; padding:14px;
+       cursor:pointer; transition:border-color .15s, background .15s; position:relative;}
+  .opt:hover{border-color:var(--dim);}
+  .opt:focus-visible{outline:2px solid var(--accent2); outline-offset:2px;}
+  .opt.sel{border-color:var(--accent); background:var(--panel2);}
+  .opt.sel .letter{background:var(--accent); color:#0D1117;}
+  .letter{display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px;
+          border-radius:8px; background:var(--line); color:var(--ink); font-weight:800; font-size:14px; margin-right:9px;}
+  .oname{font-weight:700; font-size:15px;}
+  .odesc{color:var(--muted); font-size:13.5px; margin-top:8px;}
+  .odesc b{color:var(--ink); font-weight:650;}
+  .tag{font-size:10.5px; letter-spacing:.8px; text-transform:uppercase; font-weight:700; border-radius:5px;
+       padding:2px 7px; margin-left:8px; vertical-align:2px;}
+  .tag.now{background:rgba(232,184,75,.14); color:var(--accent);}
+  .tag.rec{background:rgba(46,167,122,.16); color:var(--accent2);}
+  /* visual canvas: 16:9-ish strip for mockups; set a data-URI background-image inline */
+  .canvas{margin-top:12px; border-radius:10px; overflow:hidden; position:relative; height:170px;
+          background:#000 center/cover no-repeat;}
+  .canvas::after{content:''; position:absolute; inset:0;
+          background:linear-gradient(180deg, rgba(13,17,23,.25) 0%, rgba(13,17,23,.82) 62%, #0D1117 100%);}
+  .canvas > *{position:relative; z-index:2;}
+  /* mini diagram box for non-image sketches */
+  .diagram{margin-top:12px; background:#0A0E13; border:1px solid var(--line); border-radius:10px; padding:14px;
+           min-height:96px; display:flex; flex-direction:column; justify-content:center; gap:8px;}
+  .dlabel{font-size:11px; color:var(--muted); letter-spacing:.4px;}
+  pre.mini{background:#0A0E13; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:12px 0 0;
+           font-size:12px; line-height:1.55; color:var(--muted); overflow-x:auto;
+           font-family:ui-monospace,'Cascadia Code',Consolas,monospace;}
+  pre.mini .add{color:var(--accent2);} pre.mini .k{color:var(--accent);}
+  .gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px;}
+  .shot{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  .shot img{width:100%; display:block; object-fit:cover;}
+  .shot figcaption{padding:10px 12px; font-size:12.5px; color:var(--muted);}
+  .shot figcaption b{color:var(--ink); display:block; font-size:13px; margin-bottom:2px;}
+  .note{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+        color:var(--muted); font-size:14px; margin-top:16px; max-width:80ch;}
+  .note b{color:var(--ink);}
+  /* optional free-text comment per decision */
+  .ocomment-wrap{margin-top:14px;}
+  .ocomment-label{font-size:11.5px; letter-spacing:.5px; text-transform:uppercase; color:var(--dim);
+        font-weight:700; margin-bottom:6px; display:block;}
+  textarea.ocomment{width:100%; background:#0A0E13; border:1px solid var(--line); border-radius:10px;
+        color:var(--ink); font-family:inherit; font-size:13.5px; line-height:1.5; padding:10px 12px;
+        resize:vertical; min-height:46px;}
+  textarea.ocomment:focus{outline:2px solid var(--accent2); outline-offset:1px; border-color:var(--accent2);}
+  textarea.ocomment::placeholder{color:var(--dim);}
+  .bar-answer{position:fixed; left:0; right:0; bottom:0; background:rgba(13,17,23,.92);
+        backdrop-filter:blur(10px); border-top:1px solid var(--line); padding:14px 20px; z-index:50;}
+  .bar-inner{max-width:1000px; margin:0 auto; display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
+  .bar-label{font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); font-weight:700;}
+  .bar-board{flex-basis:100%; font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+             color:var(--dim); margin-top:-4px; word-break:break-all;}
+  #answer{flex:1; min-width:220px; font-family:ui-monospace,Consolas,monospace; font-size:16px; color:var(--accent);
+          font-weight:600; overflow-x:auto; white-space:nowrap;}
+  #copy{background:var(--accent); color:#0D1117; font-weight:800; border:0; border-radius:9px;
+        padding:9px 18px; font-size:14px; cursor:pointer; font-family:inherit;}
+  #copy:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  @media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Consolidação do Buscador de Base Normativa</h1>
+  <p>10 decisões abertas — o que entra no escopo, como fica o LLM, e o destino dos dois repos. Recomendações são <b>sugestões minhas</b>, não fatos validados.</p>
+  <div class="howto">Clique nas opções (ou só anote) e responda tipo: <b>1b&nbsp;&nbsp;2a,c&nbsp;&nbsp;3a</b> — a barra
+  embaixo monta a resposta pra copiar. Grupos marcados <span class="multi">múltipla escolha</span> aceitam mais de uma letra.</div>
+</header>
+
+<!-- ONE section PER DECISION GROUP. Set data-group="N". Add data-multi="true" for multi-select.
+     Each option: class="opt" data-v="<group><letter>" (e.g. "1a"), a .letter chip, .oname, .odesc.
+     Optional per option: .tag.now (status quo) / .tag.rec (recommended), and ONE visual:
+     .canvas (image/mockup) | .diagram (CSS sketch) | pre.mini (code/schema diff).
+     Keep the .ocomment-wrap block per group: an OPTIONAL free-text field the user can use to
+     comment on the decision (nuance the multiple-choice can't carry). Set data-cgroup="N" to
+     match the group number; the copy button appends non-empty comments below the letter string. -->
+<section data-group="1" data-multi="true">
+  <div class="dhead"><span class="dnum">1</span><h2>Indexação semântica — onde ela entra</h2><span class="dcode">D-C1</span></div>
+  <p class="dsub">Você apontou isto como relevante, e a verificação dá razão: hoje, <b>sem LLM, a relevância é contagem de substring literal</b> da palavra-chave na ementa (<code>_keyword_relevance</code>), e <b>nada agrupa resultados por assunto</b>. Agrupar é o mecanismo M2 — do qual depende o critério de sucesso nº 2: <b>100+ resultados triáveis em menos de 15 decisões</b>. As três primeiras opções são cumulativas e independentes entre si. <span class="multi">múltipla escolha</span></p>
+  <div class="opts g4">
+    <div class="opt" data-v="1a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Agrupar os resultados da busca</span><span class="tag rec">recomendado</span>
+      <p class="odesc">Embeddings sobre título+ementa dos resultados, clusterizados por assunto, para a triagem decidir <b>por bloco em vez de item a item</b>. É a opção que ataca diretamente o critério nº 2. <b>Risco:</b> a qualidade do agrupamento não foi medida — cluster ruim vira decisão ruim em bloco, o que é pior que decidir item a item. Mitigação: sempre permitir descer ao item.</p>
+    </div>
+    <div class="opt" data-v="1b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Reforçar o selo “já tenho”</span><span class="tag rec">recomendado</span>
+      <p class="odesc">Hoje a feature F4 casa por <b>sha256</b>, que só pega arquivo byte-idêntico. Embeddings pegam <b>a mesma Lei em PDF diferente</b>, que é o caso comum no acervo. <b>Risco:</b> falso positivo <i>esconde</i> normativo novo — o oposto do que se quer. Exige limiar conservador e nunca ocultar, só marcar (decisão B5 já manda mostrar tudo).</p>
+    </div>
+    <div class="opt" data-v="1c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Busca semântica sobre o acervo baixado</span>
+      <p class="odesc">Pesquisar depois <i>dentro</i> do que já foi baixado. <b>Sobrepõe o wiki-chat</b>, que você declarou projeto distinto em 08/09 e que já está com 15/15 do plano implementado. <b>Impacto:</b> muda a fronteira entre os dois projetos — não é só uma feature a mais.</p>
+    </div>
+    <div class="opt" data-v="1d" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">d</span><span class="oname">Não entra</span><span class="tag now">como está hoje</span>
+      <p class="odesc">Fica como está: relevância por LLM item a item, com fallback de substring literal quando não há LLM. Zero trabalho novo. <b>Custo:</b> o M2 agrupa só por <code>tipo</code> e <code>orgao_emissor</code> (metadado), nunca por assunto — e o critério nº 2 fica dependendo disso ser suficiente. Não medido.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c1">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c1" data-cgroup="1" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="2">
+  <div class="dhead"><span class="dnum">2</span><h2>Qual modelo de embeddings</h2><span class="dcode">D-C1.2</span></div>
+  <p class="dsub">⚠ <b>Só decida se escolheu 1a, 1b ou 1c.</b> Gap de informação relevante: o <code>gemma-4</code> é modelo de <i>geração</i>, não de embeddings. O LM Studio expõe <code>/v1/embeddings</code>, mas apenas se um modelo de embeddings estiver carregado — e <b>não consigo verificar daqui</b>, o endpoint é inalcançável fora da rede.</p>
+  <div class="opts g4">
+    <div class="opt" data-v="2a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Pelo endpoint local</span><span class="tag rec">recomendado</span>
+      <p class="odesc">Mesma infraestrutura do LLM, sem dependência nova no app. <b>⚠ Depende de confirmação com o Alexandro</b> de que há (ou pode haver) um modelo de embeddings carregado no LM Studio. Se não houver, esta opção não existe e cai para b ou d.</p>
+    </div>
+    <div class="opt" data-v="2b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">sentence-transformers no próprio app</span>
+      <p class="odesc">Roda offline, sem depender do servidor — funciona <b>nesta máquina inclusive</b>, o que destrava desenvolvimento e teste aqui. <b>Custo:</b> ~500MB de download de modelo e PyTorch como dependência, num projeto que hoje instala 7 pacotes leves.</p>
+    </div>
+    <div class="opt" data-v="2c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">API paga de embeddings</span>
+      <p class="odesc">Estável e sem infraestrutura. <b>Custo por chamada e chave a gerenciar</b> — e contraria o ganho principal de ir para o LLM local, que foi justamente eliminar chave e limite de tier.</p>
+    </div>
+    <div class="opt" data-v="2d" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">d</span><span class="oname">Sem embeddings — TF-IDF/BM25 local</span>
+      <p class="odesc">Agrupa por sobreposição de vocabulário, com scikit-learn puro: <b>sem modelo, sem GPU, sem rede</b>. Mais fraco que embeddings para sinônimos e paráfrase. Resolve “agrupar” com a menor infraestrutura possível, e pode virar o fallback das outras três.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c2">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c2" data-cgroup="2" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="3">
+  <div class="dhead"><span class="dnum">3</span><h2>Chat sobre o acervo</h2><span class="dcode">D-C2</span></div>
+  <p class="dsub">Estava na lista de fora-de-escopo da spec de 08/09, como YAGNI.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="3a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Não entra</span><span class="tag rec">recomendado</span>
+      <p class="odesc">É o <b>wiki-chat</b>, que você declarou projeto distinto em 08/09: ele <i>consome</i> acervo, este <i>constrói</i>. O wiki-chat já tem o plano inteiro implementado (15/15) e está indo para homologação. <b>Impacto:</b> nada muda nos dois projetos.</p>
+    </div>
+    <div class="opt" data-v="3b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Entra</span>
+      <p class="odesc">O buscador passa a também consumir o que baixou. <b>Risco:</b> duplica um projeto pronto e reabre a fronteira que você fechou explicitamente — o alerta de duplicação foi levantado em 08/09 e <i>retirado</i> depois da sua correção.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c3">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c3" data-cgroup="3" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="4">
+  <div class="dhead"><span class="dnum">4</span><h2>Extração de dispositivos e geração de checklist</h2><span class="dcode">D-C3</span></div>
+  <p class="dsub">Também estava fora por YAGNI, com o argumento de que já existem: <code>/analise-normativa</code> (extrai e verifica) e <code>checklist-conformidade</code> (gera a planilha).</p>
+  <div class="opts g2">
+    <div class="opt" data-v="4a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Não entra, mas ganha handoff</span><span class="tag rec">recomendado</span>
+      <p class="odesc">O buscador entrega o acervo organizado e a planilha-registro <b>no formato que as duas soluções já consomem</b>. Custo pequeno (formato de saída), e fecha a ponte que hoje é manual. <b>Impacto:</b> não toca nem <code>/analise-normativa</code> nem <code>checklist-conformidade</code>.</p>
+    </div>
+    <div class="opt" data-v="4b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Entra nativo</span>
+      <p class="odesc">Pipeline único, do tema ao checklist, sem trocar de ferramenta. <b>Custo:</b> reimplementa duas soluções que existem e funcionam — é o oposto de “aproveitar o que já funciona”.</p>
+    </div>
+    <div class="opt" data-v="4c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Não entra, sem handoff</span><span class="tag now">como está hoje</span>
+      <p class="odesc">A ponte entre o buscador e as duas soluções continua manual, como hoje.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c4">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c4" data-cgroup="4" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="5">
+  <div class="dhead"><span class="dnum">5</span><h2>Adaptadores Planalto e LEGIN (scraping)</h2><span class="dcode">D-B2</span></div>
+  <p class="dsub">Decisão aberta desde 09/09. <b>A emenda adversarial R1-10 verificou que duas das três rotas catalogadas retornam 404 hoje</b>, e a do TCU pode ser SPA. Enquanto isso, A já cobre legislação federal pelo <b>LexML (API SRU/CQL)</b> e o TCU por <b>Dados Abertos</b> — as duas por API, não por scraping.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="5a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Não entram</span><span class="tag rec">recomendado</span>
+      <p class="odesc">LexML já cobre legislação federal e o TCU já vem por API oficial. Elimina de vez o scraping frágil e as emendas R1-18/R1-19. <b>Perde:</b> normativos que só existam no LEGIN da Câmara — lacuna real, mas cujo tamanho <b>não foi medido</b>.</p>
+    </div>
+    <div class="opt" data-v="5b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Entram, com validação prévia dos seletores</span>
+      <p class="odesc">Baixar a página real, confirmar o seletor e trocar a fixture sintética pela página real. <b>Custo:</b> ~5 min por site agora, mais <b>manutenção recorrente</b> toda vez que o HTML mudar — e as rotas atuais já estão 404.</p>
+    </div>
+    <div class="opt" data-v="5c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Ficam para depois</span>
+      <p class="odesc">Consolida primeiro com LexML+TCU, mede a lacuna com uso real e decide depois. <b>Reversível</b> e adia o custo sem fechar a porta.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c5">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c5" data-cgroup="5" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="6">
+  <div class="dhead"><span class="dnum">6</span><h2>Provedor de busca da web aberta</h2><span class="dcode">D-B1</span></div>
+  <p class="dsub">Aberta desde 09/09 — mas <b>a pergunta foi escrita sem saber que A existia</b>. ✅ Verificado: A já implementa Google CSE <i>e</i> DuckDuckGo (<code>ddgs</code>), com proteção SSRF, bloqueio de IP privado e validação de esquema de URL, tudo já revisado em segurança.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="6a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Reusar o que A já tem</span><span class="tag rec">recomendado</span>
+      <p class="odesc">DuckDuckGo sem chave nenhuma; Google CSE quando houver chave configurada. <b>Zero trabalho</b> e já passou por revisão de segurança. <b>Risco:</b> o DuckDuckGo pode bloquear por robô — daí o Google CSE existir como segundo backend.</p>
+    </div>
+    <div class="opt" data-v="6b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">API paga (Brave, Serper, Tavily)</span>
+      <p class="odesc">Resultado limpo e estável, sem risco de bloqueio. <b>Custo por consulta e chave a gerenciar</b>, e descarta um backend que já está escrito e testado.</p>
+    </div>
+    <div class="opt" data-v="6c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Só fontes catalogadas</span>
+      <p class="odesc">Procedência sempre forte, sem web aberta. <b>Perde</b> a rede de segurança que a própria decisão B1 escolheu ter, e joga fora <code>google_searcher.py</code> (499 linhas).</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c6">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c6" data-cgroup="6" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="7">
+  <div class="dhead"><span class="dnum">7</span><h2>Configuração do LLM</h2><span class="dcode">D-C5</span></div>
+  <p class="dsub">✅ Verificado nesta sessão: <code>http://10.10.111.125:1234/v1</code> <b>não responde desta máquina</b> (timeout de 10s; IP interno da Câmara). A solução será migrada para uma máquina na rede, onde o LLM local passa a ser utilizável. Em qualquer opção, o requisito B3 continua valendo: <b>nenhum caminho de código pode exigir LLM</b>.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="7a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Local primário, Gemini alternativa</span><span class="tag rec">recomendado</span>
+      <p class="odesc">Produção usa <code>gemma-4</code> local: <b>sem chave e sem limite de tier</b>. Gemini fica como alternativa configurável e <code>NullLLM</code> como padrão inerte, que é o que roda aqui. <b>Impacto:</b> preserva as ~400 linhas de prompt e fallback já testadas de A.</p>
+    </div>
+    <div class="opt" data-v="7b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Gemini primário, local opcional</span>
+      <p class="odesc">Funciona aqui e lá sem reconfigurar. <b>Custo:</b> mantém os limites que o próprio código de A documenta — <b>15 RPM e 1.000 chamadas/dia</b> — que mordem exatamente no caso de uso que originou o projeto: o acervo de 100+ normativos.</p>
+    </div>
+    <div class="opt" data-v="7c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Só local, remove google-genai</span>
+      <p class="odesc">Um caminho só e uma dependência a menos. <b>Perde:</b> nenhum LLM disponível fora da rede da Câmara, inclusive para teste manual nesta máquina.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c7">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c7" data-cgroup="7" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="8">
+  <div class="dhead"><span class="dnum">8</span><h2>Destino do repositório A (levantamento-normativos)</h2><span class="dcode">D-C6</span></div>
+  <p class="dsub">A tag anotada <code>levantamento-v1-streamlit</code> <b>já foi criada</b> nesta sessão, então o estado pré-consolidação está preservado em qualquer cenário. O código de A entra no repo consolidado por <code>git merge --allow-unrelated-histories</code>, preservando autoria e cadeia de commits.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="8a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Arquivar no GitHub, depois de provado</span><span class="tag rec">recomendado</span>
+      <p class="odesc">Vira somente-leitura, com README apontando para cá — só <b>depois</b> que o golden-master provar a consolidação. <b>Reversível</b> (desarquivar é um clique) e impede que as duas bases divirjam.</p>
+    </div>
+    <div class="opt" data-v="8b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Deixar parado, sem arquivar</span><span class="tag now">como está hoje</span>
+      <p class="odesc">Nada muda. <b>Risco:</b> alguém (ou você, do outro PC) commita lá por engano e as duas bases divergem em silêncio — que é exatamente o problema que esta consolidação existe para resolver.</p>
+    </div>
+    <div class="opt" data-v="8c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Deletar o repositório remoto</span>
+      <p class="odesc">⚠ <b>Irreversível.</b> Não recomendo: o histórico de A é a prova documental de que o código existia — foi justamente a ausência dessa prova que fez a spec de 08/09 nascer de uma premissa falsa.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c8">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c8" data-cgroup="8" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="9">
+  <div class="dhead"><span class="dnum">9</span><h2>Push dos commits para o GitHub</h2><span class="dcode">D-C7</span></div>
+  <p class="dsub">Hoje há <b>1 commit local não enviado</b> (o spec de consolidação, <code>7e42f51</code>). Nada foi pushed nesta sessão.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="9a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Push a cada chunk fechado</span><span class="tag rec">recomendado</span>
+      <p class="odesc">O outro PC enxerga o andamento — e foi ele que gerou o commit de hoje às 15:20, então há trabalho acontecendo em dois lugares. <b>Reduz o risco de divergir de novo</b>, que é a origem deste board.</p>
+    </div>
+    <div class="opt" data-v="9b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Só no fim da consolidação</span>
+      <p class="odesc">Histórico fica local até o fim. <b>Risco:</b> se o outro PC commitar nesse meio-tempo, o merge vem depois e maior.</p>
+    </div>
+    <div class="opt" data-v="9c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Não pushar por ora</span><span class="tag now">como está hoje</span>
+      <p class="odesc">Mantém tudo local até você decidir.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c9">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c9" data-cgroup="9" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section data-group="10">
+  <div class="dhead"><span class="dnum">10</span><h2>Onde registrar a lição do endpoint inalcançável</h2><span class="dcode">D-C8</span></div>
+  <p class="dsub">Fato a não redescobrir: <code>10.10.111.125:1234</code> só responde de dentro da rede da Câmara. Sua regra global <code>environment-lessons-go-global.md</code> diz que lição <b>de máquina</b> vai para o arquivo global, e lição <b>de repo</b> fica no repo.</p>
+  <div class="opts g2">
+    <div class="opt" data-v="10a" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">a</span><span class="oname">Em ~/.claude/ENVIRONMENT.md</span><span class="tag rec">recomendado</span>
+      <p class="odesc">É lição de máquina/rede, não de projeto: vale para qualquer trabalho futuro que tente usar esse endpoint. Segue a sua regra global ao pé da letra. <b>Impacto:</b> edita um arquivo fora deste repo.</p>
+    </div>
+    <div class="opt" data-v="10b" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">b</span><span class="oname">Só no LESSONS.md do repo</span>
+      <p class="odesc">Fica junto do projeto. <b>Custo:</b> invisível de qualquer outro projeto — exatamente a lacuna que a regra global foi criada para fechar.</p>
+    </div>
+    <div class="opt" data-v="10c" tabindex="0" role="button" aria-pressed="false">
+      <span class="letter">c</span><span class="oname">Não registrar</span>
+      <p class="odesc">Nada é escrito; a informação vive só nesta conversa e some com ela.</p>
+    </div>
+  </div>
+  <div class="ocomment-wrap">
+    <label class="ocomment-label" for="c10">Comentário (opcional)</label>
+    <textarea class="ocomment" id="c10" data-cgroup="10" placeholder="Observações, ressalvas ou condições sobre esta decisão…"></textarea>
+  </div>
+</section>
+
+<section>
+  <div class="dhead"><h2>Já decidido — não precisa responder</h2></div>
+  <div class="note">
+    <p><b>Abordagem:</b> port-first, aproveitando ao máximo o que já funciona — confirmado por você hoje.</p>
+    <p><b>Base do código:</b> o Streamlit de A, invertendo a decisão B2 (que escolheu FastAPI sem saber que A existia).
+    B vira uma lista de 6 features sobre código que roda, no lugar de 16 tasks sobre pasta vazia.</p>
+    <p><b>Destino:</b> <code>~/Documents/solucoes/buscador-normativos/</code> — pasta criada e repo clonado nesta sessão.</p>
+    <p><b>Travas anti-regressão:</b> tag <code>levantamento-v1-streamlit</code> (✅ feita), golden-master antes de mexer
+    no modelo de dados, auditoria de preservação de docstrings, e correção dos documentos que afirmam falsamente que
+    “o artefato original não existe”.</p>
+    <p><b>Continua verbal, sem letras:</b> o nome definitivo da pasta de código depois do merge, e a ordem exata de
+    implementação das 6 features — ambos entram no plano de implementação, não aqui.</p>
+  </div>
+</section>
+
+</div>
+
+<div class="bar-answer">
+  <div class="bar-inner">
+    <span class="bar-label">Sua resposta</span>
+    <div id="answer">— clique nas opções acima —</div>
+    <button id="copy" type="button">Copiar</button>
+    <div class="bar-board" id="boardid"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sel = {};
+  function isMulti(g){
+    var s = document.querySelector('section[data-group="'+g+'"]');
+    return !!(s && s.getAttribute('data-multi') === 'true');
+  }
+  function render(){
+    var groups = Object.keys(sel).filter(function(g){return sel[g].length}).sort(function(a,b){return a-b});
+    var txt = groups.map(function(g){ return g + sel[g].sort().join(','); }).join('  ');
+    document.getElementById('answer').textContent = txt || '— clique nas opções acima —';
+  }
+  document.querySelectorAll('.opt[data-v]').forEach(function(el){
+    function toggle(){
+      var v = el.getAttribute('data-v');
+      var m = v.match(/^(\d+)(\w)$/); if(!m) return;
+      var g = m[1], o = m[2];
+      sel[g] = sel[g] || [];
+      var i = sel[g].indexOf(o);
+      if (i >= 0) { sel[g].splice(i,1); el.classList.remove('sel'); el.setAttribute('aria-pressed','false'); }
+      else {
+        if (!isMulti(g)) {
+          sel[g] = [];
+          document.querySelectorAll('.opt[data-v]').forEach(function(x){
+            var xm = x.getAttribute('data-v').match(/^(\d+)/);
+            if (xm && xm[1] === g) { x.classList.remove('sel'); x.setAttribute('aria-pressed','false'); }
+          });
+        }
+        sel[g].push(o); el.classList.add('sel'); el.setAttribute('aria-pressed','true');
+      }
+      render();
+    }
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+  });
+  function gatherComments(){
+    var out = [];
+    document.querySelectorAll('textarea.ocomment').forEach(function(ta){
+      var v = (ta.value || '').trim();
+      if (v) out.push(ta.getAttribute('data-cgroup') + ': ' + v);
+    });
+    return out;
+  }
+  // Board identity travels WITH the answer. Without it, a bare "1j 2d 3a" is ambiguous the
+  // moment two boards exist, and letters mean different decisions in each one -> decoding
+  // against the wrong board corrupts the ledger silently. Prefer the real filename (it cannot
+  // drift from the artifact); fall back to the declared meta when served from a route (hub).
+  function boardId(){
+    var fromFile = '';
+    try { fromFile = decodeURIComponent((location.pathname || '').split('/').pop() || ''); } catch(e) {}
+    if (/\.html?$/i.test(fromFile)) return fromFile;
+    var meta = document.querySelector('meta[name="board-id"]');
+    var declared = meta ? (meta.getAttribute('content') || '').trim() : '';
+    if (declared && declared.indexOf('__') !== 0) return declared;
+    return fromFile || '';
+  }
+  function composeFull(){
+    var letters = document.getElementById('answer').textContent;
+    if (letters.indexOf('—') === 0) letters = '';
+    var comments = gatherComments();
+    var parts = [];
+    var id = boardId();
+    if (id) parts.push('board: ' + id);
+    if (letters) parts.push(letters);
+    if (comments.length) parts.push('# comentarios\n' + comments.join('\n'));
+    return parts.join('\n\n');
+  }
+  (function(){
+    var el = document.getElementById('boardid');
+    var id = boardId();
+    if (el) el.textContent = id ? ('board: ' + id) : '';
+  })();
+  document.getElementById('copy').addEventListener('click', function(){
+    var t = composeFull();
+    if (!t) return;
+    navigator.clipboard.writeText(t).then(function(){
+      var b = document.getElementById('copy'); b.textContent = 'Copiado!';
+      setTimeout(function(){ b.textContent = 'Copiar'; }, 1400);
+    });
+  });
+})();
+</script>
+</body>
+</html>

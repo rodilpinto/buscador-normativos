@@ -98,11 +98,55 @@ Tudo o mais do plano de 16 tasks **sai de escopo**. Entram, sobre código que j�
 | F4 | Selo **"já tenho"**, casando por **sha256** (não por título) | M1 | R1-08, R1-09 |
 | F5 | Download + organização por tema + relatório de duplicata | B4 | R1-07, R1-12, R1-17 |
 | F6 | SQLite (retomabilidade) + colunas de registro na planilha | §6, critério 4 | R1-11, R1-15 |
+| F7 | **Agrupamento semântico dos resultados** para triagem em bloco | **M2** — é o que faz o critério nº 2 fechar | — |
 
-**Fora de escopo, confirmado:** indexação semântica, chat sobre o acervo, extração de
-dispositivos, geração de checklist (as duas últimas já existem em `/analise-normativa` e
-`checklist-conformidade`; as duas primeiras são o `wiki-chat`). Some também a reescrita em
-FastAPI e as tasks T14/T15.
+### 3.1 F7 — agrupamento semântico (decisão D-C1, 2026-09-16)
+
+**Por que entrou.** Na spec de 08/09 "indexação semântica" foi cortada como YAGNI, junto com o
+chat sobre o acervo. ✅ Verificado que o corte foi **por associação de nome, não por análise**:
+são três coisas distintas, e só uma delas pertence ao `wiki-chat`.
+
+✅ **O problema que F7 resolve é aritmético.** `score_relevance` (com LLM) e `_keyword_relevance`
+(sem LLM) **ordenam** resultados; nenhum **agrupa**. Ordenar 100 itens muda a ordem das 100
+decisões, não o número. Agrupar por metadado (`tipo`, `orgao_emissor`) produz grupos
+internamente heterogêneos, em que o humano desce ao item e volta às 100 decisões. Sem
+agrupamento por assunto, **o critério de sucesso nº 2 não tem mecanismo**.
+
+> ### ⚠ Requisito vinculante — o agrupamento é ADITIVO
+> "não remover do usuário a capacidade de ver tudo. os agrupamentos devem facilitar e não
+> remover opções." — Rodrigo, 2026-09-16
+>
+> O agrupamento **oferece** um atalho para decidir em bloco. **Nunca** remove, oculta, filtra
+> nem colapsa item fora da visão do usuário. Reforça a decisão B5 ("mostrar todos, nada é
+> ocultado"). **Tem teste próprio** — não "simplificar".
+>
+> 📝 Efeito colateral notado: isto **derruba o risco principal** que a própria feature carregava
+> (cluster ruim → decisão em bloco errada). Se nada some, cluster mal formado custa uma
+> conferência a mais, não um normativo perdido.
+
+**Fora de escopo, confirmado (board de 16/09):**
+
+- **Chat sobre o acervo** (D-C2) — é o `wiki-chat`, projeto distinto, já 15/15 implementado.
+- **Busca semântica sobre o acervo baixado** (opção `1c` da D-C1) — mesmo terreno do `wiki-chat`.
+- **Selo já-tenho por embedding** (opção `1b` da D-C1) — não entra agora. ⚠ **Lacuna conhecida e
+  não mitigada:** material **sem numeração** (manuais, frameworks, guias ANPD) continua
+  escapando do selo, porque a dedup bibliográfica de A depende de `tipo|numero|data`.
+- **Extração de dispositivos e geração de checklist** (D-C3) — o handoff para
+  `/analise-normativa` e `checklist-conformidade` vai para **roadmap de feature futura**, fora
+  do MVP.
+- **Adaptadores Planalto e LEGIN** (D-B2) — adiados; ver §3.2.
+- **Reescrita em FastAPI** e as tasks T14/T15.
+
+### 3.2 Cobertura é requisito, não preferência (D-B2 + D-B1)
+
+> "essa é uma ferramenta de pesquisar, então devemos conseguir pegar o máximo de coisas possível
+> senão a ferramenta não será segura. então temos de ter formas de pegar os resultados e formas
+> subsidiárias de pegar o q a ferramenta original não pegar" — Rodrigo, 2026-09-16
+
+Adiar Planalto e LEGIN **só é aceitável porque a web aberta é a via subsidiária** (D-B1: reusar
+o DuckDuckGo + Google CSE que A já tem). Decorre daí um item **obrigatório antes de fechar o
+MVP**: medir a lacuna de cobertura das fontes catalogadas contra um tema real e registrar o
+resultado. Cobertura insuficiente conta como **falha**, não como limitação conhecida.
 
 ---
 
@@ -167,6 +211,26 @@ ser teórico — é a condição para a suíte rodar aqui.
 documenta (`gemini-2.5-flash-lite`: 15 RPM, 1.000/dia) — limite que morde exatamente no caso
 de uso que originou o projeto, o acervo de 100+ normativos.
 
+### 5.1 Embeddings são caminho SEPARADO do LLM (decisão D-C1.2)
+
+⚠ **Distinção que precisa ficar explícita no código:** embedding **não é** o LLM. É modelo
+menor e separado, que só produz vetores — não gera texto e não é o `gemma-4`, que é modelo de
+geração. Confundir os dois quebra o requisito B3.
+
+**Escolha:** `sentence-transformers` rodando **dentro do app**, não no servidor. Roda offline,
+**inclusive nesta máquina**, o que destrava desenvolvimento e teste sem depender de terceiros.
+Custo aceito: PyTorch e ~500MB de modelo, num projeto que hoje instala 7 pacotes leves.
+
+📝 **Migração prevista:** quando houver modelo de embeddings no LM Studio do servidor local, a
+troca é de **configuração** — a interface é a mesma, muda só quem gera o vetor. O pedido a ser
+repassado ao Alexandro está em `BLOCKED-ON-RODRIGO.md` (B-01). **Não bloqueia nada**: foi por
+isso que a opção local-no-app foi escolhida.
+
+**Consequência de desenho:** F7 precisa de uma interface de vetorização de um método só
+(`vetorizar(textos) -> matriz`), com pelo menos duas implementações desde o início —
+`sentence-transformers` e um fallback sem modelo — para que a troca seja verdadeiramente de
+configuração e não um refactor.
+
 ---
 
 ## 6. Emendas adversariais: o que continua valendo
@@ -229,6 +293,11 @@ Herdados da spec de 08/09, com o nº 2 como critério central:
 5. **Novo:** a suíte de A continua verde após a consolidação — provado por golden-master, não
    por inspeção.
 6. **Novo:** o sistema roda de ponta a ponta **sem nenhum LLM configurado**.
+7. **Novo (F7):** o agrupamento **nunca reduz** o conjunto visível. Teste que prova que a soma
+   dos itens dos grupos é igual ao total de resultados, e que existe caminho para ver a lista
+   inteira sem agrupamento. Requisito vinculante de §3.1.
+8. **Novo (§3.2):** a lacuna de cobertura das fontes catalogadas foi **medida** contra um tema
+   real e registrada, antes de o MVP ser considerado fechado.
 
 ---
 
