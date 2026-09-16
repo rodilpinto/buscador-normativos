@@ -10,6 +10,310 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-08-buscador-normativos-design.md`
 
+## Emendas da Rodada 1 (revisão adversarial) — VINCULANTES, prevalecem sobre o corpo
+
+> **Data:** 2026-09-11 · **Método:** 5 revisores independentes e cegos entre si (contrato entre
+> tasks · dados/API · risco de domínio · construtibilidade · determinismo e teste).
+> **Regra de precedência:** onde uma emenda contradiz o texto original de uma task, **a emenda
+> vence**. Nenhuma task pode ser marcada como feita sem cumprir a emenda que a cita.
+>
+> **Procedência dos achados:** ✅ = comportamento verificado por leitura do texto do plano, por
+> execução de comando ou por consulta à página real. 📝 = recomendação de desenho, não verificada.
+> ⚠ **Os números de linha citados nas emendas referem-se ao plano ANTES desta inserção.**
+> Esta seção acrescentou ~300 linhas ao topo do arquivo: para localizar qualquer trecho citado,
+> use `grep -n` pelo identificador (nome de função, string do teste), não o número literal.
+>
+> Os itens marcados **[confirmado na síntese]** foram re-verificados pelo orquestrador, não só
+> pelo revisor que os levantou. **[convergente]** = levantado por 2 ou mais revisores cegos.
+
+---
+
+### BLOQUEADORES (nenhuma linha de código antes de resolver)
+
+**R1-01 · O grafo de ondas está errado: T12 e T13 dependem da T11.** ✅ [confirmado na síntese] [convergente: lentes 1 e 4]
+`tests/test_download.py` (linha 1719) e `tests/test_planilha.py` (linha 1927) fazem
+`from buscador.busca import executar_busca`, que é a T11. A T13 estava agendada na **onda 2**
+e a T12 declarada **paralela à T11** na onda 3. As duas falhariam em `ModuleNotFoundError` no
+slot agendado. A checagem de colisão do `00-overview.md` comparou **arquivos tocados** e não
+**imports**, então não podia ver isso.
+**Emenda vinculante:** a onda 3 passa a ser **T11 sozinha**; T12 e T13 vêm **depois** da T11.
+A afirmação "T11 ∥ T12" fica **revogada**. O `00-overview.md` e o `_TODO.md` devem ser
+corrigidos antes de qualquer build.
+📝 Alternativa que restauraria o paralelismo, se o implementador preferir: reescrever as duas
+fixtures para semear o banco por SQL cru (como `tests/test_db.py` já faz) em vez de chamar o
+orquestrador. Tem a vantagem de fazer cada teste testar a própria unidade. Não é obrigatória.
+**Regra nova, permanente:** toda checagem de colisão de trilha passa a comparar **arquivos
+tocados E imports entre tasks**.
+
+**R1-02 · Nenhuma task do plano instala nada.** ✅ [confirmado na síntese]
+`pip install` aparece uma única vez em 2641 linhas, na **linha 2554**, dentro do *texto* do
+README que a T16 grava em disco. Nunca é executado. As ~32 instruções `py -m pytest` das 16
+tasks rodam contra o Python global. Verificado ao vivo pelo revisor: repetindo os Steps 1-3 da
+T1 nesta máquina, o comando falha com `No module named pytest`, **não** com o
+`ModuleNotFoundError: No module named 'buscador.config'` que o plano promete. A primeira
+instrução executável do plano já falha pelo motivo errado, o que quebra o ciclo TDD logo no
+primeiro passo: o agente vê vermelho, mas não o vermelho que deveria ver.
+**Emenda vinculante:** a T1 ganha um **Step 0** que cria o venv e instala:
+`python -m venv .venv` e `.venv/Scripts/python -m pip install -e ".[dev]"`. Toda instrução
+`Run:` das 16 tasks passa a usar `.venv/Scripts/python -m pytest`.
+📝 Recomendado junto: declarar `[build-system]` no `pyproject.toml`. O revisor verificou que
+`pip install -e .` funciona sem ele (setuptools implícito), então não é bloqueador.
+
+**R1-03 · `normalizar_url` falha o próprio teste da T3.** ✅ [confirmado na síntese]
+Teste (linha 373): `normalizar_url("https://X.gov.br/Lei.htm?a=1#topo") == "https://x.gov.br/lei.htm"`.
+Implementação (linhas 412-415): minusculiza `p.scheme` e `p.netloc`, **nunca o path**. Devolve
+`https://x.gov.br/Lei.htm`. A T3 está no **gate da onda 1** e três das quatro trilhas da onda 2
+dependem dela.
+**Emenda vinculante:** minusculizar o path em `normalizar_url`.
+**Trava de rastreabilidade, obrigatória junto:** a URL normalizada serve **apenas** para
+`chave_dedup`. O campo `Resultado.url` guarda a URL original, literal, sem nenhuma
+transformação (spec §6, item 3). Acrescentar teste que prove que `url` não é sobrescrita pela
+forma normalizada.
+
+**R1-04 · `chave_dedup` descarta a query string e perde normativo em silêncio.** ✅ [lente 2]
+`normalizar_url` passa `""` como query em `urlunsplit`. Legin e TCU identificam documentos
+distintos por id na query (`?idAto=152` vs `?idAto=153`). Dois normativos **diferentes**
+colapsam na mesma chave, e `unicos.setdefault(r.chave_dedup, r)` (linha ~1662) mantém só o
+primeiro, **sem aviso, sem log, sem relatório**. É perda silenciosa de acervo, o inverso exato
+da mitigação "nunca duplicação silenciosa" da B4.
+**Emenda vinculante:** (a) preservar a query string na chave quando o path sozinho não
+discrimina, descartando apenas parâmetros sabidamente de ruído (sessão, rastreamento); e
+(b) **todo colapso de dedup vira registro**: o que foi fundido com o quê, visível ao humano.
+Dedup silencioso é proibido nas duas direções.
+
+**R1-05 · As duas travas anti-ancoragem colidem e a ordem escolhida viola a constraint do plano.** ✅ [confirmado na síntese] [lente 5]
+Em `premarcacao.py` o `if r.vinculacao == "obrigatorio"` retorna **antes** do teste de
+`procedencia == "web-aberta"`. Logo um item `obrigatorio` vindo da **web aberta** nasce `fica`,
+contra a **linha 21** deste plano ("Web aberta nunca é pré-marcada `fica`"). A docstring da
+task diz "A ordem das regras É a especificação", isto é, o plano eleva a especificação uma
+ordem que contradiz sua própria constraint. Hoje o caso é inalcançável só porque
+`FonteWebAberta` fixa `vinculacao_padrao="contexto"`: é **acidente de implementação, não
+garantia**. Nenhum teste cobre a combinação.
+**Emenda vinculante:** escrever a precedência de forma explícita e testada. A regra é:
+**procedência vence vinculação**. Nada de web aberta nasce `fica`, qualquer que seja a
+vinculação; `obrigatorio` de fonte catalogada nunca nasce `sai`. Acrescentar
+`test_obrigatorio_de_web_aberta_nao_nasce_fica` e uma invariante de dados que impeça a
+construção de um `Resultado` com `procedencia="web-aberta"` e `vinculacao="obrigatorio"` sem
+passar por revisão humana.
+
+**R1-06 · As ações de grupo furam a trava anti-ancoragem, e o servidor não a reafirma.** ✅ [confirmado na síntese] [lente 3]
+O template nem renderiza `data-vinculacao` (linha 2235 traz só `data-ja-tenho` e
+`data-procedencia`). `desmarcar-todos` (linha 2264) desmarca tudo sem olhar vinculação;
+`desmarcar-ja-tenho` (linha 2265), que é **a mitigação obrigatória da B5**, desmarca qualquer
+item com selo, inclusive um `obrigatorio`. A rota `gravar` (linha 2172) faz
+`UPDATE resultados SET decisao='sai'` na busca inteira e reaplica `fica` só ao que veio no POST,
+**sem nenhuma validação**. Resultado: uma norma juridicamente obrigatória sai do acervo de
+critério com um clique, sem aviso e sem registro de divergência. A trava da spec §7 existe só
+em `premarcacao.py` e não sobrevive à camada de interação.
+**Emenda vinculante:** (a) renderizar `data-vinculacao` em cada item; (b) toda ação de grupo
+**pula** itens `obrigatorio` e mostra quantos poupou; (c) a rota `gravar` **valida no servidor**:
+mudar um `obrigatorio` para `sai` exige confirmação explícita e separada, e grava o motivo da
+divergência; (d) teste de contrato para cada uma das quatro ações de grupo provando que o item
+`obrigatorio` sobrevive.
+
+**R1-07 · O relatório de duplicata da B4 é calculado e jogado fora.** ✅ [lente 3]
+`baixar_selecionados` devolve `RelatorioDownload(baixados, duplicatas, erros)`, e a rota
+`aplicar` (linha 2391) **descarta o retorno**. Não grava, não loga, não renderiza. `COLUNAS`
+da planilha (linha 1986) não tem coluna de duplicata nem de caminho do arquivo, e a consulta
+traz `a.sha256` mas nunca `a.caminho`. A **detecção** existe; o **relatório**, que é a peça
+textualmente exigida pela decisão B4 como mitigação obrigatória, nunca chega ao humano.
+**Emenda vinculante:** persistir o `RelatorioDownload`, renderizá-lo após o "aplicar", e
+acrescentar à planilha as colunas "Duplicata de outro tema" e "Caminho do arquivo".
+
+**R1-08 · O selo já-tenho (M1) casa por título, não por sha256, e a File Structure promete sha256.** ✅ [lente 5]
+A linha 42 da File Structure diz "Índice **sha256** do acervo existente". `indexar()` mapeia
+`normalizar_titulo(stem do arquivo) -> caminho` e `marcar_ja_tenho` compara títulos
+normalizados. `sha256_arquivo` é implementado e testado, mas **nunca chamado** nesse caminho.
+Consequência traçada com nomenclatura real: acervo tem `LGPD.pdf` (chave `lgpd`), resultado vem
+como "LEI Nº 13.709, DE 14 DE AGOSTO DE 2018" (chave `lei n 13 709 de 14 de agosto de 2018`).
+**Não casa.** O M1, que é o mecanismo central de redução de decisões, não dispara justamente na
+variação de nomenclatura mais comum do direito brasileiro. No sentido inverso, dois normativos
+homônimos de anos ou órgãos diferentes ("Instrução Normativa nº 1") colapsam na mesma chave e
+produzem um "já tenho" **falso**, que pré-marca `sai` um documento que o órgão não tem.
+**Emenda vinculante:** (a) casar por sha256 onde houver arquivo; (b) o casamento por título
+vira **sinal fraco**, exibido ao humano como "possível duplicata, não confirmada", e **nunca**
+dirige sozinho uma pré-marcação `sai`; (c) testes com as três formas reais: "Lei nº 13.709, de
+14 de agosto de 2018", "Lei 13.709/2018", "LGPD".
+
+**R1-09 · O dedup por sha256 não cobre o acervo que já existia.** ✅ [lente 5] [convergente com R1-07]
+`baixar_selecionados` compara o sha256 novo contra a tabela `arquivos`, que só é populada por
+downloads feitos **pela própria ferramenta**. Os arquivos que o órgão já tinha, colocados à mão,
+nunca entram lá. Ou seja: a mitigação obrigatória da B4 não cobre exatamente a população de
+arquivos que motivou o projeto.
+**Emenda vinculante:** antes do primeiro download, popular `arquivos` com o sha256 de todo
+arquivo sob `acervo_raizes`, usando o `sha256_arquivo` que hoje é código morto. Teste: semear um
+arquivo num acervo fora de `raiz_dados`, baixar bytes idênticos e provar que é reportado como
+duplicata.
+
+**R1-10 · Duas das três rotas catalogadas retornam 404 hoje, e a do TCU pode ser SPA.** ✅ [lente 2, verificado contra a web]
+`www2.camara.leg.br/legin/busca?termo=` → **404**. `portal.tcu.gov.br/busca?q=` → **404**.
+A busca real do TCU fica em `pesquisa.apps.tcu.gov.br/#/pesquisa/integrada`, com roteamento por
+hash, assinatura de aplicação renderizada em JavaScript. **Se confirmado, `httpx` + `selectolax`
+não conseguem raspar aquilo, e isso é mudança de arquitetura, não ajuste de seletor.** O TCU
+publica API de dados abertos (`dados-abertos.apps.tcu.gov.br/api/acordao/recupera-acordaos`) que
+o plano não menciona. A rota do Planalto **não foi confirmada** (erro de conexão no teste): é
+lacuna real, não aprovação.
+**Emenda vinculante:** antes de escrever T5 e T6, baixar a página real de cada fonte, confirmar
+rota e seletor, e **substituir a fixture sintética pela página real**. Para o TCU, decidir entre
+API de dados abertos e scraping **antes** de implementar. Isto resolve a **D-B2**, que sai de
+"suposição" para "duas rotas comprovadamente erradas".
+
+**R1-11 · Falta a coluna "Dimensão TCU", exigida pelo critério de sucesso nº 4 da spec.** ✅ [confirmado na síntese] [lente 2]
+A spec (§8, critério 4, linha 120) lista 11 colunas do projeto, entre elas **Dimensão TCU**.
+`COLUNAS` da T13 tem 17 entradas, mas nenhuma é essa, e não existe campo correspondente no
+schema da T2 nem no `Resultado` da T3. O plano entrega 10 das 11 colunas originais e acrescenta
+uma "Pré-marcação" não pedida, fechando 17 por coincidência aritmética.
+**Emenda vinculante:** acrescentar `dimensao_tcu` ao schema (T2), ao `Resultado` (T3), ao
+adaptador que consegue preenchê-la (no mínimo `FonteTCU`) e a `COLUNAS` (T13).
+
+---
+
+### ALTOS (corrigir antes da task correspondente, não antes de tudo)
+
+**R1-12 · `caminho_longo()` é chamado em um único lugar, contra a constraint do próprio plano.** ✅ [confirmado na síntese] [convergente: lentes 3 e 5]
+A linha 17 afirma: "**toda** operação de arquivo usa o helper". Ele é definido na linha 1818 e
+usado **só** na linha 1877, no `open()` do download. Ficam desprotegidos: `indexar()` e
+`sha256_arquivo()` da T9 (varrem o acervo, que mora sob `~/Documents/projetos-nuati/...`, prefixo
+já longo) e o `mkdir`/`save` de `gerar_planilha` na T13. Acima de 260 chars a falha é
+**silenciosa**: arquivo do acervo some do índice sem erro, planilha não é gravada e a rota
+`aplicar` ainda responde 303.
+Erro de documentação junto: a linha 17 diz que o helper é "da Task 13"; ele é da **Task 12**.
+**Emenda vinculante:** mover `caminho_longo()` para um módulo compartilhado (T1 ou T2) e
+aplicá-lo em **toda** leitura e escrita que toque `raiz_dados` ou `acervo_raizes`. Teste com
+caminho real acima de 260 chars para T9 e T13.
+
+**R1-13 · Nenhum rate limit, nenhum User-Agent, nenhum backoff.** ✅ [convergente: lentes 2 e 3]
+Busca por `user-agent|rate.limit|backoff|sleep|throttle|robots` nas 2641 linhas: **zero
+ocorrências**. Os três adaptadores fazem `httpx.Client(...).get(...)` em laço por termo. O
+usuário é servidor público operando da rede do órgão; dezenas de requisições por busca contra
+`planalto.gov.br`, `camara.leg.br` e `tcu.gov.br` é caminho concreto para **bloqueio do IP
+institucional**. Sites .gov.br atrás de WAF também costumam devolver 403 ou página de desafio
+para cliente sem User-Agent, e aí `extrair()` devolve lista vazia em vez de erro.
+Este risco **não está na spec §7**.
+**Emenda vinculante:** User-Agent identificável e honesto, intervalo mínimo entre requisições e
+tratamento de 429/503 com backoff, nos três adaptadores, **antes** de qualquer execução contra a
+web real. Acrescentar o risco à spec §7.
+
+**R1-14 · Toda rota FastAPI vaza uma conexão sqlite.** ✅ [convergente: lentes 2 e 4]
+O helper `conn()` (linha 2151) abre conexão nova a cada requisição e nunca fecha: sem
+`close()`, sem `try/finally`, sem dependência com `yield`. São 6 rotas. Num app que a spec
+descreve como servidor local de vida longa, é vazamento de handle por requisição. No Windows,
+handle aberto também trava o teardown de `tmp_path` do pytest.
+**Emenda vinculante:** trocar por dependência FastAPI com `yield` que fecha no `finally`, e
+fechar a conexão em todo helper de teste que abre uma.
+
+**R1-15 · Re-execução: o "aplicar" rebaixa tudo, e a decisão pós-download não reconcilia com o arquivo.** ✅ [lente 3]
+(a) A seleção pega todas as linhas `decisao='fica'` sem checar se já existe `resultado_arquivo`.
+Um segundo clique em "aplicar" **rebate na rede** tudo que já foi baixado, e como o sha256 é
+idêntico, cada item já baixado é contado como "duplicata", poluindo justamente o relatório da
+B4 com um sentido que não é o dele.
+(b) Se o humano voltar à triagem e desmarcar um item **já baixado**, `gravar` o marca `sai` e
+nada remove o arquivo nem o vínculo. A planilha passa a mostrar sha256 preenchido numa linha
+com decisão `sai`: contradição direta dentro do documento de rastreabilidade.
+**Emenda vinculante:** (a) pular o que já tem `resultado_arquivo`, sem tocar a rede e sem contar
+como duplicata; contar duplicata só quando o mesmo sha256 aparece em `resultado_id` de **outro
+tema**; (b) mudar decisão depois do download exige confirmação e grava override rastreável; a
+planilha nunca mostra sha256 em linha `sai` sem marcar o histórico.
+
+**R1-16 · O critério de sucesso nº 2 da spec não tem teste em nenhuma das 16 tasks.** ✅ [lente 5]
+A spec §8 promete "100+ resultados triáveis em menos de **15 decisões humanas**". Nenhum teste
+constrói um conjunto de 100+ resultados nem conta decisões. As 16 tasks podem ficar verdes e o
+produto falhar no único número que o justifica.
+**Emenda vinculante:** teste que monta 100+ resultados sintéticos com mistura realista de
+`vinculacao`/`procedencia`/`ja_tenho`, roda `premarcar_todos` mais o agrupamento, e afirma um
+teto de decisões necessárias abaixo de 15, usando as ações de grupo ao máximo.
+
+**R1-17 · `pasta_do_tema` trunca em 32 chars sem desambiguador.** ✅ [lente 2]
+Dois temas com os mesmos 32 primeiros caracteres normalizados caem na **mesma pasta**, sem
+detecção. "Levantamento sobre Governança de Dados" e "Levantamento sobre Governança de Acesso"
+colidem. É a falha que a B4 queria evitar, chegando por outro caminho.
+**Emenda vinculante:** sufixar com `busca_id` ou hash curto do tema completo, mantendo o teto de
+32 chars por causa do limite de 260.
+
+**R1-18 · Fixture sintética não é gate de nada.** ✅ [convergente: lentes 2 e 5]
+Nas T5 e T6 o mesmo autor escreve o seletor CSS **e** o HTML que o alimenta. Todo teste verde
+dessas tasks prova só que o autor é coerente consigo mesmo. O plano admite isso, mas a admissão
+mora numa **nota de risco em prosa no fim do documento**, não presa a nenhum checkbox. Um agente
+que segue task a task com "N passed" como critério entrega os três adaptadores verdes e
+estruturalmente não testados.
+**Emenda vinculante:** vira **Step com checkbox** dentro das T5 e T6: a fixture real precisa
+estar commitada antes da task poder ser marcada como feita. Enquanto não estiver, `buscar()` é
+declarado **não verificado** no README e no `_TODO.md`.
+
+**R1-19 · Seletor errado devolve lista vazia em silêncio, contra a mitigação da spec §7.** ✅ [convergente: lentes 2 e 4]
+A spec §7 promete "falha é ruidosa" para adaptador que quebra. Isso só vale para o teste de
+`extrair()` com fixture. No caminho real, se o HTML não casar o seletor, `css()` devolve lista
+vazia, `extrair()` devolve `[]` e **nenhuma exceção sobe**. O `try/except` do orquestrador nunca
+dispara; a fonte contribui zero resultado sem alarme.
+**Emenda vinculante:** resposta HTTP 200 não vazia que produz **zero** extrações vira aviso
+explícito, distinto de "a busca não achou nada". O orquestrador registra por fonte.
+
+---
+
+### MÉDIOS e BAIXOS (não bloqueiam, mas entram na task correspondente)
+
+- **R1-20 · `CATALOGO`/`registrar` são código morto.** ✅ [confirmado na síntese] [convergente: lentes 1 e 4]
+  Só aparecem no próprio arquivo da T4 e no teste dela (linhas 489, 496, 516-517, 550-554).
+  `fontes_padrao` da T16 monta `[FontePlanalto(), FonteLegin(), FonteTCU()]` na mão. A promessa
+  implícita de "fonte nova sem tocar o núcleo" **não é entregue**: acrescentar a ANPD ainda exige
+  editar `cli.py`. **Emenda:** ou ligar `fontes_padrao` ao `CATALOGO`, ou remover o mecanismo da
+  T4 e documentar que fonte nova custa uma linha no `cli.py`. Não deixar como está.
+- **R1-21 · `ementa_llm` nunca é escrito.** ✅ [lente 1] O campo existe no dataclass e no schema,
+  a decisão B3 promete "enriquece ementas", e **nenhuma task escreve nele**: o `INSERT` da T11
+  nem o inclui. **Emenda:** implementar, ou corrigir a B3 na spec para não prometer o que o plano
+  não entrega. 📝 Recomendação da síntese: corrigir a spec, é menos escopo e o LLM continua
+  opcional.
+- **R1-22 · A T12 declara consumir `sha256_arquivo` e não consome.** ✅ [lente 1] A seção
+  `Interfaces` lista a função da T9; o código calcula `hashlib.sha256(conteudo)` inline sobre os
+  bytes em memória. **Emenda:** corrigir a declaração, ou reusar de fato (ver R1-09, que quer o
+  reuso por outro motivo).
+- **R1-23 · `README.md` criado duas vezes** (T1 e T16, ambas como "Create"). ✅ [todas as lentes
+  confirmaram] **Emenda:** a T16 passa a ser "Modify"; a T1 grava um esqueleto mínimo.
+- **R1-24 · `openpyxl` levanta `IllegalCharacterError`** com caractere de controle vindo do HTML,
+  abortando a planilha inteira por causa de uma linha. 📝 [lente 2] **Emenda:** limpar apenas os
+  caracteres **ilegais em XML** antes de gravar a célula. ⚠ Cuidado: isso **não pode** virar
+  normalização de texto, que seria paráfrase proibida pela spec §6.
+- **R1-25 · O teste do `caminho_longo` é tautológico.** ✅ [lente 2] `assert caminho_longo(tmp_path
+  / "x").endswith("x")` nunca falharia, mesmo com o helper inteiramente removido. **Emenda:**
+  construir caminho real acima de 260 chars e afirmar o prefixo de caminho estendido do Windows.
+- **R1-26 · `indexar()` depende da ordem do `rglob`.** ✅ [lente 5] `setdefault` guarda o primeiro,
+  e a ordem do sistema de arquivos não é garantida: o "já tenho" pode apontar para arquivo
+  diferente entre execuções. **Emenda:** `sorted()` e regra de desempate documentada.
+- **R1-27 · Os três extratores catalogados não têm guarda de título vazio.** ✅ [lente 5] Âncora com
+  href e texto vazio entra com `titulo=''`, passa no `NOT NULL`, e várias linhas malformadas
+  colapsam na mesma `chave_dedup`. **Emenda:** replicar o `if not titulo or not url: continue` que
+  a `FonteWebAberta` já tem.
+- **R1-28 · `pytest-asyncio` é peso morto.** ✅ [lente 4] Está nas deps, não há `asyncio_mode`
+  configurado e **nenhum** teste assíncrono no plano. **Emenda:** remover da dev extras.
+- **R1-29 · `py` vs o interpretador explícito.** ✅ [lente 4] As ~32 instruções usam o atalho `py`,
+  enquanto o `global-constraints.md` manda usar o caminho completo. Hoje funciona nesta máquina.
+  **Emenda:** normalizar para o caminho do venv depois da R1-02.
+- **R1-30 · `coletado_em` é calculado por linha** dentro da list comprehension, em vez de uma vez
+  por busca. 📝 [lente 5] Inconsistência latente para qualquer agrupamento futuro por data de
+  coleta.
+- **R1-31 · Nada impede `raiz_dados` apontar para dentro de `acervo_raizes`.** 📝 [lente 3] Erro de
+  configuração faria a ferramenta **escrever dentro do acervo só-leitura**. **Emenda sugerida:**
+  validar em `carregar_config` que nenhuma raiz de acervo é ancestral da raiz de dados.
+- **R1-32 · Decisões humanas não são reaproveitadas entre buscas do mesmo tema.** 📝 [lente 3]
+  Rodar "LGPD" de novo meses depois recria tudo como não decidido, inclusive o que já foi
+  triado. É o cenário mais provável em auditoria contínua e o plano não o trata nem documenta.
+- **R1-33 · O dedup por sha256 assume determinismo de bytes que pode não existir.** 📝 [lente 2]
+  PDF de acórdão gerado sob demanda costuma trazer timestamp de impressão ou marca por
+  requisição: dois downloads do **mesmo** acórdão podem ter hash diferente. **Emenda:** registrar
+  como limitação conhecida no README e na spec, em vez de apresentar o dedup sha256 como
+  mitigação completa.
+
+---
+
+### O que a rodada 1 declarou SÃO (não mexer)
+
+Verificado pelos revisores e não contestado: o schema SQLite em si (tipos, `CHECK`, `PRAGMA
+foreign_keys` ligado, nenhum adaptador de data depreciado do Python 3.12+); a estrutura de
+campos do `Resultado` e a passagem de `app.py` entre T14 e T15 (sem descasamento de nome ou
+aridade); `selectolax` tem wheel `cp313-win_amd64` no PyPI, então não há risco de compilação;
+`pip install -e .` funciona sem `[build-system]`; `python -m pytest` resolve `import buscador`
+sem instalar o pacote; e `Form(default=[])` tipado `list[int]` funciona no FastAPI atual.
+
 ## Global Constraints
 
 - **Python:** `C:\Users\P_8106\AppData\Local\Programs\Python\Python313\python.exe`. Rodar via **Bash**, não PowerShell — caminhos acentuados quebram no PowerShell 5.1.
