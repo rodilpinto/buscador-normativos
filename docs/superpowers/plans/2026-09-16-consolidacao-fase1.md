@@ -18,6 +18,236 @@ inteiro sem LLM — requisito B3.
 **Tech Stack:** Python 3.13.7 · Streamlit · requests · openpyxl · beautifulsoup4 · ddgs ·
 pytest 9.0.2 · `sentence-transformers` (só na Fase 2)
 
+## Emendas da Rodada 1 — VINCULANTES, prevalecem sobre o corpo
+
+> **Data:** 2026-09-16 · **Método:** 5 revisores independentes e cegos entre si (regressão ·
+> dados/API · risco · arquitetura · teste), com trava de proporcionalidade obrigatória.
+> **39 achados brutos → 21 aceitos, 3 adaptados, 3 rejeitados.** 38 dos 39 eram `verified`.
+> **Precedência:** onde uma emenda contradiz o corpo, **a emenda vence**.
+> ✅ = comportamento verificado por leitura de código ou execução · 📝 = recomendação de desenho.
+
+### BLOCKERS — nada de código antes de resolver
+
+**A1 · A ordem das tasks é impossível.** ✅ [convergente: lentes 1 e 4]
+As Tasks 1 e 2 rodam `tools/golden_master.py` e `tools/run_all_tests.py`, que fazem
+`APP = RAIZ / "levantamento-normativos"` — pasta que **só existe depois da Task 3** (o merge).
+Resultado medido: `ModuleNotFoundError: No module named 'models'` na Task 1, e
+`NotADirectoryError` na Task 2 (cwd inexistente), antes de qualquer teste rodar.
+**Emenda:** **a Task 3 (merge) passa a ser a PRIMEIRA.** O merge é operação de git puro e não
+altera um byte de `.py`, então "congelar antes de qualquer mudança" continua satisfeito. A nova
+ordem é **3 → 1 → 2 → 4 → 5 → 6 → 7 → 8 → 9**. O Step 6 da Task 3 ("provar que nada regrediu")
+**sai**, porque chama ferramentas que ainda não existem nesse ponto.
+
+**A2 · `export_to_excel` não existe.** ✅ [convergente: lentes 1, 2 e 4]
+A função pública real é **`generate_excel(results, topic)`** (`excel_export.py:274`); é o que
+`app.py:26` e `test_phase4.py:19` importam. `deduplicate(results)` (`deduplicator.py:186`), essa
+sim, está correta.
+**Emenda:** trocar as duas ocorrências de `export_to_excel` por `generate_excel` no bloco da
+Task 1, e apagar o aviso que mandava "conferir" — o nome certo já é conhecido.
+
+**A3 · O sha256 do `.xlsx` NÃO é determinístico — o golden-master nasceria morto.** ✅ [convergente: lentes 1, 2 e 4, cada uma medindo por conta própria]
+Três revisores rodaram o `generate_excel` real duas vezes com entrada idêntica e obtiveram
+hashes diferentes (`71c0072e…`/`08a04d87…`, `bc84f2ba…`/`e240e5d1…`, `57498cbd…`/`e64ef12d…`).
+Causa medida: `.xlsx` é um ZIP; o `date_time` de cada membro recebe o relógio do `save()`, e
+`docProps/core.xml` embute `dcterms:created`/`modified`.
+Consequência: `congelar && comparar` imprimiria `DIVERGIU` na sequência imediata, **sem nada ter
+mudado** — e o executor seria empurrado a deletar a metade Excel da prova para destravar.
+**Emenda:** hashear o **conteúdo**, não o arquivo. Substituir o corpo de `_sha_planilha`:
+
+```python
+def _sha_planilha(itens: list) -> str:
+    """Hash dos VALORES das celulas, nao dos bytes do arquivo.
+
+    .xlsx e um ZIP: o date_time de cada membro e o docProps/core.xml carregam
+    o relogio da geracao, entao o sha dos bytes crus muda a cada execucao.
+    Medido: dois runs com a mesma entrada dao hashes diferentes.
+    load_workbook e a mesma tecnica que test_phase4.py:19 ja usa.
+    """
+    from excel_export import generate_excel
+    from openpyxl import load_workbook
+
+    ws = load_workbook(generate_excel(itens, topic="golden-master")).active
+    linhas = [tuple(c.value for c in linha) for linha in ws.iter_rows()]
+    return hashlib.sha256(repr(linhas).encode("utf-8")).hexdigest()
+```
+
+> **Conflito resolvido:** a lente 2 propôs hashear os membros do ZIP ignorando `docProps/`.
+> **Rejeitado em favor do hash de células** — é mais simples, é a técnica que o projeto já usa
+> em `test_phase4.py`, e não quebra quando openpyxl mudar estilos ou tema entre versões.
+
+**A4 · As faixas de linha da Task 6 deixam quatro restos, e um deles impede o módulo de importar.** ✅ [convergente: lentes 1 e 3]
+Um revisor **executou** as remoções propostas (28-48, 56-60, 74-105, 106-145) num clone e achou:
+(a) a linha 49 `        logger.info("No Gemini SDK installed…")` fica com indentação de 8 espaços
+em nível de módulo → **`IndentationError`, o módulo nem importa**; (b) o cabeçalho de comentário
+`# Priority: st.secrets > env var > empty string` (51-54) sobrevive descrevendo comportamento
+apagado — doc falso de pé; (c) `MODEL_NAME = "gemini-2.5-flash-lite"` (linha 68) executa **depois**
+do `MODEL_NAME` novo e o sobrescreve; (d) o `is_available()` antigo (147-153) sobrescreve o novo e
+faz `return _sdk != "none" and bool(api_key)` com ambos os nomes já deletados → **`NameError`**.
+`app.py:24` importa essa função como `llm_available` e a chama em 6 pontos (291, 368, 395, 398,
+418, 571): **o app quebra no Passo 1 do wizard.**
+**Emenda:** o Step 3 passa a nomear **blocos**, não faixas: apagar do `# SDK import` até o fim do
+`except ImportError`; o bloco `# API Key Resolution` inteiro; o bloco `# Model configuration`
+com o `MODEL_NAME` literal; o bloco `# Lazy Singleton Client` com `_client`, `_no_key_logged` e
+`_get_client`; e **`_generate` E `is_available`**. A seção **Files** da Task 6 passa a dizer
+`linhas 28-68 e 74-153`.
+
+**A5 · O runner descarta o exit code das suítes-script.** ✅ [lente 5]
+No laço de `SUITES_SCRIPT`, `_, saida = _rodar(...)` joga fora o `returncode`: só o regex decide.
+Não é hipotético — `test_llm_phase3.py` restaura `os.environ["GEMINI_API_KEY"]` **depois** de
+imprimir o resumo; se essa linha levantar, a suíte sai com código ≠ 0 e o runner ainda imprime
+`TUDO VERDE`.
+**Emenda:** trocar por `code, saida = _rodar(...)` e acrescentar `if code != 0: falhou = True`,
+espelhando o que o laço de `SUITES_PYTEST` já faz duas linhas abaixo.
+
+### ALTOS — corrigir antes da task correspondente
+
+**A6 · O isolamento de ambiente do `test_llm_phase3.py` fura com a variável nova.** ✅ [convergente: lentes 1 e 4]
+A suíte se blinda com **uma** linha: `os.environ.pop("GEMINI_API_KEY", None)` (`test_llm_phase3.py:14`).
+A Task 5 faz `escolher_backend()` ler também `BUSCADOR_LLM_BASE_URL` — que o próprio plano manda
+documentar no `CLAUDE.md` como configuração de produção. Entrada concreta: essa variável setada
+(o estado pretendido na máquina da Câmara) → `is_available()` True → a suíte entra no ramo que
+exige resultado não-vazio → endpoint inalcançável → `[]` → **53/53 vira 52/53**, e o runner sai 1.
+O critério de pronto só testava "ambos vazios", então o buraco passava batido.
+**Emenda:** novo step na Task 6 trocando a linha 14 por
+`for _v in ("GEMINI_API_KEY", "BUSCADOR_LLM_BASE_URL", "BUSCADOR_LLM_API_KEY"): os.environ.pop(_v, None)`.
+
+**A7 · `timeout` escalar faz uma busca de 100 normativos travar 11 minutos.** ✅ [lente 2]
+`requests` aplica o timeout escalar a connect **e** read. O endpoint de produção foi verificado
+como inalcançável **por hang** (IP interno sem rota: o SYN morre sem RST), não por recusa. Com
+`BATCH_SIZE = 20` (`gemini_client.py:160`), `score_relevance` e `categorize_results` fatiam 100
+resultados em lotes, um `_generate` por lote → ~11 minutos de espera antes de cair na heurística.
+**Emenda:** `timeout=(3.05, TIMEOUT_PADRAO)` — tupla `(connect, read)` que `requests` aceita
+nativamente. Host sem rota falha em ~3s; 11 min viram ~33s, sem encurtar o read de quem está
+realmente gerando.
+
+**A8 · O gate de preservação de documentação dá falso verde.** ✅ [convergente: lentes 1, 3 e 4]
+Rodado contra o diff real da Task 6 simulada: de **82 linhas removidas, o grep casa 12**. Entre
+as 70 perdidas estão frases de contrato — `temperature: Sampling temperature (0.0 = deterministic).`,
+`max_tokens: Maximum output tokens.`, `Returns None if no SDK is installed`. Causa: a alternância
+exige `#`, aspas ou `[A-Z]` no começo, e linha de continuação de docstring começa minúscula. O
+`| head -50` piora. **O gate que existe para provar que nenhuma explicação sumiu passava verde
+tendo deixado passar a única linha que documenta que `temperature 0.0` significa determinístico.**
+**Emenda:** trocar por `git diff -U0 levantamento-v1-streamlit HEAD -- '*.py' | grep '^-' | grep -v '^---'`
+e **ler tudo, sem `head`**. São ~80 linhas; filtrar é o que cria o falso verde.
+
+**A9 · O runner não compara contra a linha de base — suíte pode encolher em silêncio.** ✅ [lente 5]
+`if failed or passed == 0` só olha a execução corrente. Se `test_comprehensive.py` cair de 98
+para 40 testes executados e os 40 passarem, sai `Total: 40 | Passed: 40 | Failed: 0` e o runner
+reporta `TUDO VERDE`. Hoje a prova de que os números batem depende de um humano lembrar do "anote
+os números" — exatamente o que a regra anti-regressão proíbe.
+**Emenda:** acrescentar ao runner
+`BASELINE = {"test_searchers.py": 13, "test_llm_phase3.py": 53, "test_comprehensive.py": 98, "test_phase4.py": 41}`
+e falhar com mensagem explícita quando `passed != BASELINE[nome]`, dizendo qual suíte encolheu e
+de quanto.
+
+**A10 · Os 10 testes do novo backend nunca entram no runner.** ✅ [convergente: lentes 1 e 4]
+`SUITES_PYTEST` é hardcoded com uma suíte só. Os 8 testes da Task 5 e os 2 da Task 6 — **os
+únicos que cobrem a troca de transporte, que é o refactor mais arriscado da fase** — rodam apenas
+nos steps manuais dessas tasks e nunca mais.
+**Emenda:** `SUITES_PYTEST = ["test_phase4.py", "test_backends.py"]`, e `BASELINE` ganha
+`"test_backends.py": 10`.
+
+**A11 · A docstring de módulo do `gemini_client.py` passa a mentir.** ✅ [lente 3]
+Nenhum step a toca, e ela afirma duas coisas que ficam falsas: "encapsulates all communication
+with the Google Gemini API using the google-genai SDK" e "It is the **ONLY** module in the
+project that imports google.genai" — que deixa de ser verdade assim que `backends.py` o importa.
+O próximo agente lê o contrato errado no primeiro parágrafo.
+**Emenda:** reescrever as linhas 1-14 dizendo que o módulo hospeda prompts, parsing e heurística
+e **delega transporte** a `llm/backends.py`, preservando o parágrafo
+`Every public function degrades gracefully…`, que continua verdadeiro e é o contrato do B3.
+
+**A12 · A entrada fixa não exercita duas das três estratégias de dedup.** ✅ [lente 5]
+O deduplicador tem 3 estratégias (id exato · `tipo+numero` · ementa fuzzy ≥0.85), mas os 3
+exemplos do esqueleto só acionam a primeira, e a instrução "complete até 12" nunca pede os outros
+dois casos. O golden-master congelaria um comportamento que nunca cobre 2/3 do módulo.
+**Emenda:** o Step 1 passa a exigir explicitamente (a) um par com mesmo `tipo`+`numero` e `data`
+diferente; (b) um par com `tipo`/`numero` diferentes e ementas quase idênticas após normalização
+(≥60 chars, ratio ≥0,85). E um check no Step 3: conferir que `len(dedup_esperado.json) < 12` —
+prova de que o colapso realmente aconteceu.
+
+### MÉDIOS — entram na task correspondente
+
+**A13 · `pandas` é dependência de produção não declarada.** ✅ [lente 2]
+`app.py:18` faz `import pandas as pd` e `app.py:1221` usa `pd.DataFrame(...)` em produção. Nem o
+`requirements.txt` nem o `pyproject.toml` do plano o declaram: hoje funciona **por acidente**,
+porque o Streamlit arrasta pandas transitivamente.
+**Emenda:** acrescentar `"pandas",` a `[project] dependencies`.
+
+**A14 · O golden-master hasheia itens já mutados pelo dedup.** ✅ [lente 2]
+`deduplicator._merge()` altera o registro sobrevivente **in-place** (a própria docstring diz
+"Modified in-place"), mexendo em `ementa`, `nome`, `source`, `found_by`, `relevancia` e `link` —
+todos colunas da planilha. Como `congelar` chama `_saida_dedup(itens)` e depois
+`_sha_planilha(itens)` sobre a mesma lista, o sha da planilha é congelado sobre itens mutados.
+**Emenda:** em `congelar` e em `comparar`, usar `_sha_planilha(_carregar_entrada())` — entrada
+limpa recarregada do JSON — com o comentário
+`# entrada limpa: o dedup muta os itens in-place (deduplicator._merge)`.
+
+**A15 · `app.py` manda o usuário configurar um arquivo que deixou de ser lido.** ✅ [lente 1]
+`app.py:291-296` instrui: "configure `GEMINI_API_KEY` em `.streamlit/secrets.toml`". A Task 6
+apaga a leitura de `st.secrets`. O usuário segue a instrução, nada muda, e conclui que o app
+quebrou. A Task 6 não listava `app.py` nos Files.
+**Emenda:** acrescentar `app.py` aos Files da Task 6 e trocar a mensagem para citar
+`BUSCADOR_LLM_BASE_URL` / `GEMINI_API_KEY` **como variáveis de ambiente**.
+
+**A16 · O `_TODO.md` carrega duas lições que não existem em nenhum outro arquivo.** ✅ [lente 3]
+A seção P3 tem dois registros `[x]` históricos, um deles uma **lição de ambiente**: criar repo no
+GitHub exigiu `winget install --id GitHub.cli`, porque criar repositório é chamada de **API**, não
+operação git, e o token do Credential Manager que faz o `push` funcionar não bastava. Substituir
+o arquivo apaga isso — perda seca de informação, contra a regra global.
+**Emenda:** Step 4a antes da substituição: (i) mover os dois registros `[x]` para o `log.md`, que
+é append-only; (ii) acrescentar a lição do `winget`/API-vs-git ao `~/.claude/ENVIRONMENT.md`, na
+seção de gh/GitHub que já existe.
+
+**A17 · O `MEMORY.md` do repo-pai some da Task 7.** ✅ [lente 3]
+A §11 da spec lista seis documentos a alterar, incluindo `projetos-nuati/MEMORY.md` (ponteiro
+para esta solução). A Task 7 não o lista nos Files.
+**Emenda:** acrescentar `~/Documents/projetos-nuati/MEMORY.md` aos Files da Task 7, com o
+ponteiro para este repo.
+
+**A18 · O `.gitignore` do Step 3 não é união, é lista nova.** ✅ [lente 3]
+Descarta quatro entradas de A. Duas são inócuas aqui, mas **`.pytest_cache/` morde**: as Tasks 4,
+5 e 6 rodam pytest na raiz de B, o cache aparece não-ignorado, e o `git add -A` das Tasks 7 e 8 o
+commita.
+**Emenda:** acrescentar `.pytest_cache/` e `desktop.ini` ao heredoc.
+
+**A19 · O runner não tem prova de que detecta falha.** 📝 [lente 5]
+O `golden_master.py` tem um Step dedicado a provar que o comparador detecta mudança; o runner
+não tem o equivalente, então nada garante que ele não esteja sempre verde.
+**Emenda:** novo step na Task 2 — introduzir uma falha temporária numa suíte (um `assert False`),
+confirmar que o runner devolve `HOUVE FALHA` e exit 1, desfazer.
+
+**A20 · `disponivel()` responde sobre configuração, não sobre alcançabilidade.** ✅ **adaptada** [lente 2]
+`OpenAICompatBackend.disponivel()` devolve `bool(base_url and modelo)` e nunca toca a rede, mas
+`app.py` toma 6 decisões de UI em cima de `is_available()`. Com a variável apontando para um host
+sem rota, a UI anuncia LLM ativo e todo resultado vem da heurística.
+**Emenda adaptada:** ⛔ **probe de rede REJEITADO** — custaria 6 chamadas por rerun do Streamlit,
+e a A7 já derruba o hang de 60s para ~3s. Fica só (a) a docstring de uma linha em `disponivel()`
+dizendo que informa **configuração, não alcançabilidade**, e (b) a mensagem da UI dizer
+"LLM **configurado**", não "disponível".
+
+**A21 · Pequenas inconsistências do próprio plano.** ✅ [lentes 1, 2 e 4]
+- A seção **Files** da Task 1 declara `tests/golden/planilha_esperada.xlsx`, mas o código grava
+  `planilha_sha256.txt`. Corrigir o nome.
+- A mensagem de divergência do dedup só imprime contagens, mas o teste que a dispara compara
+  listas de dicts: duas listas do mesmo tamanho com conteúdo diferente produzem a mensagem
+  "esperado 9, obtido 9". Incluir o primeiro item divergente.
+- O `Interfaces` da Task 4 promete que `pip install -e ".[dev]"` "instala app e ferramentas". Com
+  `packages = []` a metade do app é falsa — o app roda por caminho, não por instalação. Corrigir
+  a promessa.
+- A tabela de comandos do `CLAUDE.md` e o docstring de `test_phase4.py:6` citam caminhos que a
+  Task 8 renomeia. Incluir os dois na varredura da Task 8.
+- O Step 4 da Task 1 só prova o ramo do dedup; acrescentar a prova do ramo do sha.
+
+### REJEITADOS — com a razão, para não voltarem na rodada 2
+
+| # | Achado | Por que foi rejeitado |
+|---|---|---|
+| R1-26 | Os 22 PNGs e `.playwright-mcp/` de A somem no merge | ✅ São artefatos não-versionados de sessão de teste, por desenho. O próprio revisor marcou `nao-vale`. Preservá-los versionaria lixo. |
+| R1-34 | A Task 3 também faz `git mv`, contradizendo a justificativa da Task 8 | A Task 3 move **documentos**, a Task 8 move **código**; a preocupação com `git log --follow` é sobre o código. Inconsistência de redação minha, não defeito do plano. |
+| R1-13 (parte) | `disponivel()` deveria sondar a rede | Custo desproporcional: 6 chamadas de rede por rerun do Streamlit para informação que a A7 já torna barata de descobrir. Ver A20, que ficou com a parte barata. |
+
+---
+
 ## Global Constraints
 
 - **Texto normativo NUNCA é parafraseado.** Título e ementa são copiados literalmente da fonte;
