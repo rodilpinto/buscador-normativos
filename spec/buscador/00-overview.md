@@ -8,6 +8,9 @@ last_updated: 2026-09-10
 
 # Mapa de execução: 16 tasks, 5 ondas
 
+> ⛔ **SUPERADO — não execute.** Cópia verbatim de uma task do plano de 16 tasks, superado em
+> 2026-09-16. Plano vigente: `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md`.
+
 > O **plano** segue fonte de verdade do *conteúdo* de cada task. Este arquivo é fonte de
 > verdade do *ordenamento*. O status por task vive no `_TODO.md`, não aqui.
 > Os arquivos em `tasks/` são cópia verbatim do plano, para o agente de build não ler 2641 linhas.

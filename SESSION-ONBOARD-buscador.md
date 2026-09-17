@@ -34,7 +34,7 @@ plano e ledgers. Nada foi merjado ainda.
 ## 3. Achados críticos (não perder)
 
 1. **O projeto NÃO é greenfield.** O app `levantamento-normativos` existe desde março/2026 em
-   `~/Documents/projeto-nuati-normativos-levantamento/`: **205 testes verdes** medidos em 16/09,
+   `~/Documents/projeto-nuati-normativos-levantamento/`: **205 testes verdes** medidos em 16/09 (13+53+98+41),
    busca por API (LexML SRU/CQL, TCU Dados Abertos, Google CSE/DuckDuckGo). A spec de 08/09 dizia
    o contrário — a varredura dela não cobriu essa pasta. Detalhe em `LESSONS.md`.
 2. **A decisão B2 foi REVERTIDA:** a base é o **Streamlit já escrito**, não um FastAPI novo.
@@ -83,10 +83,33 @@ Em qualquer dos dois, a primeira task é a **T3 (merge)**. Pergunte antes de esc
 | `decisions/DECISIONS-LOG.md` + o board `.html` | as rodadas de decisão, com os comentários |
 | ⛔ `docs/.../2026-09-08-*` e `spec/buscador/tasks/` | **SUPERADOS**, histórico apenas |
 
-Código a consolidar (fora deste repo, ainda): `~/Documents/projeto-nuati-normativos-levantamento/`.
-Acervo de consulta: `~/Documents/projetos-nuati/referencias/`.
+## 8. Fatos que não estão escritos em nenhum outro lugar
 
-## 8. Como atualizar este arquivo
+| | |
+|---|---|
+| **Repo B** (este) | `github.com/rodilpinto/buscador-normativos`, privado, branch **`master`** |
+| **Repo A** (a consolidar) | `github.com/rodilpinto/levantamento-normativos`, privado, branch **`main`** |
+| Caminho de A | `~/Documents/projeto-nuati-normativos-levantamento/` — ⚠ o código fica em `levantamento-normativos/` **dentro** dele, não na raiz |
+| Cliente de LLM | `llm/gemini_client.py` (dentro de `llm/`, não na raiz) |
+| Rodar o app | `python -m streamlit run app.py`, a partir da pasta do código |
+| Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
+
+⚠ **Assimetria de branch:** A usa `main`, B usa `master`. No merge (T3) isso aparece como
+`git fetch levantamento` + `levantamento/main`, enquanto o push daqui é `origin master`.
+
+⚠ **`.claude/` é rastreado neste repo** (`.claude/commands/onboard-buscador.md`). Por isso **não**
+entra no `.gitignore` unido da T3, embora estivesse no de A.
+
+⚠ **Namespace `R1-*` tem dois significados:** no plano de 08/09 são as emendas de 2026-09-11; na
+revisão de 16/09 os achados brutos foram numerados à parte. Diga sempre de qual documento.
+
+⚠ **A mensagem da tag de rollback é imutável e cita `6.533 linhas`** — medição antiga, que omitia
+`llm/__init__.py`. O valor correto é **6.561** (`git ls-files '*.py' | xargs wc -l`).
+
+**Fechar a D-C9** quando respondida: mover para 🟢 em `_DECISOES-PENDENTES.md` com a data, abrir
+seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-ON-RODRIGO.md` e atualizar a §6.
+
+## 9. Como atualizar este arquivo
 
 Ao mudar de estado: atualize §2/§6, bump `last_updated`, acrescente entrada no `log.md`, atualize
 os ledgers. Mantenha ≤ 1 página.

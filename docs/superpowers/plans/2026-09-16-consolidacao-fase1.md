@@ -4,7 +4,7 @@
 > (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 > Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Trazer as 6.533 linhas do app `levantamento-normativos` para dentro deste repo
+**Goal:** Trazer as ~6.5k linhas do app (`git ls-files '*.py' | xargs wc -l` → 6.561) `levantamento-normativos` para dentro deste repo
 preservando histórico, provar mecanicamente que nada regrediu, trocar o transporte do LLM para
 OpenAI-compatível, e corrigir os documentos que afirmam falsamente que esse código não existe.
 
@@ -22,7 +22,7 @@ pytest 9.0.2 · `sentence-transformers` (só na Fase 2)
 
 > **Data:** 2026-09-16 · **Método:** 5 revisores independentes e cegos entre si (regressão ·
 > dados/API · risco · arquitetura · teste), com trava de proporcionalidade obrigatória.
-> **39 achados brutos → 21 aceitos, 3 adaptados, 3 rejeitados.** 38 dos 39 eram `verified`.
+> **39 achados brutos → 21 emendas** (A1-A21). Dedup e curadoria descartaram o resto: achados convergentes foram fundidos numa emenda só, e 3 foram rejeitados com razão registrada. 38 dos 39 eram `verified`.
 > **Precedência:** onde uma emenda contradiz o corpo, **a emenda vence**.
 > ✅ = comportamento verificado por leitura de código ou execução · 📝 = recomendação de desenho.
 
@@ -162,7 +162,7 @@ exemplos do esqueleto só acionam a primeira, e a instrução "complete até 12"
 dois casos. O golden-master congelaria um comportamento que nunca cobre 2/3 do módulo.
 **Emenda:** o Step 1 passa a exigir explicitamente (a) um par com mesmo `tipo`+`numero` e `data`
 diferente; (b) um par com `tipo`/`numero` diferentes e ementas quase idênticas após normalização
-(≥60 chars, ratio ≥0,85). E um check no Step 3: conferir que `len(dedup_esperado.json) < 12` —
+(≥60 chars, ratio ≥0,85). E um check no Step 3: conferir que `len(dedup_esperado.json) < 14` (o corpus subiu para 14 pela B12) —
 prova de que o colapso realmente aconteceu.
 
 ### MÉDIOS — entram na task correspondente
@@ -242,7 +242,7 @@ dizendo que informa **configuração, não alcançabilidade**, e (b) a mensagem 
 
 | # | Achado | Por que foi rejeitado |
 |---|---|---|
-| R1-26 | Os 22 PNGs e `.playwright-mcp/` de A somem no merge | ✅ São artefatos não-versionados de sessão de teste, por desenho. O próprio revisor marcou `nao-vale`. Preservá-los versionaria lixo. |
+| R1-26 | Os 21 PNGs e `.playwright-mcp/` de A somem no merge | ✅ São artefatos não-versionados de sessão de teste, por desenho. O próprio revisor marcou `nao-vale`. Preservá-los versionaria lixo. |
 | R1-34 | A Task 3 também faz `git mv`, contradizendo a justificativa da Task 8 | A Task 3 move **documentos**, a Task 8 move **código**; a preocupação com `git log --follow` é sobre o código. Inconsistência de redação minha, não defeito do plano. |
 | R1-13 (parte) | `disponivel()` deveria sondar a rede | Custo desproporcional: 6 chamadas de rede por rerun do Streamlit para informação que a A7 já torna barata de descobrir. Ver A20, que ficou com a parte barata. |
 
@@ -594,11 +594,11 @@ propósito durante o merge, para não atrapalhar `git log --follow`. A renomeaç
 |---|---|---|
 | `tools/golden_master.py` | congela e compara saídas determinísticas | **novo** (Task 1) |
 | `tests/golden/*.json`, `*.xlsx` | saídas de referência congeladas | **novo** (Task 1) |
-| `tools/run_all_tests.py` | runner único das 4 suítes, com exit code | **novo** (Task 2) |
+| `tools/run_all_tests.py` | runner único das suítes (4; viram **5** no Step 4b da T6) | **novo** (Task 2) |
 | `levantamento-normativos/` | app Streamlit completo | **merge de A** (Task 3) |
 | `pyproject.toml` | dependências e metadados | **novo** (Task 4) |
-| `buscador/llm/backends.py` | protocolo `LLMBackend` + 3 implementações | **novo** (Task 5) |
-| `buscador/llm/client.py` | 3 funções de A, com transporte trocado | **modificado de A** (Task 6) |
+| `levantamento-normativos/llm/backends.py` | protocolo `LLMBackend` + 3 implementações | **novo** (Task 5) |
+| `levantamento-normativos/llm/gemini_client.py` | 3 funções de A, com transporte trocado | **modificado de A** (Task 6) |
 | `docs/historico/levantamento-v1/` | spec antiga de A, preservada | **movido** (Task 3) |
 | `log.md`, `SESSION-ONBOARD-buscador.md`, `_TODO.md`, `CLAUDE.md` | duráveis corrigidos | **modificado** (Task 7) |
 
@@ -977,6 +977,10 @@ Thumbs.db
 # Artefatos de sessao de teste
 .playwright-mcp/
 test_*.png
+
+# Cache de teste e lixo do Windows (emenda A18)
+.pytest_cache/
+desktop.ini
 EOF
 git add .gitignore
 ```
@@ -1511,7 +1515,7 @@ título:
 ```markdown
 > ⚠ **CORREÇÃO (2026-09-16).** A §1 desta spec afirma que só existe um formatador sem chamadas
 > de rede. **Isso é falso.** O app `levantamento-normativos` existe desde março de 2026, tem
-> 6.533 linhas e busca por API (LexML SRU/CQL, TCU Dados Abertos, Google CSE/DuckDuckGo). A
+> 6.561 linhas e busca por API (LexML SRU/CQL, TCU Dados Abertos, Google CSE/DuckDuckGo). A
 > varredura de 08/09 não cobriu `~/Documents/projeto-nuati-normativos-levantamento/`.
 > **Prova:** suíte executada em 16/09 — 41 passed (pytest) e 98/98 PASS, incluindo três testes
 > LIVE contra LexML e TCU, todos verdes.
@@ -1527,7 +1531,7 @@ Acrescente no topo (o formato do arquivo é "mais recente primeiro"):
 ## [2026-09-16] consolidação | o artefato original existia — correção de premissa
 
 A entrada de 08/09 afirma que "o artefato original não existe" e que o buscador "nunca foi
-código". **Está errado.** O app `levantamento-normativos` existia desde março: 6.533 linhas,
+código". **Está errado.** O app `levantamento-normativos` existia desde março: 6.561 linhas,
 busca por API, revisões de segurança e qualidade aplicadas. A varredura de 08/09 cobriu
 `solucoes/`, as skills e `projeto-AI-com-IA/`, mas **não** a pasta onde o app mora.
 

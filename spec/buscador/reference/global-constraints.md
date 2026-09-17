@@ -2,6 +2,9 @@
 
 # Buscador de Base Normativa — Implementation Plan
 
+> ⛔ **SUPERADO — não execute.** Cópia verbatim de uma task do plano de 16 tasks, superado em
+> 2026-09-16. Plano vigente: `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Construir um app web local que, a partir de um tema, pesquisa normativos em fontes catalogadas e na web aberta, e entrega uma lista **triável em poucas decisões humanas**, baixando e organizando só o que sobrevive à triagem.

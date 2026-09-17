@@ -22,7 +22,7 @@ Existiam **dois projetos concorrentes**, não duas cópias do mesmo:
 | Local | `~/Documents/projeto-nuati-normativos-levantamento/` | este repo |
 | Criado | mar/2026 | 08/09/2026 |
 | Estado | ✅ código completo e revisado | ✅ spec + plano, **zero linha de código** |
-| Volume | ✅ 6.533 linhas (4.059 produção + 2.474 teste) | ✅ 16 tasks, plano de 2.641 linhas + 19 emendas |
+| Volume | ✅ 6.561 linhas (4.087 produção + 2.474 teste) | ✅ 16 tasks, plano de 2.641 linhas + 19 emendas |
 | Stack | Streamlit + Gemini + openpyxl | FastAPI + SQLite (planejado) |
 | Remoto | `rodilpinto/levantamento-normativos` | `rodilpinto/buscador-normativos` |
 
@@ -86,7 +86,7 @@ Streamlit. Consequência: manter Streamlit não nos prende a ele — migrar depo
 
 ---
 
-## 3. Escopo: as seis features que entram de B
+## 3. Escopo: as features que entram de B (F1-F7)
 
 Tudo o mais do plano de 16 tasks **sai de escopo**. Entram, sobre código que já roda:
 
@@ -337,7 +337,7 @@ Assim os 2 commits de A e sua autoria passam a viver aqui.
 renomear no mesmo commit em que se funde histórico, o que atrapalha o `git log --follow`), e
 renomear para o nome definitivo **em commit separado**, depois.
 
-⚠ **Os 22 PNGs de teste e o `.playwright-mcp/`** na raiz de A estão **não versionados** (saída
+⚠ **Os 21 PNGs de teste e o `.playwright-mcp/`** na raiz de A estão **não versionados** (saída
 de `git status`). Não entram no merge, e não devem: são artefatos de sessão de teste.
 
 ---
@@ -348,8 +348,8 @@ de `git status`). Não entram no merge, e não devem: são artefatos de sessão 
 |---|---|
 | `log.md` | entrada nova registrando o achado de §1.1 e esta consolidação |
 | `docs/superpowers/specs/2026-09-08-...-design.md` | corrigir §1 (premissa falsa) e a B2 (stack), apontando para cá |
-| `SESSION-ONBOARD-buscador.md` | reescrever §2 (fase), §3 item 2 (achado falso) e §5 (próximo movimento) |
-| `_TODO.md` | substituir as 16 tasks pelas 6 features de §3 |
+| `SESSION-ONBOARD-buscador.md` | reescrever §2 (fase), §3 (achados críticos) e §6 (próximo movimento) |
+| `_TODO.md` | substituir as 16 tasks pelas features F1-F7 de §3 |
 | `_DECISOES-PENDENTES.md` | fechar D-B1 e D-B2 à luz desta spec; abrir a de configuração do LLM |
 | `CLAUDE.md` | registrar que a base é Streamlit e que o LLM é OpenAI-compatível |
 | `projetos-nuati/MEMORY.md` | ponteiro para esta solução (item já aberto no `_TODO.md` de B) |

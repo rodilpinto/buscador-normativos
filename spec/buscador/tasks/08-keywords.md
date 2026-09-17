@@ -4,6 +4,9 @@ plan: docs/superpowers/plans/2026-09-08-buscador-normativos.md (linhas 1110-1288
 reference: spec/buscador/reference/global-constraints.md
 ---
 
+> ⛔ **SUPERADO — não execute.** Cópia verbatim de uma task do plano de 16 tasks, superado em
+> 2026-09-16. Plano vigente: `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md`.
+
 > Extraído verbatim do plano. O plano segue fonte de verdade; esta cópia existe para o
 > agente de build não precisar ler 2641 linhas. Divergência entre os dois = o plano ganha.
 > **Depends on:** T1 (`Config`)

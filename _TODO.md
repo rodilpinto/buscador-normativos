@@ -65,9 +65,9 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
 
 ## P3 — depois da Fase 1
 
-- [ ] **Medir a lacuna de cobertura** das fontes catalogadas contra um tema real. ⚠ **Obrigatório
-      antes de fechar o MVP** — não é opcional. Cobertura insuficiente conta como falha, não como
-      limitação conhecida (requisito derivado do comentário do Rodrigo, `decisions/DECISIONS-LOG.md`).
+- [ ] **Medir a lacuna de cobertura** das fontes catalogadas → **`BLOCKED-ON-RODRIGO.md` B-04**.
+      É bloqueio no humano (exige tema real e julgamento de quem conhece o acervo), não task.
+      ⚠ Obrigatório antes de fechar o MVP. O pacote completo está lá; aqui só o ponteiro.
 - [ ] Rodar contra um tema real e medir o critério de sucesso nº 2 da spec: 100+ resultados
       triáveis em menos de 15 decisões.
 - [ ] Reavaliar se Planalto e LEGIN fazem falta (D-B2 adiou; a lacuna não foi medida).

@@ -16,7 +16,9 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 ## 🔴 D-C9 — Dobrar as emendas no corpo do plano, ou construir com elas como estão?
 
 - **Onde aparece:** fim da sessão de 16/09, depois das 3 rodadas adversariais. **Não respondida.**
-- **Trava:** o início da Fase 1. As duas opções levam à mesma primeira task (T3, o merge).
+- **Trava:** ⚠ **nada, na prática.** As duas opções levam à mesma primeira task (T3, o merge),
+  que é git puro. Dá para executar a T3 inteira sem esta resposta — **não fique parado por ela.**
+  Ela só muda a *forma* de ler o plano a partir da T1.
 
 O plano da Fase 1 tem emendas vinculantes em três camadas (A1-A21, B1-B12, C1-C5), com
 precedência **C > B > A > corpo**. Cada seção do corpo derrubada já carrega um marcador `⛔`

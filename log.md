@@ -5,8 +5,8 @@
 
 **O achado que reorienta o projeto.** A entrada de 08/09 afirma que "o artefato original não
 existe" e que o buscador "nunca foi código". **Está errado.** O app `levantamento-normativos`
-existe desde março de 2026 em `~/Documents/projeto-nuati-normativos-levantamento/`: 6.533 linhas
-(4.059 produção + 2.474 teste), busca por API (LexML SRU/CQL, TCU Dados Abertos, Google
+existe desde março de 2026 em `~/Documents/projeto-nuati-normativos-levantamento/`: 6.561 linhas
+(4.087 produção + 2.474 teste; medido com `git ls-files '*.py' | xargs wc -l`), busca por API (LexML SRU/CQL, TCU Dados Abertos, Google
 CSE/DuckDuckGo), revisões de segurança e qualidade aplicadas. A varredura de 08/09 cobriu
 `solucoes/`, as skills e `projeto-AI-com-IA/` — **não** cobriu a pasta onde o app mora.
 
@@ -100,7 +100,7 @@ memória em 23/08.
 >
 > ⛔ **RETRATADO em 2026-09-16: o artefato EXISTE.** A varredura não cobriu
 > `~/Documents/projeto-nuati-normativos-levantamento/`, onde vive o app `levantamento-normativos`
-> desde março de 2026 — 6.533 linhas, busca por API (LexML SRU/CQL, TCU Dados Abertos, Google
+> desde março de 2026 — 6.561 linhas, busca por API (LexML SRU/CQL, TCU Dados Abertos, Google
 > CSE/DuckDuckGo), 205 testes verdes medidos em 16/09. O parágrafo abaixo sobre o formatador
 > `gerar_planilha_normativos.py` continua correto; errada é a conclusão de que ele era tudo o que
 > havia. Ver a entrada de 2026-09-16 no topo e `LESSONS.md`.

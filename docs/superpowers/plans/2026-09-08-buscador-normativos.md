@@ -1,5 +1,16 @@
 # Buscador de Base Normativa — Implementation Plan
 
+> # ⛔ PLANO SUPERADO — NÃO EXECUTE
+>
+> Este plano de 16 tasks foi **superado em 2026-09-16** pela consolidação. Ele nasceu da premissa
+> falsa de que o projeto era greenfield (ver a retratação na spec de 08/09).
+>
+> 👉 **Plano vigente:** `2026-09-16-consolidacao-fase1.md`.
+>
+> Fica no repo como histórico e porque suas emendas R1-xx continuam citadas pelo plano vigente.
+> ⚠ **Atenção ao namespace:** os identificadores `R1-01`…`R1-19` **deste** arquivo são as emendas
+> de 2026-09-11 e **não** têm relação com os achados brutos numerados na revisão de 16/09.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Construir um app web local que, a partir de um tema, pesquisa normativos em fontes catalogadas e na web aberta, e entrega uma lista **triável em poucas decisões humanas**, baixando e organizando só o que sobrevive à triagem.

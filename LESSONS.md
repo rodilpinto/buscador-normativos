@@ -9,7 +9,7 @@
 **Problema.** A spec de 08/09 declarou este projeto *greenfield*, afirmando que "o artefato
 original não existe" e que o buscador "nunca foi código". Sobre essa base foram escritos uma
 spec, um plano de 16 tasks e 19 emendas adversariais — **nenhuma linha de código**. O app existia
-desde março de 2026, com 6.533 linhas e 205 testes verdes.
+desde março de 2026, com 6.561 linhas e 205 testes verdes.
 
 **Causa-raiz.** A varredura de 08/09 cobriu `solucoes/`, as skills e `projeto-AI-com-IA/`. Não
 cobriu `~/Documents/projeto-nuati-normativos-levantamento/`. A conclusão foi registrada como
@@ -23,8 +23,17 @@ durável de todas, porque *procurar e não achar parece prova*. Ela **declara on
 é escrita. Quando vier herdada de outro documento, **refazer a busca e citar o comando** — nunca
 repetir por cópia.
 
-**Cobertura.** ✅ Aplicada aos 3 documentos deste repo que carregavam a afirmação. ⚠ **Não varri**
-outros repos por afirmações negativas herdadas — não medido.
+**Cobertura.** ✅ **Medida em 2026-09-16, não estimada.** 20 arquivos superados carregam marcador
+(`spec/buscador/**` = 18, mais a spec e o plano de 08/09), verificado por script que lista os
+arquivos e confere marcador em cada um. As duas afirmações falsas dentro do `log.md` (append-only)
+foram retratadas **inline**, ao lado de onde estão.
+⚠ **Não varri** outros repos por afirmações negativas herdadas — não medido.
+
+> ⚠ **Esta seção já esteve errada.** Na primeira redação ela dizia "✅ Aplicada aos 3 documentos" —
+> e a spec de 08/09 **não tinha sido tocada**, seguindo a circular com a premissa falsa enquanto o
+> onboard mandava lê-la. Pego pelo dogfood do próprio checkpoint. É a prova viva da regra da
+> entrada seguinte: **escrever "verificado" exige rodar a verificação sobre o conjunto inteiro
+> naquele momento, e citar o comando.**
 
 ---
 
@@ -104,6 +113,8 @@ tocada exige varredura própria, por vizinhança (o pacote, a pasta), não por d
 ## Ponteiros
 
 - Lições de **máquina** (valem em qualquer projeto desta máquina): `~/.claude/ENVIRONMENT.md`.
-  Registrada em 16/09: o endpoint LLM `10.10.111.125:1234` só responde de dentro da rede da Câmara.
+  Registradas por este projeto: (1) o endpoint LLM `10.10.111.125:1234` só responde de dentro da
+  rede da Câmara, com a regra do `timeout` em tupla; (2) criar repositório no GitHub exige o `gh`
+  CLI — o token do Credential Manager que faz o `push` não autoriza a chamada de API.
 - Bloqueios que dependem do humano: `BLOCKED-ON-RODRIGO.md`.
 - Decisões: `_DECISOES-PENDENTES.md` e `decisions/DECISIONS-LOG.md`.

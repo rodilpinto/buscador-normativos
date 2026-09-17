@@ -10,6 +10,11 @@ related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 > Índice acumulativo de ações que só o Rodrigo pode fazer (pedidos a terceiros, credenciais,
 > acessos, decisões de gate). **Nunca é resetado**; item resolvido vira trilha DONE no fim.
 > Entradas são índices finos — o pacote completo mora no doc da área.
+>
+> **Estados:** 🔴 aberto · 🟡 em andamento · ✅ resolvido (vai para a trilha DONE, **sem**
+> renumerar os demais).
+> **IDs:** `B-0N`, sequenciais, **nunca reaproveitados**. Entrada nova vai no fim das abertas,
+> antes da trilha DONE. Todo item tem ID — inclusive os que ainda não viraram pedido formulado.
 
 ---
 
@@ -34,15 +39,6 @@ de configuração: a interface de embeddings é a mesma, muda só quem gera o ve
 
 ---
 
-## ⏳ Também depende do humano (sem pedido formulado ainda)
-
-- **Medir a lacuna de cobertura** das fontes catalogadas contra um tema real, antes de fechar o
-  MVP. Requisito derivado do comentário do Rodrigo no grupo 5 do board
-  ("ferramenta de pesquisa que não pega o máximo não é segura"). Precisa de um tema real e do
-  julgamento de quem conhece o acervo — não dá para automatizar a aferição.
-
----
-
 ## 🔴 B-02 · Escolher entre dobrar as emendas no corpo ou construir com elas como estão
 
 - **Aberto em:** 2026-09-16 · **Detalhe completo:** decisão **D-C9** em `_DECISOES-PENDENTES.md`
@@ -62,6 +58,21 @@ O `~/Documents/projetos-nuati/MEMORY.md` **não existe** (verificado). O MEMORY.
 projeto é a auto-memória em `~/.claude/projects/C--Users-Rodrigo-Documents-projetos-nuati/memory/`,
 e a regra global `memory-write-policy` proíbe criar ou editar auto-memória sem autorização
 explícita. **Pergunta ao Rodrigo:** autoriza acrescentar uma linha lá apontando para este repo?
+
+---
+
+## 🔴 B-04 · Medir a lacuna de cobertura das fontes catalogadas
+
+- **Aberto em:** 2026-09-16 · **Origem:** comentário do Rodrigo no grupo 5 do board
+- **Bloqueia:** o fechamento do MVP. **Não** bloqueia nenhuma task da Fase 1.
+
+> "essa é uma ferramenta de pesquisar, então devemos conseguir pegar o máximo de coisas possível
+> senão a ferramenta não será segura." — Rodrigo, 2026-09-16
+
+Rodar uma busca sobre um **tema real** e avaliar o que as fontes catalogadas (LexML + TCU)
+deixaram passar, comparado ao que a web aberta trouxe. Precisa de um tema real e do julgamento de
+quem conhece o acervo — **não dá para automatizar a aferição**, por isso é bloqueio no humano e
+não task. Cobertura insuficiente conta como **falha**, não como limitação conhecida.
 
 ---
 

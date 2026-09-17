@@ -1,5 +1,18 @@
 # Buscador de Base Normativa — Design
 
+> # ⛔ PREMISSA FALSA — RETRATADA EM 2026-09-16
+>
+> A **§1 deste documento afirma que o artefato original não existe** e que só há um formatador
+> sem chamadas de rede. **Isso é falso.** O app `levantamento-normativos` existe desde março de
+> 2026 em `~/Documents/projeto-nuati-normativos-levantamento/`: busca por API (LexML SRU/CQL,
+> TCU Dados Abertos, Google CSE/DuckDuckGo), com a suíte medida verde em 16/09.
+> A varredura de 08/09 não cobriu aquela pasta.
+>
+> **A decisão B2 (FastAPI sobre Streamlit) foi REVERTIDA** por ter nascido dessa premissa.
+>
+> 👉 **Documento vigente:** `2026-09-16-consolidacao-buscador-design.md`, que **prevalece** onde
+> houver contradição. O resto desta spec (princípio §2, rastreabilidade §6, riscos §7) segue válido.
+
 **Data:** 2026-09-08 · **Origem:** brainstorm da área `ai-com-ia` (projeto "Auditoria Interna
 apoiada por IA", Secin/Nuati) · **Repo:** `~/Documents/solucoes/buscador-normativos/`
 
