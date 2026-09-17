@@ -538,6 +538,8 @@ qualquer step que rode o runner*.
 
 ## Linha de base medida (2026-09-16, antes de qualquer mudança)
 
+> ⛔ **Parcialmente derrubada.** O total de 205 vale ate a Task 6; depois do Step 4b (B2) sao **215**. Ver **B5** e **C2**.
+
 ✅ Verificado executando nesta máquina:
 
 | Suíte | Runner | Resultado |
@@ -582,6 +584,8 @@ verifique primeiro se a causa é rede: rode de novo antes de acusar regressão.
 
 ## Estrutura de arquivos
 
+> ⛔ **Ordem derrubada pela A1:** a Task 3 (merge) e a PRIMEIRA. Ordem real: 3 → 1 → 2 → 4 → 5 → 6 → 7 → 8 → 9.
+
 **Depois do merge (Task 3), o código de A fica em `levantamento-normativos/`** — nome mantido de
 propósito durante o merge, para não atrapalhar `git log --follow`. A renomeação para `buscador/`
 é a Task 8, em commit separado.
@@ -601,6 +605,8 @@ propósito durante o merge, para não atrapalhar `git log --follow`. A renomeaç
 ---
 
 ## Task 1: Golden-master das saídas determinísticas
+
+> ⛔ **Derrubada por A1** (roda em 2º, depois do merge), **A2** (`generate_excel`, nao `export_to_excel`), **A3** (hash de celulas, nao de bytes), **A14** (entrada limpa), **A12/B12** (14 itens, cobrindo as 3 estrategias de dedup) e **A21**.
 
 Congela o comportamento **antes** de qualquer mudança. Sem isto, toda prova de não-regressão
 vira leitura de código — que é exatamente o que a regra anti-regressão proíbe.
@@ -779,6 +785,8 @@ git push origin master
 
 ## Task 2: Runner único das quatro suítes
 
+> ⛔ **Derrubada por A1** (roda em 3º), **A5** (capturar exit code), **A9+B3+C1** (piso com 3 ramos, nao igualdade), **A19+B4** (prova bidirecional) e **C3** (o trecho entra no laco de impressao, onde `nome` existe). ⚠ O titulo diz "quatro suites": viram **cinco** na Task 6 (B2/C2).
+
 **Files:**
 - Create: `tools/run_all_tests.py`
 
@@ -897,6 +905,8 @@ git push origin master
 
 ## Task 3: Merge do histórico de A
 
+> ⛔ **Derrubada por A1**: esta e agora a **PRIMEIRA** task, e o **Step 6 sai** (chama ferramentas que ainda nao existem). Tambem por **A18** (`.pytest_cache/` e `desktop.ini` no `.gitignore`).
+
 **Files:**
 - Modify: `.gitignore` (resolver conflito unindo as duas listas)
 - Move: `spec/context.md`, `spec/implementation-plan/`, `spec/insights.md`, `spec/todos.md`
@@ -1003,6 +1013,8 @@ Expected: `TUDO VERDE` e `golden-master OK`, ambos exit 0, **com os mesmos núme
 
 ## Task 4: Ambiente reproduzível (emenda R1-02)
 
+> ⛔ **Derrubada por A13** (`pandas` e dependencia de producao nao declarada), **A21** (a promessa de `Interfaces` e falsa com `packages = []`) e **B11** (registrar a versao de openpyxl usada no congelamento).
+
 Hoje as dependências estão instaladas **globalmente** nesta máquina — o projeto não declara
 nada instalável. A emenda R1-02 registrou que isso quebra o ciclo TDD logo no primeiro passo.
 
@@ -1074,6 +1086,8 @@ git push origin master
 ---
 
 ## Task 5: Protocolo de backend de LLM
+
+> ⛔ **Derrubada por A7** (`timeout=(3.05, TIMEOUT_PADRAO)`, tupla) e **B9** (o teste precisa afirmar o `timeout`, senao nao trava o conserto).
 
 **Files:**
 - Create: `levantamento-normativos/llm/backends.py`
@@ -1354,6 +1368,8 @@ git push origin master
 
 ## Task 6: Ligar o cliente existente ao novo backend
 
+> ⛔ **Muito derrubada.** Ver **A4+B6** (apagar blocos nomeados; faixa `29-68 e 70-153`), **A6+B1+C5** (ACRESCENTAR linha, nao trocar a 14; entra como Step 2b), **A11+B7** (docstrings de `gemini_client.py` E `llm/__init__.py`), **A15** (`app.py` entra nos Files), **B2** (novo Step 4b) e **C4** (`tools/run_all_tests.py` no `git add`).
+
 Troca **só o transporte**. As ~400 linhas de prompt, parsing e fallback de A ficam intactas —
 é o ponto inteiro da consolidação.
 
@@ -1479,6 +1495,8 @@ git push origin master
 
 ## Task 7: Corrigir os documentos com premissa falsa
 
+> ⛔ **Derrubada por A16** (preservar os 2 registros historicos do `_TODO`), **A17+B8** (o caminho do MEMORY.md estava errado; e auto-memoria e exige autorizacao) e **B10** (o `log.md` prescreve um caminho de Python falso).
+
 Afirmação sabidamente falsa deixada de pé faz o próximo agente repetir o erro.
 
 **Files:**
@@ -1594,6 +1612,8 @@ git push origin master
 
 ## Task 8: Renomear o pacote e fechar a fase
 
+> ⛔ **Derrubada por A8+B7** (o gate de documentacao usa `git diff -U0 | grep '^-'` sem `head`, e nao ve arquivo nao-modificado) e **C2** (o Step 3 espera **215**, nao "os mesmos numeros da Task 2").
+
 **Files:**
 - Move: `levantamento-normativos/` → `buscador/`
 
@@ -1642,6 +1662,8 @@ git push origin master
 ---
 
 ## Task 9: Aposentar o repo A (decisão D-C6)
+
+> ✅ **Step 2 parcialmente FEITO em 2026-09-16:** a tag `levantamento-v1-streamlit` ja foi empurrada para o remoto (confirmado por `git ls-remote --tags origin`). Falta o README e o `gh repo archive`.
 
 ⛔ **Só execute depois de TODOS os critérios de pronto abaixo estarem verdes**, e
 **confirme com o Rodrigo no momento** — arquivar é ação externa, visível a terceiros, e a
@@ -1694,6 +1716,8 @@ Expected: `{"isArchived":true}`. Reversível a qualquer momento por `gh repo una
 
 ## Critérios de pronto da Fase 1
 
+> ⛔ **Derrubado por B5:** sao **215 passed** (13 + 53 + 98 + 41 + 10), nao 205.
+
 - [ ] `python tools/run_all_tests.py` devolve `TUDO VERDE`, com **205 passed e 0 failed**
       (13 + 53 + 98 + 41). Variação no que as APIs retornam é aceitável; falha não é.
 - [ ] `python tools/golden_master.py comparar` devolve exit 0
@@ -1704,6 +1728,8 @@ Expected: `{"isArchived":true}`. Reversível a qualquer momento por `gh repo una
 - [ ] A auditoria da Task 8 Step 4 não encontra explicação perdida sem herdeiro
 
 ## O que a Fase 2 recebe
+
+> ⛔ **Complementado por B3/C1:** mudanca intencional de composicao atualiza o `BASELINE` **no mesmo commit** que acrescenta o teste.
 
 Um app funcionando neste repo, com histórico preservado, ambiente reproduzível, LLM trocável e
 duas provas mecânicas de não-regressão já montadas. As 7 features (F1 procedência · F2

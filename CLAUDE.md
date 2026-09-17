@@ -17,9 +17,19 @@ Nasceu do projeto "Auditoria Interna apoiada por IA" (Secin/Nuati), área `ai-co
 | Doc | Papel |
 |---|---|
 | `SESSION-ONBOARD-buscador.md` | estado, ponto de entrada |
-| `docs/superpowers/specs/2026-09-08-buscador-normativos-design.md` | spec: princípio, decisões B1-B5, riscos |
-| `docs/superpowers/plans/2026-09-08-buscador-normativos.md` | plano: 16 tasks com TDD |
-| `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | ledgers e timeline |
+| `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | **spec vigente** |
+| `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | **plano vigente** — ⛔ emendas no topo prevalecem sobre o corpo |
+| `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
+| `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` · `decisions/` | lições · pendências humanas · rodadas de decisão |
+| ⛔ `docs/.../2026-09-08-*` · `spec/buscador/tasks/` | **superados** — histórico apenas |
+
+## Arquitetura (consolidação de 2026-09-16)
+
+- **Base: Streamlit**, não FastAPI. A decisão B2 de 08/09 foi **revertida** — ela escolheu FastAPI
+  sem saber que o app `levantamento-normativos` já existia, com suíte verde e busca por API.
+- **LLM por backend injetável:** OpenAI-compatível para o servidor local da Câmara, Gemini como
+  alternativa, backend nulo como padrão inerte. Configuração por variável de ambiente.
+- **O agrupamento semântico é ADITIVO:** nunca remove, oculta ou filtra item da visão do usuário.
 
 ## Convenções
 

@@ -43,6 +43,32 @@ de configuração: a interface de embeddings é a mesma, muda só quem gera o ve
 
 ---
 
+## 🔴 B-02 · Escolher entre dobrar as emendas no corpo ou construir com elas como estão
+
+- **Aberto em:** 2026-09-16 · **Detalhe completo:** decisão **D-C9** em `_DECISOES-PENDENTES.md`
+- **Bloqueia:** o início da Fase 1 (as duas opções levam à mesma primeira task, a T3).
+
+Pergunta de uma linha, com as opções e a recomendação no ledger. Não exige pesquisa nem consulta
+a terceiros — é preferência de forma.
+
+---
+
+## 🔴 B-03 · Autorizar o registro do repo na auto-memória do `projetos-nuati`
+
+- **Aberto em:** 2026-09-16 · **Origem:** emenda B8 da rodada 2 adversarial
+- **Bloqueia:** nada do código. Só o item de `_TODO.md` §P3.
+
+O `~/Documents/projetos-nuati/MEMORY.md` **não existe** (verificado). O MEMORY.md real desse
+projeto é a auto-memória em `~/.claude/projects/C--Users-Rodrigo-Documents-projetos-nuati/memory/`,
+e a regra global `memory-write-policy` proíbe criar ou editar auto-memória sem autorização
+explícita. **Pergunta ao Rodrigo:** autoriza acrescentar uma linha lá apontando para este repo?
+
+---
+
 ## ✅ DONE
 
-_(vazio — nada resolvido ainda)_
+- [x] **2026-09-16 · Tag `levantamento-v1-streamlit` empurrada para o remoto.** Era o ponto de
+      restauração de toda a trava anti-regressão e existia **só nesta máquina**
+      (`git ls-remote --tags origin` voltava vazio). O plano só a empurrava na T9, a última task —
+      até lá, perder o disco perderia o rollback. Fechado no checkpoint de 16/09; confirmado por
+      `git ls-remote --tags origin`.

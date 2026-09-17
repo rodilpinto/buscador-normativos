@@ -1,82 +1,88 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-09-10
-related: [_DECISOES-PENDENTES.md, log.md, SESSION-ONBOARD-buscador.md, spec/buscador/00-overview.md]
+last_audit: 2026-09-16
+related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
 # TODOs — o que está pendente
 
-> **Conteúdo** de cada task: o plano (`docs/superpowers/plans/2026-09-08-buscador-normativos.md`),
-> com cópia verbatim por task em `spec/buscador/tasks/`.
-> **Ordenamento** (ondas, trilhas, colisões): `spec/buscador/00-overview.md`.
+> **Conteúdo** de cada task: `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md`.
+> ⛔ **Leia as três seções de emendas ANTES do corpo** — precedência **C > B > A > corpo**.
+> Cada seção do corpo derrubada carrega um marcador `⛔` dizendo qual emenda a derruba.
 > **Status**: aqui, e só aqui.
 
-## Onda 1 — gate (sequencial, nada paralelo)
+## ⛔ Superado — o plano de 16 tasks NÃO vale mais
 
-- [ ] **T1 · Fundação** → `spec/buscador/tasks/01-foundation.md`
-      (`pyproject.toml`, `README.md`, `buscador/config.py`, `tests/test_config.py`)
-      ⚠ **Dois Steps já estão feitos** pelo checkpoint de 09/09: o `git init` (Step 6) e o
-      `.gitignore` (Step 1). Pular os dois.
-      ⚠ Colisão conhecida: a T16 também lista `README.md` como "Create" e vai sobrescrever.
-- [ ] **T3 · Modelos e normalização** → `tasks/03-models-normalize.md`
-      (`Resultado`, `chave_dedup`; está no gate porque 3 das 4 trilhas da onda 2 consomem)
+O plano de 08/09 (`docs/superpowers/plans/2026-09-08-buscador-normativos.md`) e o split em
+`spec/buscador/tasks/` foram **superados** pela consolidação de 16/09. Ficam no repo como
+histórico e porque várias das emendas antigas continuam citadas. **Não execute aquelas tasks.**
+Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 
-## Onda 2 — quatro trilhas em paralelo (interseção de arquivos vazia, verificada)
+---
 
-**Trilha A · dados**
-- [ ] **T2 · Banco SQLite** → `tasks/02-sqlite-db.md`
-- [ ] **T13 · Planilha-registro** → `tasks/13-registry-spreadsheet.md` (depende de T2)
+## Fase 1 — consolidação (plano de 16/09)
 
-**Trilha B · fontes**
-- [ ] **T4 · Protocolo `Fonte` + catálogo** → `tasks/04-source-protocol.md`
-- [ ] **T5 · Adaptador Planalto** → `tasks/05-planalto-adapter.md` ⚠ ver D-B2
-- [ ] **T6 · Adaptadores Legin e TCU** → `tasks/06-legin-tcu-adapters.md` ⚠ ver D-B2
-- [ ] **T7 · Fonte de web aberta** → `tasks/07-open-web-source.md` (provedor injetado; ver D-B1)
-      T5, T6 e T7 são paralelas entre si depois da T4.
+⚠ **A ordem NÃO é a numeração.** A emenda A1 reordenou: **T3 → T1 → T2 → T4 → T5 → T6 → T7 → T8 → T9.**
 
-**Trilha C · llm**
-- [ ] **T8 · Palavras-chave** → `tasks/08-keywords.md` (protocolo `LLM` + `NullLLM`, tolerante a falha)
+⚠ **Os arquivos de código citados abaixo (`app.py`, `llm/__init__.py`, `test_llm_phase3.py`,
+`excel_export.py`…) ainda NÃO existem neste repo.** Eles vivem em
+`~/Documents/projeto-nuati-normativos-levantamento/levantamento-normativos/` e só chegam aqui
+depois da **T3** (o merge). Antes disso, abra-os lá.
 
-**Trilha D · triagem-core**
-- [ ] **T9 · Índice do acervo e selo já-tenho** → `tasks/09-archive-index.md` (M1)
-- [ ] **T10 · Pré-marcação** → `tasks/10-premarking.md` (M3 + M4, **com as duas travas anti-ancoragem**)
+- [ ] **T3 · Merge do histórico de A** — `git merge --allow-unrelated-histories`. É a **primeira**.
+      ⚠ O Step 6 dela **sai** (A1): chama ferramentas que ainda não existem nesse ponto.
+- [ ] **T1 · Golden-master** — congela dedup + planilha. ⚠ `generate_excel`, não `export_to_excel`
+      (A2); hash de **células**, não de bytes (A3); entrada limpa (A14); **14** itens cobrindo as
+      3 estratégias de dedup (A12/B12).
+- [ ] **T2 · Runner único** — ⚠ nasce com `SUITES_PYTEST = ["test_phase4.py"]` só (B2); piso com
+      3 ramos, não igualdade (A9/B3/C1); o trecho entra no laço de impressão (C3).
+- [ ] **T4 · Ambiente reproduzível** — `pyproject.toml` + venv. ⚠ `pandas` é dependência de
+      produção não declarada (A13); SDK de LLM vira extra opcional.
+- [ ] **T5 · Protocolo de backend de LLM** — ⚠ `timeout=(3.05, 60)`, tupla (A7); o teste precisa
+      afirmar o `timeout` (B9).
+- [ ] **T6 · Ligar o cliente ao backend** — a task mais emendada. ⚠ **ACRESCENTAR** linha, não
+      trocar a 14 do `test_llm_phase3.py` (B1); blocos nomeados (A4/B6); `app.py` e
+      `llm/__init__.py` entram nos Files (A15/B7); Step 4b registra a suíte no runner (B2).
+- [ ] **T7 · Corrigir os documentos com premissa falsa** — ⚠ o MEMORY.md é auto-memória e exige
+      **autorização do Rodrigo** (B8).
+- [ ] **T8 · Renomear para `buscador/` + auditoria de docstrings** — ⚠ gate sem `head` (A8); o
+      Step 3 espera **215**, não "os mesmos números da T2" (C2).
+- [ ] **T9 · Aposentar o repo A** — ⛔ só depois de todos os critérios de pronto, **e confirmando
+      com o Rodrigo no momento** (ação externa).
+      - [x] **2026-09-16 · tag `levantamento-v1-streamlit` empurrada para o remoto** (confirmado
+        por `git ls-remote --tags origin`). O ponto de restauração deixou de ser local.
+      - [ ] README de arquivamento no repo A · [ ] `gh repo archive`
 
-## Onda 3 — núcleo (T11 e T12 em paralelo)
+## Fase 2 — as features (plano ainda não escrito)
 
-- [ ] **T11 · Orquestrador** → `tasks/11-search-orchestrator.md` (resiliente a fonte quebrada)
-- [ ] **T12 · Download** → `tasks/12-download-organize.md` (dedup sha256, pasta por tema, 260 chars)
+- [ ] **F1** procedência (`catalogada` / `web-aberta`)
+- [ ] **F2** vinculação (`obrigatorio` / `aplicavel` / `contexto`)
+- [ ] **F3** pré-marcação com motivo + as **duas** travas anti-ancoragem
+- [ ] **F4** selo "já tenho" por sha256
+- [ ] **F5** download + organização por tema + relatório de duplicata
+- [ ] **F6** SQLite + colunas de registro na planilha
+- [ ] **F7** agrupamento semântico dos resultados — ⚠ **aditivo**, nunca subtrativo (D-C1)
 
-## Onda 4 — web (sequencial: T14 e T15 tocam o mesmo `app.py`)
+## P3 — depois da Fase 1
 
-- [ ] **T14 · Página de triagem** → `tasks/14-triage-page.md` (M2: ações de grupo; mitigação de B5)
-- [ ] **T15 · Fluxo web completo** → `tasks/15-web-flow.md` (nova busca → triagem → aplicar)
-
-## Onda 5 — fechamento
-
-- [ ] **T16 · CLI, fontes reais e README** → `tasks/16-cli-sources-readme.md`
-
-## P3 — depois do plano
-
-- [ ] **Validar os seletores CSS contra os sites reais** e trocar as 4 fixtures sintéticas
-      por páginas reais salvas. Enquanto isso não for feito, `buscar()` é **não verificado**.
-- [ ] **Confirmar as rotas de busca** de Planalto (`/busca?q=`), Legin (`/legin/busca?termo=`)
-      e TCU (`/busca?q=`) — todas são suposição do plano.
-- [ ] **Rodar contra um tema real** e medir o critério de sucesso nº 2 da spec: 100+ resultados
+- [ ] **Medir a lacuna de cobertura** das fontes catalogadas contra um tema real. ⚠ **Obrigatório
+      antes de fechar o MVP** — não é opcional. Cobertura insuficiente conta como falha, não como
+      limitação conhecida (requisito derivado do comentário do Rodrigo, `decisions/DECISIONS-LOG.md`).
+- [ ] Rodar contra um tema real e medir o critério de sucesso nº 2 da spec: 100+ resultados
       triáveis em menos de 15 decisões.
-- [ ] **Resolver a ambiguidade do `README.md`** criado duas vezes (T1 e T16), registrada em
-      `spec/buscador/00-overview.md`.
-- [x] **2026-09-09 · Remoto criado**: `github.com/rodilpinto/buscador-normativos`, **privado**
-      (confirmado via `gh repo view --json visibility`). Segue a convenção dos outros repos
-      `rodilpinto/*`. ⚠ Exigiu instalar o **GitHub CLI** (`winget install --id GitHub.cli`),
-      que não existia nesta máquina — criar repositório é chamada de **API**, não operação
-      git, então o token do Credential Manager que faz o `push` funcionar não bastava.
-- [x] **2026-09-10 · Split feito**: 16 tasks extraídas verbatim para `spec/buscador/tasks/`,
-      agrupadas em 5 ondas e 7 trilhas, com checagem mecânica de colisão de arquivos.
-- [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova em `solucoes/`,
-      junto às outras (fica no repo-pai, não aqui).
+- [ ] Reavaliar se Planalto e LEGIN fazem falta (D-B2 adiou; a lacuna não foi medida).
+- [ ] Escrever o plano da Fase 2.
+- [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
+      ⛔ **Bloqueado em autorização** — é auto-memória; a regra `memory-write-policy` exige que o
+      Rodrigo autorize antes.
 
 ## Fora de escopo (registrado para não voltar à pauta)
 
-Indexação semântica, chat sobre o acervo, extração de dispositivos e geração de checklist.
-As duas últimas já existem (`/analise-normativa` + `checklist-conformidade`); as duas
-primeiras são o `wiki-chat`.
+Decidido no board de 16/09 (`decisions/DECISIONS-LOG.md`):
+
+- **Chat sobre o acervo** — é o `wiki-chat`, projeto distinto.
+- **Busca semântica sobre o acervo baixado** — mesmo terreno do `wiki-chat`.
+- **Selo já-tenho por embedding** — ⚠ lacuna conhecida e **não mitigada**: material sem numeração
+  (manuais, frameworks, guias ANPD) continua escapando do selo.
+- **Extração de dispositivos e geração de checklist** — o handoff vai para roadmap, fora do MVP.
+- **Reescrita em FastAPI** — a decisão B2 foi revertida.

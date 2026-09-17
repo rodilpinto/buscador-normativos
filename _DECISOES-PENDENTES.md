@@ -7,15 +7,37 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 # Decisões — o que espera o humano
 
-> Status: 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA.
 > Sugestões aqui são propostas, não fatos validados — marcadas com 📝.
 > Histórico de rodadas respondidas: `decisions/DECISIONS-LOG.md`.
 
+> **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
+> em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
+
+## 🔴 D-C9 — Dobrar as emendas no corpo do plano, ou construir com elas como estão?
+
+- **Onde aparece:** fim da sessão de 16/09, depois das 3 rodadas adversariais. **Não respondida.**
+- **Trava:** o início da Fase 1. As duas opções levam à mesma primeira task (T3, o merge).
+
+O plano da Fase 1 tem emendas vinculantes em três camadas (A1-A21, B1-B12, C1-C5), com
+precedência **C > B > A > corpo**. Cada seção do corpo derrubada já carrega um marcador `⛔`
+apontando qual emenda a derruba (feito no checkpoint de 16/09).
+
+| Opção | Ganha | Perde / risco |
+|---|---|---|
+| **a** Dobrar as emendas no corpo primeiro | plano linear, lido de cima a baixo sem saltar | ~1 passada de edição sobre 1.7k linhas; risco de errar ao transcrever |
+| **b** Construir com as emendas como estão | começa agora; a precedência está explícita e marcada | o executor precisa ler 3 seções + o corpo por task; é onde alguém escorrega |
+
+📝 **Recomendação:** `a`, mas é preferência fraca — os marcadores `⛔` já mitigam boa parte do
+risco da `b`.
+
+**Decisão tomada:** _(pendente)_
+
 ---
 
-## ✅ Nenhuma decisão aberta
+## ⛔ Bloqueadas em autorização (não são escolhas, são permissões)
 
-Todas as 10 do board de 16/09 foram respondidas. Próximas decisões abertas entram aqui.
+- **Registrar este repo no `MEMORY.md` do `projetos-nuati`** — é auto-memória, e a regra global
+  `memory-write-policy` exige autorização explícita do Rodrigo. Item no `_TODO.md` §P3.
 
 ---
 

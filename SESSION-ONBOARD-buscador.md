@@ -1,103 +1,92 @@
 ---
 title: Buscador de Base Normativa — state snapshot
 maintained_by: sessões do Claude Code; humanos podem editar
-last_updated: 2026-09-10
-related: [_TODO.md, _DECISOES-PENDENTES.md, log.md, spec/buscador/00-overview.md, docs/superpowers/specs/2026-09-08-buscador-normativos-design.md, docs/superpowers/plans/2026-09-08-buscador-normativos.md]
+last_updated: 2026-09-16
+related: [_TODO.md, _DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, decisions/DECISIONS-LOG.md, docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md, docs/superpowers/plans/2026-09-16-consolidacao-fase1.md]
 ---
 
 # Buscador de Base Normativa — onboarding de sessão
 
-Ponto de entrada único. ≤ 1 página. Histórico em `log.md`; backlog em `_TODO.md`; decisões
-abertas em `_DECISOES-PENDENTES.md`.
+Ponto de entrada único. ≤ 1 página. Histórico em `log.md`; backlog em `_TODO.md`; decisões em
+`_DECISOES-PENDENTES.md`; lições em `LESSONS.md`.
 
 ## 1. O que é (30s)
 
-App web local que **constrói** o acervo de critério de uma ação de controle: recebe um tema,
-expande em palavras-chave, busca em fontes catalogadas e na web aberta, e entrega uma lista
-**triável em poucas decisões humanas**; só o que sobrevive à triagem é baixado e organizado.
+App web local que **constrói** o acervo de critério de uma ação de controle: tema →
+palavras-chave → busca → **triagem em poucas decisões** → download → organização → planilha.
 
-Nasceu de um brainstorm na área `ai-com-ia` do repo `projetos-nuati` em 2026-09-08. **Repo
-próprio**, pela regra do projeto: cada solução vive em `~/Documents/solucoes/<nome>/`.
+⚠ **Não confundir com o `wiki-chat`** (`projetos-nuati/wiki-chat/`): aquele **consome** acervo
+pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
+board de 16/09 (decisão D-C2).
 
-⚠ **Não confundir com o `wiki-chat`** (em `projetos-nuati/wiki-chat/`). Aquele **consome** um
-acervo pronto e conversa sobre ele; este **constrói** o acervo. Foram explicitamente
-declarados projetos diferentes pelo Rodrigo em 08/09.
+## 2. Estado na última pausa (2026-09-16)
 
-## 2. Estado na última pausa (2026-09-10)
+🟡 **Planejamento fechado e revisado. ZERO linha de código de produção.** O que existe é spec,
+plano e ledgers. Nada foi merjado ainda.
 
-### Feito e commitado
-Cadeia desta área (repo só desta área, então aqui o tip **é** o último commit dela):
-- `1c04c2d` — **commit inicial**: spec de design, plano de **16 tasks**, ledgers, log,
-  comando de onboard, `CLAUDE.md` e `.gitignore`.
-- `40d3242` — ajuste doc-only: registra que `git init` e `.gitignore` já estão feitos, e que
-  o repo não tem remoto.
-- → commit deste checkpoint. ⚠ **O SHA mais novo listado aqui está sempre um passo atrás do
-  commit que gravou este arquivo** — a cadeia real termina em `git log --oneline -3`.
+**Cadeia desta sessão:** `7e42f51` → `8bdb0e3` → `e70f533` → `c93e6de` → `1c7fa04` → `8b5cf6a`
+→ commit deste checkpoint.
+⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo** —
+é propriedade estrutural do checkpoint, não erro. A cadeia real termina em `git log --oneline -3`.
 
-### Fase
-🟡 **Planejamento concluído, ZERO linha de código escrita.** Nenhum módulo `buscador/`,
-nenhum teste, nenhuma dependência instalada. ✅ **Split feito em 10/09**: as 16 tasks viraram
-arquivos verbatim em `spec/buscador/tasks/`, em 5 ondas e 7 trilhas, com colisão de arquivos
-checada (`spec/buscador/00-overview.md`). ⚠ Da Task 1 do plano, **dois passos já estão
-feitos**: o `git init` e o `.gitignore`. Falta `pyproject.toml`, `config.py` e o teste.
-
-### Working tree
-Limpo. ✅ **Remoto criado em 2026-09-09**: `github.com/rodilpinto/buscador-normativos`
-(**privado**, confirmado via API), branch `master` rastreando `origin/master`.
+**Working tree:** limpo na pausa; `master` rastreando `origin/master`, tudo pushed.
 
 ## 3. Achados críticos (não perder)
 
-1. **A dor real que este projeto resolve:** a primeira busca do levantamento LGPD trouxe
-   **100+ normativos**, "inviável de usar por um humano", exigindo super-filtragem manual.
-   O produto não é buscar, é **triar**. Todo desenho serve a reduzir o **número de decisões**.
-2. **O artefato original não existe.** Varredura esgotada em 08/09: o "buscador" citado de
-   memória nunca foi código. O que existe em
-   `projetos-nuati/referencias/_apendices-e-scripts/` é só um **formatador** — uma lista de
-   ~30 normativos escrita à mão dentro do `.py`, sem nenhuma chamada de rede. Isto aqui é
-   greenfield de verdade.
-3. **⚠ Os seletores CSS das Tasks 5-7 são suposição.** As fixtures fazem os testes passarem
-   mesmo se o seletor estiver errado **para o site real**. Ao implementar: baixe a página
-   real, confirme o seletor, e **substitua a fixture pela página real**.
-4. **Duas travas anti-ancoragem são requisito, não detalhe** (spec §7): item `obrigatorio`
-   nunca nasce desmarcado; nada vindo da web aberta nasce marcado. Têm teste próprio na
-   Task 10 — não "simplificar".
-5. **Windows, 260 caracteres:** acima disso o Python falha **em silêncio** (`isfile` devolve
-   `False`). Pasta de tema ≤ 32 chars e helper `caminho_longo()` (Task 12).
-6. **Rodar Python via Bash, não PowerShell** — caminho acentuado quebra no PowerShell 5.1.
+1. **O projeto NÃO é greenfield.** O app `levantamento-normativos` existe desde março/2026 em
+   `~/Documents/projeto-nuati-normativos-levantamento/`: **205 testes verdes** medidos em 16/09,
+   busca por API (LexML SRU/CQL, TCU Dados Abertos, Google CSE/DuckDuckGo). A spec de 08/09 dizia
+   o contrário — a varredura dela não cobriu essa pasta. Detalhe em `LESSONS.md`.
+2. **A decisão B2 foi REVERTIDA:** a base é o **Streamlit já escrito**, não um FastAPI novo.
+3. **Precedência das emendas: C > B > A > corpo.** O plano da Fase 1 tem 3 rodadas de revisão
+   adversarial; cada seção do corpo derrubada carrega um marcador `⛔` apontando a emenda.
+4. **A ordem das tasks não é a numeração:** T3 → T1 → T2 → T4 → T5 → T6 → T7 → T8 → T9 (emenda A1).
+5. **O agrupamento semântico é ADITIVO** — nunca remove, oculta ou filtra item da visão do
+   usuário (requisito vinculante do Rodrigo, D-C1). Tem teste próprio; não "simplificar".
+6. **Cobertura é requisito, não preferência:** medir a lacuna das fontes catalogadas contra um
+   tema real **antes** de fechar o MVP.
+7. **LLM local inalcançável desta máquina** (`10.10.111.125:1234`, timeout). Detalhe e a regra do
+   `timeout` em tupla: `~/.claude/ENVIRONMENT.md`.
 
-## 4. Disciplina de trabalho
+## 4. Ponto de restauração (rollback)
 
-Um chunk = uma task do plano. Fechar cada chunk: rodar a suíte → atualizar duráveis →
-commitar. Retomar sempre com `/onboard-buscador`.
+Tag anotada no repo A, **mensagem literal**: *"Estado pre-consolidacao: app Streamlit completo e
+revisado (mar/2026)."* — ou seja, o estado **ANTES** da consolidação.
+✅ Empurrada para o remoto em 16/09 (`git ls-remote --tags origin` confirma).
 
-## 5. Próximo movimento (recomendação, não decidido)
+```bash
+cd ~/Documents/projeto-nuati-normativos-levantamento && git checkout levantamento-v1-streamlit
+```
 
-**`/go build` na onda 1**: T1 (fundação) e depois T3 (modelos/normalização), nesta ordem.
-⚠ Pular os dois Steps já feitos da T1: o `git init` e o `.gitignore`.
+## 5. Disciplina de trabalho
 
-Fechada a onda 1, a onda 2 abre **4 trilhas paralelas** com colisão de arquivos já descartada
-(A dados · B fontes · C llm · D triagem-core). O mapa está em `spec/buscador/00-overview.md`.
+Um chunk = uma task do plano. Fechar cada chunk: rodar a suíte → golden-master → atualizar
+duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-buscador`.
 
-Nenhuma das duas decisões abertas trava escrever código: a D-B1 é resolvida por injeção na T7
-e a D-B2 é verificação, não escolha. As duas travam **rodar contra a web real**.
+## 6. Próximo movimento (recomendação, não decidido)
 
-## 6. Ponteiros
+O Rodrigo tem uma escolha aberta do fim da sessão de 16/09, **não respondida**:
+
+1. **Dobrar as emendas (`A1`-`A21`, `B1`-`B12`, `C1`-`C5`) no corpo do plano** antes de construir (plano linear, ~1 passada), ou
+2. **Construir já**, lendo as três seções de emendas junto com cada task.
+
+Em qualquer dos dois, a primeira task é a **T3 (merge)**. Pergunte antes de escolher por ele.
+
+## 7. Ponteiros
 
 | Doc | Papel |
 |---|---|
-| `docs/superpowers/specs/2026-09-08-buscador-normativos-design.md` | **spec**: problema, princípio, decisões B1-B5, riscos |
-| `docs/superpowers/plans/2026-09-08-buscador-normativos.md` | **plano**: 16 tasks com código e TDD |
-| `spec/buscador/00-overview.md` | **ordenamento**: ondas, trilhas, colisões, ambiguidades |
-| `spec/buscador/tasks/NN-*.md` | cópia verbatim de uma task, para o agente de build |
-| `_TODO.md` | ledger de tarefas e **status** por task |
-| `_DECISOES-PENDENTES.md` | decisões abertas |
-| `log.md` | timeline |
+| `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | **spec vigente** |
+| `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | **plano vigente** (emendas no topo) |
+| `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
+| `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` | lições transversais · o que espera o humano |
+| `decisions/DECISIONS-LOG.md` + o board `.html` | as rodadas de decisão, com os comentários |
+| ⛔ `docs/.../2026-09-08-*` e `spec/buscador/tasks/` | **SUPERADOS**, histórico apenas |
 
-Acervo de origem (fora deste repo, só leitura):
-`~/Documents/projetos-nuati/referencias/` — 141 arquivos em 12 categorias, e o formatador
-antigo em `_apendices-e-scripts/`.
+Código a consolidar (fora deste repo, ainda): `~/Documents/projeto-nuati-normativos-levantamento/`.
+Acervo de consulta: `~/Documents/projetos-nuati/referencias/`.
 
-## 7. Como atualizar este arquivo
+## 8. Como atualizar este arquivo
 
-Ao mudar de estado: atualize §2/§5, bump `last_updated`, acrescente entrada no `log.md`,
-atualize o ledger de decisões. Mantenha ≤ 1 página.
+Ao mudar de estado: atualize §2/§6, bump `last_updated`, acrescente entrada no `log.md`, atualize
+os ledgers. Mantenha ≤ 1 página.

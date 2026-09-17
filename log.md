@@ -1,6 +1,56 @@
 # Log — Buscador de Base Normativa
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
+## [2026-09-16] consolidação | dois projetos viram um; o artefato "inexistente" existia
+
+**O achado que reorienta o projeto.** A entrada de 08/09 afirma que "o artefato original não
+existe" e que o buscador "nunca foi código". **Está errado.** O app `levantamento-normativos`
+existe desde março de 2026 em `~/Documents/projeto-nuati-normativos-levantamento/`: 6.533 linhas
+(4.059 produção + 2.474 teste), busca por API (LexML SRU/CQL, TCU Dados Abertos, Google
+CSE/DuckDuckGo), revisões de segurança e qualidade aplicadas. A varredura de 08/09 cobriu
+`solucoes/`, as skills e `projeto-AI-com-IA/` — **não** cobriu a pasta onde o app mora.
+
+**Prova medida em 16/09, antes de qualquer mudança:** 205 testes verdes — `test_searchers` 13/13,
+`test_llm_phase3` 53/53, `test_comprehensive` 98/98 (com `LIVE: LexML search`, `LIVE: TCU search`
+e `LIVE: End-to-end search + export` passando) e `test_phase4` 41 passed. Enquanto isso, a emenda
+R1-10 do plano antigo verificou que **duas das três rotas de scraping planejadas retornam 404**.
+
+**Consequências.** O projeto deixa de ser greenfield. A decisão **B2 é revertida**: a base passa a
+ser o Streamlit já escrito, não um FastAPI novo — ela fora tomada sem saber que A existia. O
+escopo cai de 16 tasks sobre pasta vazia para **7 features sobre código que roda**, e 8 das 19
+emendas antigas ficam sem efeito por construção.
+
+**Decisões.** Board de 10 grupos respondido em duas rodadas (`decisions/DECISIONS-LOG.md`).
+Entra o agrupamento semântico dos resultados (F7), com o requisito vinculante de que o
+agrupamento é **aditivo** — nunca remove, oculta ou filtra item da visão do usuário. Ficam de
+fora chat sobre o acervo, busca semântica no acervo baixado, selo já-tenho por embedding, handoff
+de checklist (roadmap) e adaptadores Planalto/LEGIN (adiados). **D-B1 e D-B2 fecham**, abertas
+desde 09/09.
+
+**Revisão adversarial, 3 rodadas, 38 emendas vinculantes** (A1-A21, B1-B12, C1-C5). A rodada 2
+achou 3 bloqueadores que as correções da rodada 1 haviam **introduzido**; a rodada 3, dirigida,
+fechou com zero bloqueadores. Detalhe e cobertura em `LESSONS.md`.
+
+**Entregas:** spec de consolidação, plano da Fase 1 (9 tasks, 43 steps), `LESSONS.md`,
+`BLOCKED-ON-RODRIGO.md`, `decisions/`. **Nenhuma linha de código de produção.**
+
+---
+
+## [2026-09-09 e 2026-09-10] registros migrados do `_TODO.md` (preservados no checkpoint de 16/09)
+
+Os dois registros `[x]` que viviam só na seção P3 do `_TODO.md`, movidos para cá antes da
+reescrita daquele arquivo — o `log.md` é append-only e é a casa certa deles.
+
+- **2026-09-09 · Remoto criado:** `github.com/rodilpinto/buscador-normativos`, **privado**
+  (confirmado via `gh repo view --json visibility`). ⚠ Exigiu instalar o GitHub CLI
+  (`winget install --id GitHub.cli`), que não existia nesta máquina — criar repositório é chamada
+  de **API**, não operação git, então o token do Credential Manager que faz o `push` funcionar não
+  bastava. **Esta lição foi promovida a `~/.claude/ENVIRONMENT.md`** por ser de máquina, não de repo.
+- **2026-09-10 · Split feito:** as 16 tasks do plano antigo extraídas verbatim para
+  `spec/buscador/tasks/`, em 5 ondas e 7 trilhas, com checagem mecânica de colisão de arquivos.
+  ⚠ Esse plano e esse split foram **superados** pela consolidação de 16/09.
+
+---
 
 ## [2026-09-10] split | 16 tasks extraídas em arquivos, agrupadas em 5 ondas e 7 trilhas
 
@@ -31,6 +81,11 @@ nenhum truncamento, nenhum acento corrompido.
 intercepta e imprime instrução de instalação). Usar o caminho completo do plano,
 `C:\Users\P_8106\AppData\Local\Programs\Python\Python313\python.exe`, ou Bash puro.
 
+> ⛔ **RETRATADO em 2026-09-16.** Medido nesta máquina: `python --version` → `Python 3.13.7`;
+> `which python` → `/c/Python313/python`. O alias da Store **não** intercepta. E o caminho
+> prescrito acima é de **outro perfil de usuário**: `ls C:/Users/P_8106` → *No such file or
+> directory*. Seguir esta lição mandaria o executor a um caminho inexistente. Use `python` nu.
+
 Nenhuma linha de código de produção foi escrita nesta fase.
 
 ## [2026-09-08] scaffold | Brainstorm, spec e plano de 16 tasks — projeto nasce
@@ -41,7 +96,15 @@ memória em 23/08.
 
 **Varredura que precedeu o desenho (e mudou o projeto).** Procurei o artefato original em
 `solucoes/` (6 repos), nas skills e comandos do `projetos-nuati`, e na pasta do
-`projeto-AI-com-IA`. **Não existe.** O candidato `/analise-normativa` foi lido por inteiro
+`projeto-AI-com-IA`. **Não existe.**
+>
+> ⛔ **RETRATADO em 2026-09-16: o artefato EXISTE.** A varredura não cobriu
+> `~/Documents/projeto-nuati-normativos-levantamento/`, onde vive o app `levantamento-normativos`
+> desde março de 2026 — 6.533 linhas, busca por API (LexML SRU/CQL, TCU Dados Abertos, Google
+> CSE/DuckDuckGo), 205 testes verdes medidos em 16/09. O parágrafo abaixo sobre o formatador
+> `gerar_planilha_normativos.py` continua correto; errada é a conclusão de que ele era tudo o que
+> havia. Ver a entrada de 2026-09-16 no topo e `LESSONS.md`.
+> O candidato `/analise-normativa` foi lido por inteiro
 (154 linhas) e **descartado**: é gerador/auditor de checklists (modos `extrair`, `verificar`,
 `instanciar`), a montante do `checklist-conformidade`, sem nenhuma função de busca. O que
 existe em `referencias/_apendices-e-scripts/` é só um **formatador**:
