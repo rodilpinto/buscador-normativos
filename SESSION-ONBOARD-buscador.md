@@ -1,7 +1,7 @@
 ---
 title: Buscador de Base Normativa — state snapshot
 maintained_by: sessões do Claude Code; humanos podem editar
-last_updated: 2026-09-16
+last_updated: 2026-09-22
 related: [_TODO.md, _DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, decisions/DECISIONS-LOG.md, docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md, docs/superpowers/plans/2026-09-16-consolidacao-fase1.md]
 ---
 
@@ -19,17 +19,24 @@ palavras-chave → busca → **triagem em poucas decisões** → download → or
 pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
 board de 16/09 (decisão D-C2).
 
-## 2. Estado na última pausa (2026-09-16)
+## 2. Estado na última pausa (2026-09-22)
 
-🟡 **Planejamento fechado e revisado. ZERO linha de código de produção.** O que existe é spec,
-plano e ledgers. Nada foi merjado ainda.
+🟢 **Frente 1 da v1.x fechada: T3 (merge) → T1 (golden-master) → T2 (runner).** O código de A
+vive em `levantamento-normativos/` **neste repo**, com história preservada. **205 testes verdes**
+pelo runner único, golden-master congelado e provado nos 2 ramos. Nenhuma linha de produção mudou.
 
-**Cadeia desta sessão:** `7e42f51` → `8bdb0e3` → `e70f533` → `c93e6de` → `1c7fa04` → `8b5cf6a`
-→ commit deste checkpoint.
-⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo** —
-é propriedade estrutural do checkpoint, não erro. A cadeia real termina em `git log --oneline -3`.
+**A v1.x é um programa de 5 frentes** (D-C11), ordem **1 → 2 → 5 → 3 → 4**. A 1 está feita. As
+outras quatro pedem **spec própria** antes de código (brainstorming → writing-plans → execução).
 
-**Working tree:** limpo na pausa; `master` rastreando `origin/master`, tudo pushed.
+**Cadeia desta sessão:** `a494485` → `dc99d73` (decisões) → `4f36080` (T3) → `97e61cc` → `d054d5b`
+(T1) → commit da T2.
+⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo.**
+
+**Working tree:** limpo na pausa; `master` = `origin/master`. Remoto `levantamento` aponta para o
+repo A local. A tag `levantamento-v1-streamlit` existe **também aqui** (veio no fetch).
+
+**Ferramentas que passaram a existir:** `python tools/run_all_tests.py` (≈9 min — as suítes LIVE
+batem em fontes quebradas) e `python tools/golden_master.py comparar`.
 
 ## 3. Achados críticos (não perder)
 
@@ -63,14 +70,16 @@ cd ~/Documents/projeto-nuati-normativos-levantamento && git checkout levantament
 Um chunk = uma task do plano. Fechar cada chunk: rodar a suíte → golden-master → atualizar
 duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-buscador`.
 
-## 6. Próximo movimento (recomendação, não decidido)
+## 6. Próximo movimento
 
-O Rodrigo tem uma escolha aberta do fim da sessão de 16/09, **não respondida**:
+**Frente 2 — honestidade das fontes.** Spec via `superpowers:brainstorming` (o gate está aberto:
+nenhuma implementação antes da spec aprovada). Insumos já medidos, em `LESSONS.md` (22/09) e no
+`_TODO.md` (F9): LexML devolve HTML com 200 e o parser classifica como `empty` em vez de `error`;
+TCU só marca `error` se **os dois** endpoints falharem, senão um 500 vira `empty`; a coluna
+`Relevancia` colapsa 3 procedências; `_keyword_relevance` é inalcançável sem LLM.
 
-1. **Dobrar as emendas (`A1`-`A21`, `B1`-`B12`, `C1`-`C5`) no corpo do plano** antes de construir (plano linear, ~1 passada), ou
-2. **Construir já**, lendo as três seções de emendas junto com cada task.
-
-Em qualquer dos dois, a primeira task é a **T3 (merge)**. Pergunte antes de escolher por ele.
+Decisões ainda abertas que **não** travam a frente 2: D-C9 (forma de consumir o plano — irrelevante
+agora, o plano de 16/09 só volta na v2.0), tag por task ou só nos marcos (D-C10).
 
 ## 7. Ponteiros
 

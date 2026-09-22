@@ -43,8 +43,15 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
       ✅ **Provas:** as 3 estratégias disparam uma cada (`id_match` · `tipo_numero` · `fuzzy 0.99`),
       14 → **11** únicos (colapso < 14, check da A12); sha estável em **3** execuções; comparador
       reprova nos **dois** ramos e volta a passar ao desfazer.
-- [ ] **T2 · Runner único** — ⚠ nasce com `SUITES_PYTEST = ["test_phase4.py"]` só (B2); piso com
-      3 ramos, não igualdade (A9/B3/C1); o trecho entra no laço de impressão (C3).
+- [x] **T2 · Runner único** — ✅ **feita em 2026-09-22.** `tools/run_all_tests.py`. Emendas:
+      A5 (exit code das suítes-script não é descartado), B2 (nasce só com `test_phase4.py`),
+      A9/B3/C1 (BASELINE como piso com 3 ramos: sem entrada = erro · encolheu = erro · cresceu =
+      aviso), C3 (no laço de impressão, onde `nome` existe), A19/B4 (prova bidirecional).
+      ✅ **Linha de base após o merge: 205 (13 + 53 + 98 + 41), TUDO VERDE, exit 0.**
+      ✅ **Prova bidirecional:** verde → `assert False` injetado → `41 | 1`, HOUVE FALHA, exit 1 →
+      desfeito via `git checkout` → verde, exit 0.
+      ➕ Coluna de **tempo por suíte** (não estava no plano): `test_searchers.py` leva **~390s**
+      porque bate no LexML bloqueado e no TCU em 500 com retries — insumo da frente 2.
 - [ ] **T4 · Ambiente reproduzível** — `pyproject.toml` + venv. ⚠ `pandas` é dependência de
       produção não declarada (A13); SDK de LLM vira extra opcional.
 - [ ] **T5 · Protocolo de backend de LLM** — ⚠ `timeout=(3.05, 60)`, tupla (A7); o teste precisa

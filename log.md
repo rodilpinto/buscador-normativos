@@ -1,6 +1,45 @@
 # Log — Buscador de Base Normativa
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
+## [2026-09-22] frente 1 | primeiro código entra; a rede de proteção existe
+
+**A sessão começou vendo a v1.0 rodar** (`python -m streamlit run app.py`, dirigida pelo
+navegador até o Passo 4) — e a demonstração achou o que ninguém tinha medido: **as duas fontes
+catalogadas devolvem zero**, e a UI diz "0 erros". LexML está atrás de um desafio de JavaScript
+do Senado (só `/busca/SRU`; a home abre; User-Agent não resolve; os 2 URLs de fallback são 404);
+o endpoint de atos normativos do TCU responde 500 (acórdãos respondem 200). Só a web aberta —
+que na prática é **DuckDuckGo**, porque `GOOGLE_CSE_ID` está vazio — traz resultado, o que o
+Rodrigo confirmou no teste dele. Detalhe medido em `LESSONS.md`.
+
+**Decisões do Rodrigo** (`_DECISOES-PENDENTES.md`, D-C10 a D-C13): v1.0 = app atual, v2.0 =
+consolidação; **todos os consertos da v1 entram**, com a mesma metodologia SDD; a v1.x vira
+**5 frentes** (1 rede de proteção · 2 honestidade das fontes · 5 LM local = T5+T6 puxadas ·
+3 cobertura Planalto/LEGIN · 4 explicabilidade F8/F9), ordem **1 → 2 → 5 → 3 → 4**; rede de
+proteção **antes** de qualquer conserto; LexML sem conserto legítimo → detectar/avisar + fonte
+substituta + pedido de acesso oficial (B-05). Pedidos novos: aba de instruções na planilha (F8),
+aba de explicações no app (F9). D-C9 ganhou a opção `c`. Push a cada task.
+
+**Frente 1 executada inteira — T3, T1, T2:**
+- **T3** (`4f36080`): merge `--allow-unrelated-histories`; conflito só no `.gitignore`; história
+  de A preservada (`--follow` alcança os 2 commits, autoria de março, 2 pais); **6.561 linhas**.
+  ⚠ O heredoc do plano **não era a união** — faltava `/*.xlsx`; o primeiro gate de auditoria deu
+  falso verde por ler estágios de conflito já apagados pelo `git add`. Ambos em `LESSONS.md`.
+- **T1** (`d054d5b`): golden-master com corpus de 14 itens que dispara as **3** estratégias de
+  dedup (14 → 11); sha de células estável em 3 execuções; comparador reprova nos 2 ramos.
+- **T2** (commit seguinte): runner único; **205 verdes, exit 0**; prova bidirecional verde →
+  vermelho → verde; BASELINE como piso com 3 ramos. `test_searchers.py` leva ~390s por causa das
+  fontes quebradas.
+
+**Pesquisa para a frente 5:** o conector de LM local do `wiki-chat` (`wikichat/llm/openai_compat.py`)
+é OpenAI-compatible via SDK `openai`, mas **nunca foi exercitado contra servidor real** e o endereço
+da Câmara não está versionado lá — está aqui, na D-C5 (`10.10.111.125:1234`). Lições a herdar:
+`/v1` obrigatório, `max_retries=0`, timeout do httpx conta inatividade (não tempo total),
+`stream.close()` no `finally`, porta fechada no Windows vira timeout.
+
+**Próximo:** spec da frente 2 (honestidade das fontes) via brainstorming → plano → execução.
+
+---
+
 ## [2026-09-16] consolidação | dois projetos viram um; o artefato "inexistente" existia
 
 **O achado que reorienta o projeto.** A entrada de 08/09 afirma que "o artefato original não

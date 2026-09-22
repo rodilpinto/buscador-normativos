@@ -1,0 +1,131 @@
+# -*- coding: utf-8 -*-
+"""Roda todas as suites registradas do app e devolve um exit code confiavel.
+
+Quantas e quais suites: ver SUITES_SCRIPT e SUITES_PYTEST abaixo — a docstring
+nao repete o numero de proposito, para nao ficar falsa quando uma suite entrar
+(a emenda C2 pegou exatamente esse defeito no plano).
+
+A maioria das suites sao scripts com helper record() e NAO sao pytest: elas
+imprimem um resumo no fim e o processo sai. Uma e pytest. Este runner normaliza
+as duas formas num unico resultado, e compara cada suite com a linha de base
+(BASELINE) para que uma suite que ENCOLHEU nao passe como verde.
+"""
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parent.parent
+APP = RAIZ / "levantamento-normativos"
+
+# ⚠ Cada suite-script imprime o resumo num formato DIFERENTE. Verificado em
+# 2026-09-16 rodando as tres. Um regex generico casa so uma delas e devolve
+# zero teste para as outras duas, o que passaria como sucesso silencioso.
+# Cada padrao captura (passed, failed) NESSA ordem.
+SUITES_SCRIPT = {
+    # Results: 13/13 passed, 0/13 failed
+    "test_searchers.py": re.compile(r"Results:\s*(\d+)/\d+\s*passed,\s*(\d+)/\d+\s*failed"),
+    # Total: 53  |  PASS: 53  |  FAIL: 0
+    "test_llm_phase3.py": re.compile(r"Total:\s*\d+\s*\|\s*PASS:\s*(\d+)\s*\|\s*FAIL:\s*(\d+)"),
+    # Total: 98 | Passed: 98 | Failed: 0
+    "test_comprehensive.py": re.compile(
+        r"Total:\s*\d+\s*\|\s*Passed:\s*(\d+)\s*\|\s*Failed:\s*(\d+)"
+    ),
+}
+# Nasce com UMA suite pytest (emenda B2): test_backends.py so existe a partir
+# da Task 5/6, e registra-la antes faria o pytest sair com 4 (arquivo ausente)
+# e o runner acusar regressao onde nao houve.
+SUITES_PYTEST = ["test_phase4.py"]
+
+PADRAO_PYTEST = re.compile(r"(\d+) passed")
+
+# Linha de base medida em 2026-09-16 (e re-medida em 2026-09-22, apos o merge).
+# E um PISO, nao igualdade (emenda B3): teste novo e legitimo nao pode virar
+# vermelho. Mas piso sozinho apodrece (emenda C1): crescimento e sinalizado, e
+# suite registrada SEM entrada aqui e erro, nao silencio.
+# Regra: mudanca intencional de composicao atualiza este dict NO MESMO COMMIT
+# que acrescenta o teste — o aviso de crescimento existe para lembrar disso.
+BASELINE = {
+    "test_searchers.py": 13,
+    "test_llm_phase3.py": 53,
+    "test_comprehensive.py": 98,
+    "test_phase4.py": 41,
+}
+
+
+def _rodar(cmd: list[str]) -> tuple[int, str, float]:
+    """Devolve (exit code, saida, segundos).
+
+    O tempo entra na tabela porque a primeira execucao completa (2026-09-22)
+    levou 8m53s: as suites LIVE batem em LexML (bloqueado por WAF) e TCU (500
+    com retries). Sem o tempo por suite, "o runner esta lento" nao tem onde
+    ser investigado.
+    """
+    inicio = time.monotonic()
+    proc = subprocess.run(
+        cmd, cwd=APP, capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
+    return proc.returncode, proc.stdout + proc.stderr, time.monotonic() - inicio
+
+
+def main() -> int:
+    linhas: list[tuple[str, int, int, float]] = []
+    falhou = False
+
+    for s, padrao in SUITES_SCRIPT.items():
+        # emenda A5: o exit code NAO e descartado. test_llm_phase3.py restaura
+        # o ambiente DEPOIS de imprimir o resumo; se essa linha levantar, o
+        # resumo esta verde e o processo sai != 0. So o regex nao pegaria.
+        code, saida, seg = _rodar([sys.executable, s])
+        m = padrao.search(saida)
+        if not m:
+            # Resumo ilegivel e FALHA, nunca "zero teste, tudo bem": a suite pode
+            # ter morrido antes de imprimir, ou mudado de formato.
+            print(f"[ERRO] {s}: nao consegui ler o resumo final (exit {code})")
+            falhou = True
+            continue
+        passed, failed = int(m.group(1)), int(m.group(2))
+        linhas.append((s, passed, failed, seg))
+        if failed or passed == 0:
+            falhou = True
+        if code != 0:
+            print(f"[ERRO] {s}: resumo verde mas o processo saiu com exit {code}")
+            falhou = True
+
+    for s in SUITES_PYTEST:
+        code, saida, seg = _rodar([sys.executable, "-m", "pytest", s, "-q"])
+        m = PADRAO_PYTEST.search(saida)
+        passed = int(m.group(1)) if m else 0
+        linhas.append((s, passed, 0 if code == 0 else 1, seg))
+        if code != 0:
+            falhou = True
+
+    largura = max(len(n) for n, _, _, _ in linhas) if linhas else 20
+    print()
+    print(f"{'suite'.ljust(largura)} | passed | failed | baseline |   tempo")
+    print("-" * (largura + 39))
+    for nome, p, f, seg in linhas:
+        esperado = BASELINE.get(nome)
+        print(
+            f"{nome.ljust(largura)} | {str(p).rjust(6)} | {str(f).rjust(6)} | "
+            f"{str(esperado if esperado is not None else '?').rjust(8)} | {seg:6.1f}s"
+        )
+        # emendas A9 + B3 + C1, no laco de impressao (C3): aqui `nome` existe.
+        if esperado is None:
+            print(f"[ERRO] {nome} esta no runner mas nao tem entrada no BASELINE — sem protecao contra encolhimento")
+            falhou = True
+        elif p < esperado:
+            print(f"[ERRO] {nome} encolheu: baseline {esperado}, agora {p}")
+            falhou = True
+        elif p > esperado:
+            print(f"[AVISO] {nome} cresceu: baseline {esperado} -> {p}; atualize o BASELINE neste commit")
+    print()
+    print("TUDO VERDE" if not falhou else "HOUVE FALHA")
+    return 1 if falhou else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
