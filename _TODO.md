@@ -63,11 +63,12 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
       **autorização do Rodrigo** (B8).
 - [ ] **T8 · Renomear para `buscador/` + auditoria de docstrings** — ⚠ gate sem `head` (A8); o
       Step 3 espera **215**, não "os mesmos números da T2" (C2).
-- [ ] **T9 · Aposentar o repo A** — ⛔ só depois de todos os critérios de pronto, **e confirmando
-      com o Rodrigo no momento** (ação externa).
-      - [x] **2026-09-16 · tag `levantamento-v1-streamlit` empurrada para o remoto** (confirmado
-        por `git ls-remote --tags origin`). O ponto de restauração deixou de ser local.
-      - [ ] README de arquivamento no repo A · [ ] `gh repo archive`
+- [x] **T9 · Aposentar o repo A** — ✅ **feita em 2026-09-22, antecipada** (a T3 + golden-master
+      + 205 verdes já provavam a consolidação; Rodrigo confirmou na hora). Tag empurrada para o
+      remoto de B; README de arquivamento em A (`af88593`); A **privado e arquivado**
+      (`gh repo view` → `PRIVATE | arquivado=true`). Apagar de vez: só depois da tag v1.x.
+      - [x] 2026-09-16 · tag no remoto de A · [x] 2026-09-22 · tag no remoto de B
+      - [x] README de arquivamento · [x] `gh repo archive`
 
 ## Fase 2 — as features (plano ainda não escrito)
 
@@ -116,6 +117,7 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
 - [ ] Rodar contra um tema real e medir o critério de sucesso nº 2 da spec: 100+ resultados
       triáveis em menos de 15 decisões.
 - [ ] Reavaliar se Planalto e LEGIN fazem falta (D-B2 adiou; a lacuna não foi medida).
+- [ ] **Deploy** — pós-v2.0. Ver D-C14 (🟡) e B-06. `Dockerfile` nasce na T4 (ambiente reproduzível).
 - [ ] Escrever o plano da Fase 2.
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
       ⛔ **Bloqueado em autorização** — é auto-memória; a regra `memory-write-policy` exige que o

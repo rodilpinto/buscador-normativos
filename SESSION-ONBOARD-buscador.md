@@ -97,11 +97,12 @@ agora, o plano de 16/09 só volta na v2.0), tag por task ou só nos marcos (D-C1
 | | |
 |---|---|
 | **Repo B** (este) | `github.com/rodilpinto/buscador-normativos`, privado, branch **`master`** |
-| **Repo A** (a consolidar) | `github.com/rodilpinto/levantamento-normativos`, **PÚBLICO** (⚠ corrigido em 22/09: `gh repo view` → `PUBLIC`; este arquivo dizia "privado"), branch **`main`** |
+| **Repo A** (fundido) | `github.com/rodilpinto/levantamento-normativos` — **privado e ARQUIVADO em 22/09** (T9). Só leitura. A tag `levantamento-v1-streamlit` existe lá e aqui (`git ls-remote --tags origin`). |
 | Caminho de A | `~/Documents/projeto-nuati-normativos-levantamento/` — ⚠ o código fica em `levantamento-normativos/` **dentro** dele, não na raiz |
 | Cliente de LLM | `llm/gemini_client.py` (dentro de `llm/`, não na raiz) |
 | Rodar o app | `python -m streamlit run app.py`, a partir da pasta do código |
 | Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
+| **Espelho na Câmara** | `git.camara.gov.br` **não é alcançável desta máquina**; é do PC do trabalho. Fluxo decidido em 22/09: este GitHub (B) é a origem → no PC do trabalho `git pull` + `git push camara master`. O push para B a cada task **continua**; a Câmara é espelho, nunca única cópia. Segredos fora do git nos dois lados. |
 | Hospedagem / deploy | **nenhum** (verificado em 22/09: sem Dockerfile/Procfile/streamlit.app; só roda local). Único endereço de infra conhecido: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
 
 ⚠ **Assimetria de branch:** A usa `main`, B usa `master`. No merge (T3) isso aparece como

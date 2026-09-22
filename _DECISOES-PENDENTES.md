@@ -58,6 +58,34 @@ risco de alguém executar um trecho do corpo que uma emenda derrubou.
 
 ---
 
+## 🟡 D-C14 — Onde o app roda: desenvolvimento, demonstração e produção
+
+- **Onde aparece:** 22/09, pergunta do Rodrigo: *"é possível fazermos o desenvolvimento no streamlit
+  privado mesmo e quando estiver numa solução mais pronta a gente migra para o servidor nuati? ou
+  então continuamos no servidor local dessa máquina até mover para o servidor nuati"*.
+- **Trava:** nada da v1.x. Só o `Dockerfile` (T4, v2.0) e a frente de deploy pós-v2.0.
+
+✅ **Fatos verificados em 22/09:** não existe deploy nenhum (sem Dockerfile/Procfile/streamlit.app);
+o app roda só local. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
+herda a visibilidade do repo (privado → só convidados, login Google/e-mail); **limite de 1 app
+privada por conta**. A nuvem da Streamlit **não alcança o LM local** (`10.10.111.125`) — lá só
+Gemini, e cada tema digitado sai da rede.
+
+| Fase | Opção | Observação |
+|---|---|---|
+| **Desenvolvimento** | 📝 local nesta máquina (como hoje) | zero infra; Gemini pessoal ou `NullLLM`; LM local inalcançável daqui de qualquer jeito |
+| **Demonstração** | 📝 Streamlit Community Cloud **privado**, opcional | serve para mostrar a colegas sem instalar nada; 1 app privada; Gemini obrigatório; **não** para tema real de auditoria |
+| **Produção** | 📝 servidor do Nuati, empacotado em Docker | mesmo host do LM Studio (`base_url` localhost), intranet, sem URL pública — o desenho do wiki-chat (D13 lá) |
+
+📝 **Recomendação:** as duas coisas que o Rodrigo perguntou são compatíveis, e a resposta é "as duas":
+**desenvolver local** (é o que já funciona) **e**, quando quiser mostrar, **uma app privada no
+Community Cloud** como vitrine — sabendo que ela roda com Gemini e fora da rede; **produção só no
+servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
+
+**Decisão tomada:** _(pendente — 🟡 em análise; ver B-06 para o que só o Rodrigo responde)_
+
+---
+
 ## ⛔ Bloqueadas em autorização (não são escolhas, são permissões)
 
 - **Registrar este repo no `MEMORY.md` do `projetos-nuati`** — é auto-memória, e a regra global

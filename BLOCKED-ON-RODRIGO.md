@@ -110,7 +110,25 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
 
 ---
 
+## 🔴 B-06 · Três fatos do servidor do Nuati que só você (ou o Alexandro) sabe
+
+- **Aberto em:** 2026-09-22 · **Origem:** D-C14 (deploy) · **Bloqueia:** só a frente de deploy pós-v2.0.
+
+1. O app pode rodar **no mesmo host** do LM Studio (`10.10.111.125`)? Se sim, `base_url` vira `localhost`.
+2. **Quem opera** lá — instala, sobe o serviço, atualiza a cada release? (Alexandro?)
+3. O servidor tem **saída para a internet** (LexML, TCU, DuckDuckGo)? Sem ela, só a web aberta some, mas as
+   fontes catalogadas também dependem de rede.
+
+Bônus: existe **GitHub/GitLab institucional** onde o repo deva viver? (Você citou `git.camara.gov.br`
+como espelho pelo PC do trabalho — registrado no state file §8.)
+
+---
+
 ## ✅ DONE
+
+- [x] **2026-09-22 · Repo A aposentado (T9).** Tag `levantamento-v1-streamlit` no remoto de B; README de
+      arquivamento (`af88593`); `rodilpinto/levantamento-normativos` privado e arquivado, confirmado por
+      `gh repo view`. Antecipado com o Rodrigo na hora, porque a consolidação já estava provada.
 
 - [x] **2026-09-16 · Tag `levantamento-v1-streamlit` empurrada para o remoto.** Era o ponto de
       restauração de toda a trava anti-regressão e existia **só nesta máquina**
