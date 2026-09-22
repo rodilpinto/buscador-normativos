@@ -29,8 +29,12 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 `~/Documents/projeto-nuati-normativos-levantamento/levantamento-normativos/` e só chegam aqui
 depois da **T3** (o merge). Antes disso, abra-os lá.
 
-- [ ] **T3 · Merge do histórico de A** — `git merge --allow-unrelated-histories`. É a **primeira**.
-      ⚠ O Step 6 dela **sai** (A1): chama ferramentas que ainda não existem nesse ponto.
+- [x] **T3 · Merge do histórico de A** — ✅ **feita em 2026-09-22** (`4f36080`). Conflito só no
+      `.gitignore`, como previsto. Step 6 não executado (A1). ✅ Verificado: `git log --follow`
+      no `app.py` alcança os 2 commits de A, autoria de março preservada, merge com 2 pais,
+      15 arquivos `.py` / **6.561 linhas**.
+      ⚠ **Correção ao plano:** o heredoc do Step 3 não era a união — faltava `/*.xlsx`. Ver a
+      nota na Task 3 do plano e a entrada de 22/09 no `LESSONS.md`.
 - [ ] **T1 · Golden-master** — congela dedup + planilha. ⚠ `generate_excel`, não `export_to_excel`
       (A2); hash de **células**, não de bytes (A3); entrada limpa (A14); **14** itens cobrindo as
       3 estratégias de dedup (A12/B12).

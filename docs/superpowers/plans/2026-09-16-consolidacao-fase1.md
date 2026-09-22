@@ -938,6 +938,12 @@ git status --short
 Expected: `AA .gitignore` e nada mais em conflito. **Se conflitar outro arquivo, pare** — a
 premissa da Task mudou e precisa ser reavaliada.
 
+> ⛔ **Corrigido na execucao de 2026-09-22.** O heredoc abaixo **nao era a uniao que diz ser**.
+> Alem das duas entradas que a A18 repos, faltava **`/*.xlsx`** (A usa para nao versionar
+> planilha baixada do app na raiz). A entrada foi acrescentada. **Nao confie no heredoc:** audite
+> contra os blobs dos DOIS pais (`git show HEAD:.gitignore` e `git show levantamento/main:.gitignore`),
+> nunca contra a lista escrita aqui. ⚠ E `.claude/` continua FORA de proposito: e rastreado em B.
+
 - [ ] **Step 3: Resolver o .gitignore unindo as duas listas**
 
 ```bash

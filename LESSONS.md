@@ -4,6 +4,31 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-22 · Um gate de auditoria rodado DEPOIS do `git add` compara contra o vazio e dá verde
+
+**Problema.** Na T3, escrevi o `.gitignore` unido e rodei um script para provar que nenhuma
+entrada de A ou de B tinha sumido. Ele imprimiu **"ausentes: NENHUMA"** — verde. Era falso: o
+script lia os lados do conflito por `git show :2:` e `:3:`, e eu já tinha rodado `git add`, que
+**apaga os estágios de conflito**. Os dois conjuntos vieram vazios, e `(vazio) - novo` é sempre
+vazio. O gate não podia reprovar.
+
+**Causa-raiz.** O script não checava o retorno do `git show`. Falha silenciosa virou prova.
+
+**Conserto.** Reler os dois lados pelos **pais do merge** (`HEAD:.gitignore` e
+`levantamento/main:.gitignore`), que existem antes e depois do `add`, e **afirmar** que a leitura
+não voltou vazia (`assert rc == 0 and stdout.strip()`). Refeito, o gate achou o que o primeiro
+escondeu: faltava `/*.xlsx`, entrada que as **três** rodadas adversariais não pegaram — a A18
+repôs duas entradas e ninguém diffou a lista inteira.
+
+**Regra.** **Todo gate de auditoria precisa ser capaz de reprovar — e isso tem de ser demonstrado,
+não presumido.** Antes de acreditar num verde, pergunte de onde vieram os dois lados da
+comparação e prove que não estão vazios. É a mesma família da emenda **A8** (o gate de docstrings
+que casava 12 de 82 linhas e passava verde) e da **A19** (runner sem prova de que detecta falha).
+Corolário prático: gate que lê estágio de conflito (`:2:`/`:3:`) roda **antes** do `git add`, ou
+lê os pais.
+
+---
+
 ## 2026-09-22 · As DUAS fontes catalogadas devolvem zero hoje — e a UI chama isso de "sem resultados", não de falha
 
 **Problema.** Primeira execução do app v1.0 nesta sessão, dirigida ponta a ponta pelo navegador:
