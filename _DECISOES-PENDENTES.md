@@ -87,6 +87,16 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 
 ---
 
+## 🟡 D-C10.1 — Tag a cada task fechada, ou só nos marcos v1.0 / v1.x / v2.0?
+
+- **Onde aparece:** 22/09, pergunta minha ao registrar a D-C10; **não respondida**.
+- **Trava:** nada. 📝 Recomendação: só nos marcos — o push por task (D-C7) + golden + runner já dão o
+  rastro; tag por task é ruído. Se `a` (marcos): criar `v1.0` já (aponta `eb91277`).
+
+**Decisão tomada:** _(pendente)_
+
+---
+
 ## ⛔ Bloqueadas em autorização (não são escolhas, são permissões)
 
 - **Registrar este repo no `MEMORY.md` do `projetos-nuati`** — é auto-memória, e a regra global
@@ -102,6 +112,63 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
   worktree e rodando os testes do próprio plano; em **duas rodadas seguidas o pior achado foi um
   cruzamento de duas correções da rodada anterior** (registrado em `LESSONS.md`). Execução: **sessão nova**,
   um subagente por task, runner + golden como gate, push por task.
+
+- **D-C11 · A v1.x vira um programa de 5 frentes, cada uma com seu ciclo SDD.** Decidido por
+  Rodrigo em 2026-09-22: *"Vamos fazer todos os consertos dessa versão 1. use a mesma metodologia
+  sdd. escreva os arquivos com os fixes, desenhe, implemente e teste, revise o app e parta para a
+  próxima."*
+
+  **Ordem decidida: 1 → 2 → 5 → 3 → 4.**
+
+  | # | Frente | Conteúdo | Spec nova? |
+  |---|---|---|---|
+  | **1** | Rede de proteção | T3 merge · T1 golden-master · T2 runner | ❌ **não** — o plano de 16/09 já cobre |
+  | **2** | Honestidade das fontes | fonte indisponível ≠ sem resultado · TCU 500 · procedência da nota · heurística inalcançável | ✅ sim |
+  | **5** | LM local | **T5+T6 puxadas para cá** — protocolo de backend + ligar o cliente | ✅ sim (emenda o plano) |
+  | **3** | Cobertura | adaptador Planalto e/ou LEGIN | ✅ sim |
+  | **4** | Explicabilidade | F8 aba da planilha · F9 aba do app | ✅ sim |
+
+  ⚠ **As frentes 2 e 5 tocam os mesmos arquivos** (`gemini_client.py`, `app.py`) — serializadas
+  de propósito, nunca em paralelo. Foi o que decidiu pôr a 5 logo depois da 2.
+  ⚠ **A frente 4 vem por último porque depende do vocabulário de procedência criado na 2** —
+  aba de explicação escrita antes descreveria comportamento que ainda vai mudar.
+
+  **Consequência para os marcos da D-C10:** a v1.x passa a conter o grosso do conteúdo técnico
+  (T3, T1, T2, T5, T6 + os consertos + Planalto/LEGIN + as abas). A **v2.0 fica com T4**
+  (ambiente), **T7** (documentos), **T8** (renomear para `buscador/`) e **T9** (aposentar o repo A).
+
+- **D-C12 · Rede de proteção antes dos consertos.** Decidido em 2026-09-22. T3, T1 e T2 rodam
+  **antes** de qualquer mudança de comportamento, porque as três não alteram uma linha de
+  produção (git puro + ferramentas novas). Só depois delas "não regrediu" passa a ser afirmação
+  verificável por máquina, em vez de quatro suítes rodadas à mão em três formatos de resumo.
+
+- **D-C13 · Cobertura do LexML: detectar/avisar E acrescentar fonte catalogada substituta.**
+  Decidido em 2026-09-22, depois de medido que o LexML não tem conserto técnico legítimo.
+  ✅ **Medições que sustentam:** só `/busca/SRU` está desafiado (a home do `lexml.gov.br` abre
+  normal); User-Agent descritivo **não** resolve; o desafio é de **JavaScript**; `/oai` é 404.
+  ⛔ **Resolver o desafio programaticamente está fora de escopo** — seria contornar proteção
+  anti-robô. Entra no lugar: detecção honesta + Planalto/LEGIN (frente 3) + pedido de acesso
+  oficial ao Senado (ação humana, ver `BLOCKED-ON-RODRIGO.md`).
+  ⚠ Isto **reabre a decisão D-B2**, que tinha adiado Planalto e LEGIN por julgar LexML+TCU
+  suficientes. A premissa caiu: o LexML não entrega nada hoje.
+
+- **D-C10 · Versionamento por marcos, com fallback declarado.** Decisão do Rodrigo nesta sessão,
+  depois de ver o app v1.0 rodando: *"ele será nossa v1.0 e esse merge de specs será a v2.0. é bom
+  termos marcos e fallbacks para o caso de regressão."*
+
+  | Marco | O que é | Fallback |
+  |---|---|---|
+  | **v1.0** | o app Streamlit de A, como está hoje: 6.561 linhas, 205 testes verdes, wizard de 5 passos, busca por API | tag anotada `levantamento-v1-streamlit` no repo A, ✅ já no remoto |
+  | **v2.0** | o resultado da Fase 1: merge + golden-master + runner único + backend de LLM injetável + pacote `buscador/` | volta para **v1.0** |
+
+  ⚠ **Estado em 22/09 (fim do dia):**
+  - tag `v1.0` neste repo — **pode ser criada agora** (a T3 trouxe `eb91277` para a história de B); não
+    criada: espera a D-C10.1.
+  - tag `v2.0` — ao fechar os critérios de pronto da v2.0 (T4/T7/T8 do plano de 16/09; o número de
+    testes esperado será o `BASELINE` de `tools/run_all_tests.py` naquele momento — o "215" do plano de
+    16/09 não vale mais, T5/T6 migraram para a frente 5).
+  - **A prova de regressão existe** desde a frente 1: golden-master (T1) + runner (T2). "Temos fallback"
+    agora significa `git checkout levantamento-v1-streamlit` + os dois gates.
 
 - **D-C11 · A v1.x vira um programa de 5 frentes, cada uma com seu ciclo SDD.** Decidido por
   Rodrigo em 2026-09-22: *"Vamos fazer todos os consertos dessa versão 1. use a mesma metodologia

@@ -28,9 +28,10 @@ Nenhuma linha de produção mudou. Contagem atual de testes: `BASELINE` em `tool
 🟡 **Frente 2 (honestidade das fontes): spec e plano v4 prontos, revisados em 3 rodadas adversariais,
 zero código.** É a próxima. Tudo está dobrado no corpo do plano — **não há seção de emendas a consultar**.
 
-**Cadeia desta sessão:** `dc99d73` → `4f36080` (T3) → `97e61cc` → `d054d5b` (T1) → `e18dd4b` (T2) →
-`b489d00` (spec) → `b1a6d3c` (plano v1) → `1e24933` (v2) → `46cdb0e` (v3) → `02dc620`/`a457e84` (v4) →
-`f55488c`/`407b5a1` (ledgers, repo A) → commit deste checkpoint.
+**Cadeia desta sessão** (ordem do `git log`): `dc99d73` → `4f36080` (T3) → `97e61cc` → `d054d5b` (T1) →
+`e18dd4b` (T2) → `b489d00`/`5c4718a` (spec) → `b1a6d3c` (plano v1) → `1e24933` (v2) → `407b5a1`/`f55488c`
+(repo A, ledgers) → `46cdb0e` (v3) → `02dc620`/`a457e84` (v4) → `eec2d44` (checkpoint) → commit dos consertos
+do dogfood.
 ⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo** — a cadeia
 real termina em `git log --oneline -3`.
 
@@ -48,9 +49,10 @@ configurado; A está arquivado no GitHub. A tag `levantamento-v1-streamlit` exis
    busca por API (LexML SRU/CQL, TCU Dados Abertos, Google CSE/DuckDuckGo). A spec de 08/09 dizia
    o contrário — a varredura dela não cobriu essa pasta. Detalhe em `LESSONS.md`.
 2. **A decisão B2 foi REVERTIDA:** a base é o **Streamlit já escrito**, não um FastAPI novo.
-3. **Precedência das emendas: C > B > A > corpo.** O plano da Fase 1 tem 3 rodadas de revisão
-   adversarial; cada seção do corpo derrubada carrega um marcador `⛔` apontando a emenda.
-4. **A ordem das tasks não é a numeração:** T3 → T1 → T2 → T4 → T5 → T6 → T7 → T8 → T9 (emenda A1).
+3. **(Plano de 16/09 apenas — v2.0)** Precedência das emendas: C > B > A > corpo; cada seção do corpo
+   derrubada carrega um marcador `⛔` apontando a emenda. **O plano da frente 2 não tem isso: está dobrado.**
+4. **(Plano de 16/09 apenas)** A ordem das tasks não é a numeração (emenda A1). No plano da frente 2,
+   **ordem = numeração**.
 5. **O agrupamento semântico é ADITIVO** — nunca remove, oculta ou filtra item da visão do
    usuário (requisito vinculante do Rodrigo, D-C1). Tem teste próprio; não "simplificar".
 6. **Cobertura é requisito, não preferência:** medir a lacuna das fontes catalogadas contra um
@@ -90,8 +92,8 @@ depender de ninguém: abrir `docs/superpowers/plans/2026-09-22-frente2-honestida
 parar" vale para a diferença entre o **bloco de testes** e o observado — contar `def test_` antes de
 suspeitar do código.
 
-Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy) e B-06. Ações do Rodrigo
-pendentes: B-01, B-03, B-04, B-05, B-06 (`BLOCKED-ON-RODRIGO.md`).
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C10.1 🟡 (tag por task ou só nos marcos),
+D-C14 (deploy). Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a T1.
 
 ## 7. Ponteiros
 
@@ -100,7 +102,7 @@ pendentes: B-01, B-03, B-04, B-05, B-06 (`BLOCKED-ON-RODRIGO.md`).
 | `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (próxima) |
 | `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração |
 | `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura; vale) |
-| `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — T3/T1/T2 **feitas**; T5/T6 viraram a frente 5; T4/T7/T8/T9 = **v2.0** (emendas no topo, D-C9) |
+| `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — T3/T1/T2/T9 **feitas**; T5/T6 viraram a frente 5; T4/T7/T8 = **v2.0** (emendas no topo, D-C9) |
 | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
 | `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` | lições transversais · o que espera o humano |
 | `decisions/DECISIONS-LOG.md` + o board `.html` | as rodadas de decisão, com os comentários |
@@ -116,7 +118,7 @@ pendentes: B-01, B-03, B-04, B-05, B-06 (`BLOCKED-ON-RODRIGO.md`).
 | Cliente de LLM | `llm/gemini_client.py` (dentro de `llm/`, não na raiz) |
 | Rodar o app | `python -m streamlit run app.py`, a partir da pasta do código |
 | Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
-| **Espelho na Câmara** | `git.camara.gov.br` **não é alcançável desta máquina**; é do PC do trabalho. Fluxo decidido em 22/09: este GitHub (B) é a origem → no PC do trabalho `git pull` + `git push camara master`. O push para B a cada task **continua**; a Câmara é espelho, nunca única cópia. Segredos fora do git nos dois lados. |
+| **Espelho na Câmara** | `git.camara.gov.br` **não é alcançável desta máquina**; é do PC do trabalho. Fluxo decidido em 22/09: este GitHub (B) é a origem → no PC do trabalho `git pull` + `git push camara master`. ⚠ **A URL do projeto lá e o `git remote add camara <url>` não estão registrados** — só o Rodrigo sabe (B-06). O push para B a cada task **continua**; a Câmara é espelho, nunca única cópia. Segredos fora do git nos dois lados. |
 | Hospedagem / deploy | **nenhum** (verificado em 22/09: sem Dockerfile/Procfile/streamlit.app; só roda local). Único endereço de infra conhecido: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
 
 ⚠ **Assimetria de branch:** A usa `main`, B usa `master`. No merge (T3) isso aparece como
@@ -129,7 +131,7 @@ entra no `.gitignore` unido da T3, embora estivesse no de A.
 revisão de 16/09 os achados brutos foram numerados à parte. Diga sempre de qual documento.
 
 ⚠ **A mensagem da tag de rollback é imutável e cita `6.533 linhas`** — medição antiga, que omitia
-`llm/__init__.py`. O valor correto é **6.561** (`git ls-files '*.py' | xargs wc -l`).
+`llm/__init__.py`. O valor correto é **6.561** (`git ls-files 'levantamento-normativos/*.py' | xargs wc -l` — ⚠ só o app; `'*.py'` cru soma `tools/`, medido em 22/09: 6.849).
 
 **Fechar a D-C9** quando respondida (só importa na v2.0): mover para 🟢 em `_DECISOES-PENDENTES.md` com a
 data, abrir seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-ON-RODRIGO.md`.

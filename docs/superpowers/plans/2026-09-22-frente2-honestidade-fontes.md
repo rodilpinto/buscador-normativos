@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13.7 · Streamlit 1.55 · requests 2.32 · openpyxl 3.1.5 · pytest 9 · ddgs 9.12 · Playwright (Python, `channel="chrome"`) só para o gate visual.
 
-**Spec:** `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` (§3.x). **Esta v2 emenda a spec em 4 pontos**, listados na triagem abaixo e marcados `⚠ emenda à spec` no corpo.
+**Spec:** `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` (§3.x). **Esta v4 emenda a spec em 4 pontos**, listados na triagem abaixo e marcados `⚠ emenda à spec` no corpo.
 
 ---
 
@@ -191,7 +191,7 @@ não quebra `replace`/`copy`/`pickle`/`==`; `from models import redigir` sem cic
 - **Separar fato de sugestão:** `📝` no que for proposta não validada.
 - **UTF-8 explícito em todo `open()` / `read_text` / `write_text`.** `PYTHONIOENCODING=utf-8` em comando que imprime acento.
 - **Rodar Python via Bash, não PowerShell.** Acima de 260 caracteres o Python falha em silêncio no Windows.
-- **Documentação move junto com o código.** Gate ao fim de **cada** task, os dois comandos, lidos inteiros: `git diff -U0 HEAD~1 -- '*.py' | grep '^-' | grep -v '^---'` e `git grep -n -E 'score_relevance|_fetch_all_pages|_search_keyword_safe|_request_with_retry|_parse_sru_response|_search_urls|_render_search_diagnostics|generate_excel|_texto_do_acordao|_map_acordao|rotulo_status' -- '*.py'` (**sem ``** — ele não casa `score_relevance_com_origem`; inclui `tools/` porque `golden_master.py` documenta `generate_excel`; todo call site e docstring de símbolo cuja assinatura mudou, **antes** de escrever o step de adaptação; R2-B2, R3).
+- **Documentação move junto com o código.** Gate ao fim de **cada** task, os dois comandos, lidos inteiros: `git diff -U0 HEAD~1 -- '*.py' | grep '^-' | grep -v '^---'` e `git grep -n -E 'score_relevance|_fetch_all_pages|_search_keyword_safe|_request_with_retry|_parse_sru_response|_search_urls|_render_search_diagnostics|generate_excel|_texto_do_acordao|_map_acordao|rotulo_status' -- '*.py'` (**sem `\b`** — ele não casa `score_relevance_com_origem`; inclui `tools/` porque `golden_master.py` documenta `generate_excel`; todo call site e docstring de símbolo cuja assinatura mudou, **antes** de escrever o step de adaptação; R2-B2, R3).
 - **Golden-master:** `python tools/golden_master.py comparar` → OK ao fim de **toda** task, exceto a T8, que recongela **no mesmo commit** e diz por quê. `dedup_esperado.json` **nunca** muda nesta frente.
 - **Runner:** `python tools/run_all_tests.py` TUDO VERDE ao fim de toda task (≈9 min hoje; deve cair com o cache de falha da T2 — anotar). Task que acrescenta teste atualiza `BASELINE` **no mesmo commit**. ⚠ **Os números "Expected" abaixo são previsões**: se o observado divergir, **parar e reconciliar** (um teste a mais/menos é sinal de step aplicado errado), nunca "ajustar o BASELINE ao que deu".
 - **Sem LLM de verdade:** `tools/run_all_tests.py` roda as suítes com `env={**os.environ, "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}` (T1 Step 6); a suíte nova tem `monkeypatch.delenv` autouse. ⚠ `st.secrets` **vence** a variável: se existir `levantamento-normativos/.streamlit/secrets.toml` (hoje só há o `.example`), o runner acha que roda sem LLM e não roda — dito no comentário do runner e no `LESSONS`; o conserto de código é da frente 5.
@@ -237,9 +237,9 @@ não quebra `replace`/`copy`/`pickle`/`==`; `from models import redigir` sem cic
 | T6 | 13 | **63** | 98 | 58 | 37 | 269 |
 | T7 | 13 | 63 | 98 | **61** | 37 | 272 |
 | T8 | 13 | 63 | 98 | **71** | 37 | 282 |
-| T9 | 13 | 63 | 98 | 71 | 37 | 282 |
+| T9 | 13 | 63 | 98 | **72** (+1: `test_origem_curta_do_app…`) | 37 | 283 |
 
-⚠ Contagens **recomputadas na v4** (a v3 contou um teste duas vezes na T4). **O observado manda**; se divergir, `grep -c '^def test_'` no bloco da task **antes** de suspeitar do código — e a regra "parar e reconciliar" vale para a diferença entre o bloco e o observado, não entre a tabela e o observado.
+⚠ Contagens **recomputadas na v4** (a v3 contou um teste duas vezes na T4). **O observado manda**; se divergir, contar os testes do bloco da task **antes** de suspeitar do código — `grep -c '^def test_'` nas suítes pytest (`test_phase4.py`, `tests/…`); nas suítes-script (`test_llm_phase3.py` usa `record()`, sem `def test_`) o número esperado é o `Total:` que o step da task declara — e a regra "parar e reconciliar" vale para a diferença entre o bloco e o observado, não entre a tabela e o observado.
 
 ---
 
@@ -2877,6 +2877,6 @@ print("GATE V11 OK — abrir e OLHAR:", SAIDA)
 ## Self-review (v4)
 
 **Cobertura da spec + emendas:** §3.1 → T1 · §3.2 → T2 · §3.3 → T3 · §3.4 → T6+T7+T9 · §3.5 → T8 · §3.6 → T9 · §3.7 → gates de golden (exceção declarada em T4) · §4 V1–V11 → T1..T9 · §5 → estrutura (+ google, tcu mapping) · §7 → T10. Emendas à spec: §3.1 (motivos; redigir em toda atribuição; rotulo_status na planilha; parcial com empty/error), §3.7 (T4; data vazia continua `""`), §5 (T5), §3.5 (`quando`, `—`, golden nas 2 abas, detalhe até 2000 com corte marcado).
-**Contagens (recomputadas dos blocos, v4):** T1 41+17=58 · T2 16 · T3 +10 = 26 coletados (25 passed + 1 xfail) · T4 xfail→passed +3 = 29 · T5 +8 = 37 · T6 63 · T7 61 · T8 71 · T9 +1 (`test_origem_curta_do_app…`) = 72 · **final 13 + 63 + 98 + 72 + 37 = 283**. ⚠ A tabela do topo mostra 282/71 na T8/T9 porque o teste da T9 nasce na T9; o executor corrige a tabela e o BASELINE no commit da T9.
+**Contagens (recomputadas dos blocos, v4):** T1 41+17=58 · T2 16 · T3 +10 = 26 coletados (25 passed + 1 xfail) · T4 xfail→passed +3 = 29 · T5 +8 = 37 · T6 63 · T7 61 · T8 71 · T9 +1 (`test_origem_curta_do_app…`) = 72 · **final 13 + 63 + 98 + 72 + 37 = 283**. A tabela do topo já traz T9 = 72 / 283; o executor atualiza o BASELINE no commit da T9.
 **Delegações à v1:** nenhuma. **Placeholders:** nenhum `TBD`/`TODO`/`# inalterado`/`...`.
 **Nomes:** `FonteIndisponivel(motivo, detalhe)` · `SOURCE_ID` · `_search_keyword_safe -> (list, erro_fatal, erro_paginacao)` · `_fetch_all_pages -> (itens, erro, parcial)` · `_search_urls -> (list, erro)` · `_texto_do_acordao` (não-total, sempre dentro de `try`) · `_sem_sumario` (total) · `score_relevance_com_origem -> list[tuple[float, str]]` · `generate_excel(results, topic, diagnostico=None, quando=None)` · `redigir(texto, limite=2000)` (corte no meio, marcado) · `rotulo_status(s)` (só planilha) · `statuses_para_falha_total(source, keywords, exc)` · `_render_search_diagnostics(kw_statuses)`.

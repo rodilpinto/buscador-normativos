@@ -6,9 +6,9 @@ related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SES
 
 # TODOs — o que está pendente
 
-> **Conteúdo** de cada task: `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md`.
-> ⛔ **Leia as três seções de emendas ANTES do corpo** — precedência **C > B > A > corpo**.
-> Cada seção do corpo derrubada carrega um marcador `⛔` dizendo qual emenda a derruba.
+> **Frente ativa: frente 2** — conteúdo das tasks em `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`
+> (tudo dobrado no corpo; ordem = numeração). O plano de 16/09 só volta na v2.0 (T4/T7/T8) e aí valem
+> as três seções de emendas dele (precedência **C > B > A > corpo**, marcadores `⛔` no corpo).
 > **Status**: aqui, e só aqui.
 
 ## ⛔ Superado — o plano de 16 tasks NÃO vale mais
@@ -23,11 +23,6 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 ## Fase 1 — consolidação (plano de 16/09)
 
 ⚠ **A ordem NÃO é a numeração.** A emenda A1 reordenou: **T3 → T1 → T2 → T4 → T5 → T6 → T7 → T8 → T9.**
-
-⚠ **Os arquivos de código citados abaixo (`app.py`, `llm/__init__.py`, `test_llm_phase3.py`,
-`excel_export.py`…) ainda NÃO existem neste repo.** Eles vivem em
-`~/Documents/projeto-nuati-normativos-levantamento/levantamento-normativos/` e só chegam aqui
-depois da **T3** (o merge). Antes disso, abra-os lá.
 
 - [x] **T3 · Merge do histórico de A** — ✅ **feita em 2026-09-22** (`4f36080`). Conflito só no
       `.gitignore`, como previsto. Step 6 não executado (A1). ✅ Verificado: `git log --follow`
@@ -54,9 +49,9 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
       porque bate no LexML bloqueado e no TCU em 500 com retries — insumo da frente 2.
 - [ ] **T4 · Ambiente reproduzível** — `pyproject.toml` + venv. ⚠ `pandas` é dependência de
       produção não declarada (A13); SDK de LLM vira extra opcional.
-- [ ] **T5 · Protocolo de backend de LLM** — ⚠ `timeout=(3.05, 60)`, tupla (A7); o teste precisa
+- [ ] **T5 · Protocolo de backend de LLM** — ➡ **migrou para a frente 5 da v1.x** (D-C11). ⚠ `timeout=(3.05, 60)`, tupla (A7); o teste precisa
       afirmar o `timeout` (B9).
-- [ ] **T6 · Ligar o cliente ao backend** — a task mais emendada. ⚠ **ACRESCENTAR** linha, não
+- [ ] **T6 · Ligar o cliente ao backend** — ➡ **migrou para a frente 5 da v1.x** (D-C11). A task mais emendada. ⚠ **ACRESCENTAR** linha, não
       trocar a 14 do `test_llm_phase3.py` (B1); blocos nomeados (A4/B6); `app.py` e
       `llm/__init__.py` entram nos Files (A15/B7); Step 4b registra a suíte no runner (B2).
 - [ ] **T7 · Corrigir os documentos com premissa falsa** — ⚠ o MEMORY.md é auto-memória e exige
@@ -87,6 +82,7 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
 - [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).
+      📝 Tag `v1.0` **pode** ser criada agora (o commit de A está na história de B) — não criada; espera a D-C10.1.
 
 ## Fase 2 — as features (plano ainda não escrito)
 
@@ -124,11 +120,7 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
 
 ## P3 — depois da Fase 1
 
-- [ ] **Consertar LexML e TCU** — ⚠ **novo em 2026-09-22.** Medido: LexML atrás de WAF do Senado
-      (3 URLs de fallback inúteis) e o endpoint de atos normativos do TCU em HTTP 500. Hoje **só a
-      web aberta traz resultado** — confirmado pelo Rodrigo ("achou vários normativos por em todos
-      da fonte Google"). Detalhe em `LESSONS.md` (2026-09-22).
-      ⚠ E a UI precisa **distinguir fonte indisponível de fonte sem resultado** (hoje diz "0 erros").
+- [x] ~~Consertar LexML e TCU~~ → **absorvido pela frente 2** (spec + plano v4 de 22/09). Medição em `LESSONS.md` (22/09).
 - [ ] **Medir a lacuna de cobertura** das fontes catalogadas → **`BLOCKED-ON-RODRIGO.md` B-04**.
       É bloqueio no humano (exige tema real e julgamento de quem conhece o acervo), não task.
       ⚠ Obrigatório antes de fechar o MVP. O pacote completo está lá; aqui só o ponteiro.

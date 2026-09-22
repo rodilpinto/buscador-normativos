@@ -81,3 +81,11 @@ resultados e formas subsidiárias de pegar o q a ferramenta original não pegar"
    para depois.
 3. **D-B1 e D-B2 fecham**, as duas abertas desde 2026-09-09. As duas mudaram de natureza quando
    se descobriu que o `levantamento-normativos` existia.
+
+---
+
+## 2026-09-22 — decisões tomadas em conversa (sem board)
+
+D-C10 a D-C15 foram decididas em diálogo direto na sessão de 22/09 e vivem **só** em
+`_DECISOES-PENDENTES.md` (seção "🟢 Decididas em 2026-09-22"), que é a casa delas. Este log é o
+registro das **rodadas de board**; não houve board em 22/09. Ponteiro, não cópia.

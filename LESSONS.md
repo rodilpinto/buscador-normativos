@@ -52,11 +52,13 @@ discordância, não o acerto, que revelou o bug.
 que acórdãos recentes chegam **sem** sumário (20/20 na sessão de 16/09).
 
 **Regra.** **Fixture de API é captura, não redação.** Se a fonte está fora do ar e a captura é impossível
-(caso do LexML hoje: `lexml_sru_valido.xml` é escrito à mão), a fixture leva `📝 escrita à mão, sem
+(caso do LexML hoje: `lexml_sru_valido.xml`, que a T2 do plano vai escrever à mão), a fixture leva `📝 escrita à mão, sem
 captura` no cabeçalho, e capturar vira item pendente — não se apaga a nota quando o teste passa.
 
-**Cobertura.** ✅ TCU: fixture real. ⚠ LexML: **sem captura real de SRU** (fonte bloqueada); registrado
-como pendência na T10 do plano. Google/DDG: dublê de objeto, sem fixture — aceitável, a forma da
+**Cobertura.** ✅ TCU: fixture real, capturada com
+`curl "https://dados-abertos.apps.tcu.gov.br/api/acordao/recupera-acordaos?inicio=0&quantidade=2"`
+(o HTML do desafio veio de `curl "https://www.lexml.gov.br/busca/SRU?operation=searchRetrieve&version=1.1&query=dc.title%3D%22licitacao%22&maximumRecords=2"`).
+⚠ LexML: **sem captura real de SRU** (fonte bloqueada); registrado como pendência na T10 do plano. Google/DDG: dublê de objeto, sem fixture — aceitável, a forma da
 resposta é do pacote `ddgs`, não de uma API.
 
 ---
@@ -114,9 +116,9 @@ fonte sem nada a dizer viram a mesma tela** — e o usuário conclui que o tema 
 É exatamente o risco que o requisito de cobertura do Rodrigo existe para impedir:
 *"devemos conseguir pegar o máximo de coisas possível senão a ferramenta não será segura."*
 
-**Conserto.** ⛔ **Nenhum ainda** — achado desta sessão, registrado antes de qualquer mudança de
-código (a Fase 1 não começou; o golden-master ainda não existe). Entra como insumo obrigatório do
-**B-04** (medir a lacuna de cobertura) e como candidato a task da Fase 2.
+**Conserto.** ⚠ *Retratado no mesmo dia, mais tarde:* virou a **frente 2 da v1.x** — spec + plano v4
+(`docs/superpowers/{specs,plans}/2026-09-22-frente2-*`), ainda **não implementado**. A frente 1 (golden-master
++ runner) já existe. Continua insumo do **B-04**.
 
 **Regra.** **Degradação graciosa sem sinalização é perda de informação, não robustez.** Toda fonte
 que falha por bloqueio, 5xx ou resposta não-parseável tem de aparecer na UI como **fonte
@@ -125,8 +127,10 @@ bater no endpoint com `curl` e olhar o `content-type`: HTTP 200 **não** signifi
 se pediu.
 
 **Cobertura.** ✅ Medido em 2026-09-22 contra LexML (3 URLs) e TCU (2 endpoints), por `curl` e
-pelos searchers reais. ⚠ **Google/DuckDuckGo não foram medidos** nesta sessão — a via da web
-aberta (D-B1) segue não verificada, e é justamente ela que deveria compensar a lacuna.
+pelos searchers reais. ⚠ Google/DuckDuckGo: não medidos por mim; *retratado no mesmo dia:* o Rodrigo
+rodou uma busca e a fonte "Google" (na prática DuckDuckGo — `GOOGLE_CSE_ID` vazio) **trouxe vários
+normativos** — é a única via que entrega hoje. Achado posterior (rodada 1 do plano): a API real de
+acórdãos do TCU não tem `ementa`/`numero`/`ano`, então o TCU estava cego **também** com o endpoint no ar.
 
 ---
 
