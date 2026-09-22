@@ -1,0 +1,2 @@
+python=3.13.7
+openpyxl=3.1.5

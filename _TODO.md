@@ -35,9 +35,14 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
       15 arquivos `.py` / **6.561 linhas**.
       ⚠ **Correção ao plano:** o heredoc do Step 3 não era a união — faltava `/*.xlsx`. Ver a
       nota na Task 3 do plano e a entrada de 22/09 no `LESSONS.md`.
-- [ ] **T1 · Golden-master** — congela dedup + planilha. ⚠ `generate_excel`, não `export_to_excel`
-      (A2); hash de **células**, não de bytes (A3); entrada limpa (A14); **14** itens cobrindo as
-      3 estratégias de dedup (A12/B12).
+- [x] **T1 · Golden-master** — ✅ **feita em 2026-09-22.** `tools/golden_master.py` +
+      `tests/golden/{entrada_fixa,dedup_esperado}.json`, `planilha_sha256.txt`, `ambiente.txt`.
+      Emendas aplicadas: A2 (`generate_excel`), A3 (hash de células), A14 (entrada limpa nas
+      duas chamadas), A21 (nome do arquivo · 1º item divergente na mensagem · prova dos 2 ramos),
+      A12/B12 (14 itens), B11 (ambiente gravado, mecanizado em `ambiente.txt`).
+      ✅ **Provas:** as 3 estratégias disparam uma cada (`id_match` · `tipo_numero` · `fuzzy 0.99`),
+      14 → **11** únicos (colapso < 14, check da A12); sha estável em **3** execuções; comparador
+      reprova nos **dois** ramos e volta a passar ao desfazer.
 - [ ] **T2 · Runner único** — ⚠ nasce com `SUITES_PYTEST = ["test_phase4.py"]` só (B2); piso com
       3 ramos, não igualdade (A9/B3/C1); o trecho entra no laço de impressão (C3).
 - [ ] **T4 · Ambiente reproduzível** — `pyproject.toml` + venv. ⚠ `pandas` é dependência de

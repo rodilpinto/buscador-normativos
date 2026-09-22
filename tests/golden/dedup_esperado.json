@@ -1,0 +1,57 @@
+[
+  {
+    "id": "0ff5e48a6442f94ca374b839fee0c74a9ebf6332b69281809693d26532fcf202",
+    "nome": "Resolução CD/ANPD nº 2, de 27 de janeiro de 2022",
+    "link": "https://www.in.gov.br/web/dou/-/resolucao-cd/anpd-n-2-de-27-de-janeiro-de-2022"
+  },
+  {
+    "id": "122b6aca0f3522928c04703fbb6036a0998923617fb43fd384fff8cdc7e314d1",
+    "nome": "Portaria SGD/ME nº 778, de 4 de abril de 2019",
+    "link": "https://www.gov.br/governodigital/portaria-778-2019"
+  },
+  {
+    "id": "31ca577f0bb99c9136d9e91a9a060fd015aad7998f2bfa2114e7a32b503484ab",
+    "nome": "Acórdão TCU nº 1.234/2022 - Plenário",
+    "link": "https://pesquisa.apps.tcu.gov.br/documento/acordao-completo/1234-2022"
+  },
+  {
+    "id": "3a351220120cf1c6223021af66150b81cc08fd5f9ed6a0f5268a14fbe5cd2fe7",
+    "nome": "Instrução Normativa SGD/ME nº 94, de 23 de dezembro de 2022",
+    "link": "https://www.gov.br/governodigital/in-94-2022"
+  },
+  {
+    "id": "63aed3d2b4fcd4aad69000b99eb4d2f4699760667fcca6093e6e681d2692461e",
+    "nome": "Decreto 10.046/2019 — Cadastro Base do Cidadão",
+    "link": "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2019/decreto/d10046.htm"
+  },
+  {
+    "id": "6a60ca55cc7f49fc05c8dace1d50ab15f19729a1252705ddb95a6bea6fa8e79c",
+    "nome": "NIST Cybersecurity Framework 2.0",
+    "link": "https://www.nist.gov/cyberframework"
+  },
+  {
+    "id": "b11926ef4bd5b5040c401acb60e6d282f464a6fdae7b43f9ccb52bf58e148634",
+    "nome": "COBIT 2019 Framework: Governance and Management Objectives",
+    "link": "https://www.isaca.org/resources/cobit"
+  },
+  {
+    "id": "e3a3fdcec713694406938a6c75b320145481ae95e4a37a930335714b407bb2ec",
+    "nome": "Instrução Normativa SGD/ME nº 1, de 4 de abril de 2019",
+    "link": "https://www.gov.br/governodigital/in-01-2019"
+  },
+  {
+    "id": "eca2f5f3bada674561a9242018c4b1e97d6425a3895604c964bbd4f704aa633d",
+    "nome": "Lei nº 14.133, de 1º de abril de 2021",
+    "link": "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm"
+  },
+  {
+    "id": "eef2fafd43e72a50a20750f217e7c02e633110e25038069ce9b1bd7beb96910e",
+    "nome": "Lei nº 13.709, de 14 de agosto de 2018",
+    "link": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm"
+  },
+  {
+    "id": "f54d9295c85724f71ad10e0d58f162ab7f726885b66ed284e1e8b50611491a39",
+    "nome": "Resolução CD/ANPD nº 2, de 27 de janeiro de 2022",
+    "link": "https://www.gov.br/anpd/resolucao-cd-2-2022"
+  }
+]
