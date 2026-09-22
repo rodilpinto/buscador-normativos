@@ -4,6 +4,19 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-22 · Modelo aposentado "só para usuários novos": o mesmo código funciona com chave velha e falha com chave nova
+
+**Problema:** no app da nuvem, com chave Gemini nova (projeto `nuati.secin`), a IA não gerava nada; localmente, com a
+chave antiga do ambiente, tudo "funcionava". **Causa raiz:** o Google retirou `gemini-2.5-flash-lite` **para usuários
+novos** (404 `NOT_FOUND`), mantendo-o para os antigos. Mascarado por dois comportamentos do app: a chave é lida só no
+import (primeiro sintoma: "IA nao disponivel" até o reboot) e `_generate` engole a exceção (segundo sintoma: "Nenhuma
+palavra-chave gerada", sem motivo). **Conserto:** `MODEL_NAME = "gemini-3.5-flash-lite"` (sugerido pelo próprio 404,
+provado com chamada real). Diagnóstico feito com script local que pede a chave via `getpass` e **tira
+`GOOGLE_API_KEY`/`GEMINI_API_KEY` do ambiente** (o SDK prefere `GOOGLE_API_KEY` global a... o que for passado por
+engano) — a chave nunca passou pelo chat nem por arquivo.
+**Regra:** "funciona aqui" com credencial antiga não prova nada sobre credencial nova; testar com a credencial **do
+ambiente de destino**. Erro de API engolido é a mesma doença que a frente 2 trata nas fontes.
+
 ## 2026-09-22 · Deploy em PaaS não deixa rastro no repo — "não existe deploy" exige olhar o painel
 
 **Problema:** state file e D-C14 afirmavam "não existe deploy nenhum (sem Dockerfile/Procfile/streamlit.app)".

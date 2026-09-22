@@ -11,6 +11,8 @@ varredura do histórico: **nenhum segredo** (só placeholders), mas IP interno, 
 Rodrigo decidiu **manter privado** e dar ao Streamlit acesso a repo privado. Redeploy:
 `https://buscador-normativos.streamlit.app/` (B, `master`). ⚠ push em `master` agora é deploy. App antigo apagado. Chave Gemini do projeto `nuati.secin` nos Secrets do app novo
 (valor fora do chat e do repo); regra: nada de `secrets.toml` local até a frente 5. Insumos da frente 5 no `_TODO.md`.
+IA da nuvem não funcionava: (1) chave lida só no import → reboot; (2) `gemini-2.5-flash-lite` dá 404 para chave nova →
+`MODEL_NAME = "gemini-3.5-flash-lite"` (provado com chamada real). Runner 205/205 com as chaves fora do ambiente; golden OK.
 
 ---
 

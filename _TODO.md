@@ -83,7 +83,9 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       rede interna); servidor Nuati = LM local primário + Gemini de reserva (coerente com D-C5). (b) 📝 o Gemini tem
       endpoint **OpenAI-compatível** (`https://generativelanguage.googleapis.com/v1beta/openai/`, informado pelo
       Rodrigo junto com a chave `nuati.secin`) — um backend OpenAI-compatível só, trocando `base_url`+chave, poderia
-      servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner.
+      servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner. (d) a chave é lida **uma vez, no import** de
+      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (e) `_generate` engole o erro da API
+      (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
 - [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).

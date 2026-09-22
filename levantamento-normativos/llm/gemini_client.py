@@ -63,9 +63,13 @@ except Exception:
 # Model configuration
 # ---------------------------------------------------------------------------
 
-# gemini-2.5-flash-lite: best free-tier throughput (15 RPM, 1000/day)
-# gemini-2.5-flash: better quality but lower free-tier limits (10 RPM, 250/day)
-MODEL_NAME = "gemini-2.5-flash-lite"
+# gemini-3.5-flash-lite: since 2026-09-22. The API answered 404 "gemini-2.5-flash-lite is no longer
+#   available to new users" for a key created that day (project nuati.secin) and suggested this
+#   model; verified with a real call. Free-tier limits NOT re-verified.
+# History (limits measured when chosen, Mar/2026 — may be stale):
+#   gemini-2.5-flash-lite: best free-tier throughput (15 RPM, 1000/day) — retired for new users
+#   gemini-2.5-flash: better quality but lower free-tier limits (10 RPM, 250/day)
+MODEL_NAME = "gemini-3.5-flash-lite"
 
 # ---------------------------------------------------------------------------
 # Lazy Singleton Client
