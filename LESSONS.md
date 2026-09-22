@@ -4,6 +4,50 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-22 · As DUAS fontes catalogadas devolvem zero hoje — e a UI chama isso de "sem resultados", não de falha
+
+**Problema.** Primeira execução do app v1.0 nesta sessão, dirigida ponta a ponta pelo navegador:
+chegou ao Passo 4 em ~135s e mostrou *"Nenhum normativo encontrado"* com o relatório
+**"0 OK, 0 erros, 4 sem resultados"**. Parecia consulta ruim. Não era: **as duas fontes
+catalogadas estão quebradas hoje**, por motivos diferentes.
+
+**Causa-raiz — medida, não inferida.**
+
+1. **LexML está atrás de um desafio de WAF do Senado.** `GET` no SRU devolve **HTTP 200 com
+   `content-type: text/html`** e `<title>Verificação de segurança — Senado Federal</title>`, não
+   XML SRU. O parser cai em `LexML XML parse error: mismatched tag: line 50, column 2` — 29
+   ocorrências no probe — e o searcher degrada para lista vazia.
+   ⚠ **Os 3 URLs de fallback não ajudam:** `PRIMARY_SRU_URL` pega o desafio; `FALLBACK_SRU_URL`
+   (`/sru/SRU`) e `FALLBACK_SRU_URL_2` (`/srw/SRU`) devolvem **404**. Os três estão no mesmo host
+   `www.lexml.gov.br`, então uma proteção no host derruba a cadeia inteira.
+2. **O endpoint de atos normativos do TCU devolve HTTP 500.** `atonormativo/recupera-atos-normativos`
+   falha nas 3 tentativas com backoff. ⚠ Não é a API inteira: `acordao/recupera-acordaos` responde
+   **200 `application/json` em 0,66s** na mesma bancada. É o recurso de *atos normativos* que está fora.
+3. **Não é rede nem proxy daqui:** `curl` direto em `google.com` e no host do LexML volta 200 em
+   ~0,35s.
+
+**A parte que mais importa: o silêncio.** Erro de parse e 500 com 3 retries **não sobem para a
+UI como erro**. O relatório diz "0 erros". Para uma ferramenta de pesquisa, **fonte bloqueada e
+fonte sem nada a dizer viram a mesma tela** — e o usuário conclui que o tema não tem normativo.
+É exatamente o risco que o requisito de cobertura do Rodrigo existe para impedir:
+*"devemos conseguir pegar o máximo de coisas possível senão a ferramenta não será segura."*
+
+**Conserto.** ⛔ **Nenhum ainda** — achado desta sessão, registrado antes de qualquer mudança de
+código (a Fase 1 não começou; o golden-master ainda não existe). Entra como insumo obrigatório do
+**B-04** (medir a lacuna de cobertura) e como candidato a task da Fase 2.
+
+**Regra.** **Degradação graciosa sem sinalização é perda de informação, não robustez.** Toda fonte
+que falha por bloqueio, 5xx ou resposta não-parseável tem de aparecer na UI como **fonte
+indisponível**, distinta de **fonte sem resultado**. E antes de aceitar "a busca não achou nada",
+bater no endpoint com `curl` e olhar o `content-type`: HTTP 200 **não** significa que veio o que
+se pediu.
+
+**Cobertura.** ✅ Medido em 2026-09-22 contra LexML (3 URLs) e TCU (2 endpoints), por `curl` e
+pelos searchers reais. ⚠ **Google/DuckDuckGo não foram medidos** nesta sessão — a via da web
+aberta (D-B1) segue não verificada, e é justamente ela que deveria compensar a lacuna.
+
+---
+
 ## 2026-09-16 · Uma varredura que não cobre a pasta certa produz um "não existe" que custa um projeto inteiro
 
 **Problema.** A spec de 08/09 declarou este projeto *greenfield*, afirmando que "o artefato

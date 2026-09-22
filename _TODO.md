@@ -1,6 +1,6 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-09-16
+last_audit: 2026-09-22
 related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -62,9 +62,38 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
 - [ ] **F5** download + organização por tema + relatório de duplicata
 - [ ] **F6** SQLite + colunas de registro na planilha
 - [ ] **F7** agrupamento semântico dos resultados — ⚠ **aditivo**, nunca subtrativo (D-C1)
+- [ ] **F8** **aba de instruções e explicações na planilha de saída** — pedido do Rodrigo em
+      2026-09-22, ao ver a v1.0 rodando. Hoje a planilha tem **uma aba só** (`Normativos`,
+      `excel_export.py:304`). A aba nova explica as colunas, a procedência de cada resultado e
+      **como a nota de relevância foi calculada**, inclusive qual parte é determinística.
+- [ ] **F9** **aba de explicações e configurações no app** — mesmo pedido, mesma data. Hoje a
+      régua de relevância existe **só dentro do prompt** em `llm/gemini_client.py` e não aparece
+      em lugar nenhum da interface. Quem lê "30%" não tem como saber o que isso significa.
+      ⚠ **Achado da leitura de código (2026-09-22), insumo desta feature:** a coluna `Relevancia`
+      hoje **colapsa três procedências diferentes** no mesmo número, sem marcar qual é qual:
+      (a) nota dada pelo Gemini; (b) `0.5` de fallback quando o lote do LLM falha ou volta
+      malformado; (c) o default do searcher (`0.3` Google, `0.5` LexML/TCU) quando o LLM não roda.
+      **`0.5` pode ser as três coisas.** Contra o princípio de rastreabilidade do projeto —
+      precisa de campo de procedência da nota, não só da fonte.
+      ⚠ **Segundo achado:** a heurística determinística `_keyword_relevance` é **inalcançável
+      pelo app**. `score_relevance` só é chamada dentro de `if llm_available()` (`app.py:571`),
+      então sem chave a nota **nunca é calculada** — fica no default do searcher. A heurística só
+      roda se alguém chamar a função direto.
+
+### 📥 Observações do Rodrigo sobre a planilha de saída (em coleta)
+
+> Aberto em 2026-09-22: *"Eu tenho algumas observações para fazer na Excel de saída, mas já tá bem
+> interessante por agora."* As demais observações ainda **não** foram ditas — este é o lugar delas.
+
+- [x] aba de instruções e explicações → virou **F8**
 
 ## P3 — depois da Fase 1
 
+- [ ] **Consertar LexML e TCU** — ⚠ **novo em 2026-09-22.** Medido: LexML atrás de WAF do Senado
+      (3 URLs de fallback inúteis) e o endpoint de atos normativos do TCU em HTTP 500. Hoje **só a
+      web aberta traz resultado** — confirmado pelo Rodrigo ("achou vários normativos por em todos
+      da fonte Google"). Detalhe em `LESSONS.md` (2026-09-22).
+      ⚠ E a UI precisa **distinguir fonte indisponível de fonte sem resultado** (hoje diz "0 erros").
 - [ ] **Medir a lacuna de cobertura** das fontes catalogadas → **`BLOCKED-ON-RODRIGO.md` B-04**.
       É bloqueio no humano (exige tema real e julgamento de quem conhece o acervo), não task.
       ⚠ Obrigatório antes de fechar o MVP. O pacote completo está lá; aqui só o ponteiro.

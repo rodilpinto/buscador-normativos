@@ -1,7 +1,7 @@
 ---
 title: "Decisões abertas — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-16
+last_updated: 2026-09-22
 related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -13,10 +13,12 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
 
-## 🔴 D-C9 — Dobrar as emendas no corpo do plano, ou construir com elas como estão?
+## 🔴 D-C9 — Como consumir o plano da Fase 1: dobrar as emendas, construir como está, ou dividir em tasks?
 
 - **Onde aparece:** fim da sessão de 16/09, depois das 3 rodadas adversariais. **Não respondida.**
-- **Trava:** ⚠ **nada, na prática.** As duas opções levam à mesma primeira task (T3, o merge),
+- **Atualizada em 2026-09-22:** acrescentada a opção **`c`** (split por task), pedida pelo Rodrigo
+  na sessão de 22/09. As opções `a` e `b` seguem como estavam.
+- **Trava:** ⚠ **nada, na prática.** As três opções levam à mesma primeira task (T3, o merge),
   que é git puro. Dá para executar a T3 inteira sem esta resposta — **não fique parado por ela.**
   Ela só muda a *forma* de ler o plano a partir da T1.
 
@@ -28,9 +30,29 @@ apontando qual emenda a derruba (feito no checkpoint de 16/09).
 |---|---|---|
 | **a** Dobrar as emendas no corpo primeiro | plano linear, lido de cima a baixo sem saltar | ~1 passada de edição sobre 1.7k linhas; risco de errar ao transcrever |
 | **b** Construir com as emendas como estão | começa agora; a precedência está explícita e marcada | o executor precisa ler 3 seções + o corpo por task; é onde alguém escorrega |
+| **c** Dobrar as emendas **e** dividir o plano em um arquivo por task | as duas vantagens da `a`, mais: o executor carrega ~150 linhas por task em vez de 1.741; é o que a fase *split* do `/go` fez com o plano de 08/09 | a passada de edição da `a` **mais** a extração; cria uma segunda cópia do conteúdo, que pode divergir do plano |
 
-📝 **Recomendação:** `a`, mas é preferência fraca — os marcadores `⛔` já mitigam boa parte do
-risco da `b`.
+### Sobre a opção `c` — o que ela repete e o que ela herda
+
+✅ **Já foi feito uma vez neste projeto**, com o plano de 08/09: 16 tasks cortadas **verbatim**
+para `spec/buscador/tasks/NN-nome.md` (122-255 linhas cada) + o transversal em
+`spec/buscador/reference/global-constraints.md`. Registrado no `log.md` de 2026-09-10. Aquele
+split está ⛔ superado junto com o plano que o originou — mas o **procedimento** vale, inclusive
+a verificação que ele usou: cobertura contígua das linhas, cercas de código pares, sem
+truncamento, conferida por quem não extraiu.
+
+⚠ **Regra herdada daquela rodada, obrigatória se a `c` for escolhida:** o **plano segue fonte de
+verdade**. Divergência entre plano e cópia por task → o plano ganha. Status continua só no
+`_TODO.md`. É a mitigação do único risco novo que a `c` traz (duas cópias do mesmo conteúdo).
+
+⚠ **A `c` só faz sentido dobrando as emendas antes** (o trabalho da `a`). Dividir o plano sem
+dobrar espalharia por 9 arquivos a necessidade de consultar 3 seções de emendas que ficariam
+fora deles — piorando exatamente o problema que a `b` já tem.
+
+📝 **Recomendação:** `c`, com a mesma força fraca de antes. Ganha da `a` porque o custo extra é
+pequeno depois que as emendas já foram dobradas, e o benefício (contexto por task) é o mesmo que
+justificou o split de 10/09. Ganha da `b` porque os marcadores `⛔` mitigam, mas não eliminam, o
+risco de alguém executar um trecho do corpo que uma emenda derrubou.
 
 **Decisão tomada:** _(pendente)_
 
@@ -40,6 +62,72 @@ risco da `b`.
 
 - **Registrar este repo no `MEMORY.md` do `projetos-nuati`** — é auto-memória, e a regra global
   `memory-write-policy` exige autorização explícita do Rodrigo. Item no `_TODO.md` §P3.
+
+---
+
+## 🟢 Decididas em 2026-09-22
+
+- **D-C11 · A v1.x vira um programa de 5 frentes, cada uma com seu ciclo SDD.** Decidido por
+  Rodrigo em 2026-09-22: *"Vamos fazer todos os consertos dessa versão 1. use a mesma metodologia
+  sdd. escreva os arquivos com os fixes, desenhe, implemente e teste, revise o app e parta para a
+  próxima."*
+
+  **Ordem decidida: 1 → 2 → 5 → 3 → 4.**
+
+  | # | Frente | Conteúdo | Spec nova? |
+  |---|---|---|---|
+  | **1** | Rede de proteção | T3 merge · T1 golden-master · T2 runner | ❌ **não** — o plano de 16/09 já cobre |
+  | **2** | Honestidade das fontes | fonte indisponível ≠ sem resultado · TCU 500 · procedência da nota · heurística inalcançável | ✅ sim |
+  | **5** | LM local | **T5+T6 puxadas para cá** — protocolo de backend + ligar o cliente | ✅ sim (emenda o plano) |
+  | **3** | Cobertura | adaptador Planalto e/ou LEGIN | ✅ sim |
+  | **4** | Explicabilidade | F8 aba da planilha · F9 aba do app | ✅ sim |
+
+  ⚠ **As frentes 2 e 5 tocam os mesmos arquivos** (`gemini_client.py`, `app.py`) — serializadas
+  de propósito, nunca em paralelo. Foi o que decidiu pôr a 5 logo depois da 2.
+  ⚠ **A frente 4 vem por último porque depende do vocabulário de procedência criado na 2** —
+  aba de explicação escrita antes descreveria comportamento que ainda vai mudar.
+
+  **Consequência para os marcos da D-C10:** a v1.x passa a conter o grosso do conteúdo técnico
+  (T3, T1, T2, T5, T6 + os consertos + Planalto/LEGIN + as abas). A **v2.0 fica com T4**
+  (ambiente), **T7** (documentos), **T8** (renomear para `buscador/`) e **T9** (aposentar o repo A).
+
+- **D-C12 · Rede de proteção antes dos consertos.** Decidido em 2026-09-22. T3, T1 e T2 rodam
+  **antes** de qualquer mudança de comportamento, porque as três não alteram uma linha de
+  produção (git puro + ferramentas novas). Só depois delas "não regrediu" passa a ser afirmação
+  verificável por máquina, em vez de quatro suítes rodadas à mão em três formatos de resumo.
+
+- **D-C13 · Cobertura do LexML: detectar/avisar E acrescentar fonte catalogada substituta.**
+  Decidido em 2026-09-22, depois de medido que o LexML não tem conserto técnico legítimo.
+  ✅ **Medições que sustentam:** só `/busca/SRU` está desafiado (a home do `lexml.gov.br` abre
+  normal); User-Agent descritivo **não** resolve; o desafio é de **JavaScript**; `/oai` é 404.
+  ⛔ **Resolver o desafio programaticamente está fora de escopo** — seria contornar proteção
+  anti-robô. Entra no lugar: detecção honesta + Planalto/LEGIN (frente 3) + pedido de acesso
+  oficial ao Senado (ação humana, ver `BLOCKED-ON-RODRIGO.md`).
+  ⚠ Isto **reabre a decisão D-B2**, que tinha adiado Planalto e LEGIN por julgar LexML+TCU
+  suficientes. A premissa caiu: o LexML não entrega nada hoje.
+
+- **D-C10 · Versionamento por marcos, com fallback declarado.** Decisão do Rodrigo nesta sessão,
+  depois de ver o app v1.0 rodando: *"ele será nossa v1.0 e esse merge de specs será a v2.0. é bom
+  termos marcos e fallbacks para o caso de regressão."*
+
+  | Marco | O que é | Fallback |
+  |---|---|---|
+  | **v1.0** | o app Streamlit de A, como está hoje: 6.561 linhas, 205 testes verdes, wizard de 5 passos, busca por API | tag anotada `levantamento-v1-streamlit` no repo A, ✅ já no remoto |
+  | **v2.0** | o resultado da Fase 1: merge + golden-master + runner único + backend de LLM injetável + pacote `buscador/` | volta para **v1.0** |
+
+  ⚠ **O que ainda NÃO existe** (📝 proposta minha de execução, não validada):
+  - tag `v1.0` **neste repo** — só dá para criar **depois da T3**, porque é o merge que traz o
+    commit `eb91277` de A para a história de B. Antes disso não há objeto para apontar aqui.
+  - tag `v2.0` — ao fechar os critérios de pronto da Fase 1 (215 testes + golden-master OK),
+    antes da T9 (arquivar A).
+  - `v1.x` intermediárias por task fechada: **📝 sugerido, não decidido**. O plano já manda
+    commitar e pushar a cada task (D-C7), e o golden-master já é o detector de regressão por task;
+    tag por task pode ser ruído. **Pergunta aberta ao Rodrigo:** quer tag por task, ou só nos dois
+    marcos?
+
+  ⚠ **O fallback só vale se a prova de regressão existir.** A tag devolve o código; ela não diz
+  que regrediu. Quem diz é o golden-master (T1) + o runner (T2) — e nenhum dos dois existe ainda.
+  Até a T2 fechar, "temos fallback" significa **restaurar manualmente e conferir no olho**.
 
 ---
 

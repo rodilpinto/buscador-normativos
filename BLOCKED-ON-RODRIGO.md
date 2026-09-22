@@ -1,7 +1,7 @@
 ---
 title: "Bloqueios no humano — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-16
+last_updated: 2026-09-22
 related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -39,10 +39,12 @@ de configuração: a interface de embeddings é a mesma, muda só quem gera o ve
 
 ---
 
-## 🔴 B-02 · Escolher entre dobrar as emendas no corpo ou construir com elas como estão
+## 🔴 B-02 · Escolher como consumir o plano da Fase 1 (dobrar · construir como está · dividir)
 
 - **Aberto em:** 2026-09-16 · **Detalhe completo:** decisão **D-C9** em `_DECISOES-PENDENTES.md`
-- **Bloqueia:** o início da Fase 1 (as duas opções levam à mesma primeira task, a T3).
+- **Atualizado em 2026-09-22:** são **três** opções agora — a `c` (dobrar + split por task) foi
+  acrescentada a pedido do Rodrigo. A recomendação mudou de `a` para `c`, força fraca.
+- **Bloqueia:** ⚠ **nada.** As três opções levam à mesma primeira task, a T3, que é git puro.
 
 Pergunta de uma linha, com as opções e a recomendação no ledger. Não exige pesquisa nem consulta
 a terceiros — é preferência de forma.
@@ -69,10 +71,42 @@ explícita. **Pergunta ao Rodrigo:** autoriza acrescentar uma linha lá apontand
 > "essa é uma ferramenta de pesquisar, então devemos conseguir pegar o máximo de coisas possível
 > senão a ferramenta não será segura." — Rodrigo, 2026-09-16
 
+> ⚠ **2026-09-22 — a lacuna já começou a ser medida, e é pior do que "adiar Planalto/LEGIN".**
+> Numa execução real do app v1.0 nesta data, **as duas fontes catalogadas devolveram zero**:
+> LexML está atrás de um desafio de WAF do Senado (HTTP 200 com HTML, não XML SRU; os 3 URLs de
+> fallback do searcher não salvam — dois são 404) e o endpoint de atos normativos do TCU devolve
+> HTTP 500. E a UI reportou **"0 erros"**. Detalhe completo e as medições: `LESSONS.md`, entrada
+> de 2026-09-22. Isto **muda o pacote deste bloqueio**: não é só medir o que falta, é decidir o
+> que fazer quando a fonte catalogada cai — hoje o usuário não fica sabendo.
+
 Rodar uma busca sobre um **tema real** e avaliar o que as fontes catalogadas (LexML + TCU)
 deixaram passar, comparado ao que a web aberta trouxe. Precisa de um tema real e do julgamento de
 quem conhece o acervo — **não dá para automatizar a aferição**, por isso é bloqueio no humano e
 não task. Cobertura insuficiente conta como **falha**, não como limitação conhecida.
+
+---
+
+## 🔴 B-05 · Pedir acesso oficial ao LexML / Senado Federal
+
+- **Aberto em:** 2026-09-22 · **Origem:** decisão D-C13, depois de medir o bloqueio
+- **Bloqueia:** nada do código. A frente 2 detecta e avisa; a frente 3 traz fonte substituta.
+
+✅ **Medido em 2026-09-22:** o serviço SRU do LexML (`https://www.lexml.gov.br/busca/SRU`) está
+atrás de um **desafio de JavaScript** ("Verificação de segurança — Senado Federal"). Devolve
+HTTP 200 com `text/html` em vez de XML. A home do `lexml.gov.br` abre normalmente — é só o
+serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai` → 404).
+
+⛔ **Contornar o desafio programaticamente está fora de escopo** — é proteção anti-robô.
+
+**O pedido, pronto para formular:**
+
+> A ferramenta de levantamento normativo do Nuati/Secin consome o serviço SRU público do LexML
+> (`/busca/SRU`) para localizar normativos por CQL. Desde [data] as requisições recebem a página
+> de verificação de segurança em vez do XML SRU, o que inviabiliza o uso programático.
+> Existe caminho oficial para acesso automatizado — allowlist de IP institucional, credencial de
+> API, ou endpoint alternativo para consumo por sistema?
+
+**Estado:** aguardando o Rodrigo decidir se abre o pedido e por qual canal.
 
 ---
 
