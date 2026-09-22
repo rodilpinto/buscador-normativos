@@ -18,9 +18,10 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 - **Onde aparece:** fim da sessão de 16/09, depois das 3 rodadas adversariais. **Não respondida.**
 - **Atualizada em 2026-09-22:** acrescentada a opção **`c`** (split por task), pedida pelo Rodrigo
   na sessão de 22/09. As opções `a` e `b` seguem como estavam.
-- **Trava:** ⚠ **nada, na prática.** As três opções levam à mesma primeira task (T3, o merge),
-  que é git puro. Dá para executar a T3 inteira sem esta resposta — **não fique parado por ela.**
-  Ela só muda a *forma* de ler o plano a partir da T1.
+- **Trava:** ⚠ **nada — e menos ainda depois de 22/09.** A T3 (e a T1 e a T2) já foram executadas lendo as
+  emendas junto (opção `b`, na prática). O plano da **frente 2** nasceu com as emendas **dobradas no corpo**
+  (opção `a`/`c` por construção). A D-C9 só volta a importar na **v2.0**, quando T4/T7/T8 do plano de 16/09
+  forem executadas. Pode ficar aberta até lá sem custo.
 
 O plano da Fase 1 tem emendas vinculantes em três camadas (A1-A21, B1-B12, C1-C5), com
 precedência **C > B > A > corpo**. Cada seção do corpo derrubada já carrega um marcador `⛔`
@@ -94,6 +95,13 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 ---
 
 ## 🟢 Decididas em 2026-09-22
+
+- **D-C15 · Como a frente 2 é revisada e executada.** Rodrigo, 22/09: *"2 rodadas de adversarial review e
+  depois vamos parar e começar a implementação em uma nova sessão com contexto zerado."* Feito: o plano
+  passou por **3** rodadas (a 1ª antes do pedido, mais as 2 pedidas), cada uma aplicando o plano num
+  worktree e rodando os testes do próprio plano; em **duas rodadas seguidas o pior achado foi um
+  cruzamento de duas correções da rodada anterior** (registrado em `LESSONS.md`). Execução: **sessão nova**,
+  um subagente por task, runner + golden como gate, push por task.
 
 - **D-C11 · A v1.x vira um programa de 5 frentes, cada uma com seu ciclo SDD.** Decidido por
   Rodrigo em 2026-09-22: *"Vamos fazer todos os consertos dessa versão 1. use a mesma metodologia

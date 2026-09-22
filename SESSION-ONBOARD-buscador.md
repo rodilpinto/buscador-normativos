@@ -19,24 +19,27 @@ palavras-chave → busca → **triagem em poucas decisões** → download → or
 pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
 board de 16/09 (decisão D-C2).
 
-## 2. Estado na última pausa (2026-09-22)
+## 2. Estado na última pausa (2026-09-22, fim do dia)
 
-🟢 **Frente 1 da v1.x fechada: T3 (merge) → T1 (golden-master) → T2 (runner).** O código de A
-vive em `levantamento-normativos/` **neste repo**, com história preservada. **205 testes verdes**
-pelo runner único, golden-master congelado e provado nos 2 ramos. Nenhuma linha de produção mudou.
+🟢 **Frente 1 da v1.x fechada** (T3 merge → T1 golden-master → T2 runner). O código de A vive em
+`levantamento-normativos/` **neste repo**, com história preservada; **repo A privado e arquivado**.
+Nenhuma linha de produção mudou. Contagem atual de testes: `BASELINE` em `tools/run_all_tests.py`.
 
-**A v1.x é um programa de 5 frentes** (D-C11), ordem **1 → 2 → 5 → 3 → 4**. A 1 está feita. As
-outras quatro pedem **spec própria** antes de código (brainstorming → writing-plans → execução).
+🟡 **Frente 2 (honestidade das fontes): spec e plano v4 prontos, revisados em 3 rodadas adversariais,
+zero código.** É a próxima. Tudo está dobrado no corpo do plano — **não há seção de emendas a consultar**.
 
-**Cadeia desta sessão:** `a494485` → `dc99d73` (decisões) → `4f36080` (T3) → `97e61cc` → `d054d5b`
-(T1) → commit da T2.
-⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo.**
+**Cadeia desta sessão:** `dc99d73` → `4f36080` (T3) → `97e61cc` → `d054d5b` (T1) → `e18dd4b` (T2) →
+`b489d00` (spec) → `b1a6d3c` (plano v1) → `1e24933` (v2) → `46cdb0e` (v3) → `02dc620`/`a457e84` (v4) →
+`f55488c`/`407b5a1` (ledgers, repo A) → commit deste checkpoint.
+⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo** — a cadeia
+real termina em `git log --oneline -3`.
 
-**Working tree:** limpo na pausa; `master` = `origin/master`. Remoto `levantamento` aponta para o
-repo A local. A tag `levantamento-v1-streamlit` existe **também aqui** (veio no fetch).
+**Working tree:** limpo na pausa; `master` = `origin/master`. Remoto `levantamento` (repo A local) segue
+configurado; A está arquivado no GitHub. A tag `levantamento-v1-streamlit` existe aqui **e** no remoto de B.
 
-**Ferramentas que passaram a existir:** `python tools/run_all_tests.py` (≈9 min — as suítes LIVE
-batem em fontes quebradas) e `python tools/golden_master.py comparar`.
+**Ferramentas:** `python tools/run_all_tests.py` (≈9 min — as suítes LIVE batem em fontes quebradas) e
+`python tools/golden_master.py comparar`. O app v1.0: `python -m streamlit run app.py` em
+`levantamento-normativos/`.
 
 ## 3. Achados críticos (não perder)
 
@@ -54,6 +57,13 @@ batem em fontes quebradas) e `python tools/golden_master.py comparar`.
    tema real **antes** de fechar o MVP.
 7. **LLM local inalcançável desta máquina** (`10.10.111.125:1234`, timeout). Detalhe e a regra do
    `timeout` em tupla: `~/.claude/ENVIRONMENT.md`.
+8. **As duas fontes catalogadas estão quebradas hoje (medido 22/09):** LexML `/busca/SRU` atrás de desafio
+   de JavaScript do Senado (200 `text/html`; fallbacks 404; sem conserto legítimo → B-05); TCU
+   `atonormativo` em 500 e, pior, a API de acórdãos **não devolve `ementa`/`numero`/`ano`** — o código lia
+   só isso, então todo acórdão colapsa num id e nunca casa. Só a web aberta (DuckDuckGo; `GOOGLE_CSE_ID`
+   vazio) traz resultado. A frente 2 conserta o que dá; detalhe em `LESSONS.md` (22/09).
+9. **Fixture real do TCU** em `levantamento-normativos/tests/fixtures/tcu_acordaos_real.json`; o HTML real do
+   desafio do Senado em `lexml_desafio_senado.html`. Fixtures de API são captura, não redação.
 
 ## 4. Ponto de restauração (rollback)
 
@@ -72,21 +82,25 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 
 ## 6. Próximo movimento
 
-**Frente 2 — honestidade das fontes.** Spec via `superpowers:brainstorming` (o gate está aberto:
-nenhuma implementação antes da spec aprovada). Insumos já medidos, em `LESSONS.md` (22/09) e no
-`_TODO.md` (F9): LexML devolve HTML com 200 e o parser classifica como `empty` em vez de `error`;
-TCU só marca `error` se **os dois** endpoints falharem, senão um 500 vira `empty`; a coluna
-`Relevancia` colapsa 3 procedências; `_keyword_relevance` é inalcançável sem LLM.
+**Executar o plano v4 da frente 2, a partir da T1**, em sessão nova. Primeiro passo agêntico, sem
+depender de ninguém: abrir `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, ler
+"Global Constraints" + "Estrutura de arquivos" + **só a Task 1**, e despachar um subagente para a T1
+(`superpowers:subagent-driven-development`), com o gate por task: `python tools/run_all_tests.py` verde
+**e** `python tools/golden_master.py comparar` OK **e** push. ⚠ A regra do plano "se o observado divergir,
+parar" vale para a diferença entre o **bloco de testes** e o observado — contar `def test_` antes de
+suspeitar do código.
 
-Decisões ainda abertas que **não** travam a frente 2: D-C9 (forma de consumir o plano — irrelevante
-agora, o plano de 16/09 só volta na v2.0), tag por task ou só nos marcos (D-C10).
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy) e B-06. Ações do Rodrigo
+pendentes: B-01, B-03, B-04, B-05, B-06 (`BLOCKED-ON-RODRIGO.md`).
 
 ## 7. Ponteiros
 
 | Doc | Papel |
 |---|---|
-| `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | **spec vigente** |
-| `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | **plano vigente** (emendas no topo) |
+| `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (próxima) |
+| `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração |
+| `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura; vale) |
+| `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — T3/T1/T2 **feitas**; T5/T6 viraram a frente 5; T4/T7/T8/T9 = **v2.0** (emendas no topo, D-C9) |
 | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
 | `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` | lições transversais · o que espera o humano |
 | `decisions/DECISIONS-LOG.md` + o board `.html` | as rodadas de decisão, com os comentários |
@@ -117,8 +131,8 @@ revisão de 16/09 os achados brutos foram numerados à parte. Diga sempre de qua
 ⚠ **A mensagem da tag de rollback é imutável e cita `6.533 linhas`** — medição antiga, que omitia
 `llm/__init__.py`. O valor correto é **6.561** (`git ls-files '*.py' | xargs wc -l`).
 
-**Fechar a D-C9** quando respondida: mover para 🟢 em `_DECISOES-PENDENTES.md` com a data, abrir
-seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-ON-RODRIGO.md` e atualizar a §6.
+**Fechar a D-C9** quando respondida (só importa na v2.0): mover para 🟢 em `_DECISOES-PENDENTES.md` com a
+data, abrir seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-ON-RODRIGO.md`.
 
 ## 9. Como atualizar este arquivo
 

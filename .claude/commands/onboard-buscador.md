@@ -24,14 +24,17 @@ com o onboard, siga com ela após o resumo; senão, NÃO comece nada até ele da
 - `BLOCKED-ON-RODRIGO.md` — o que espera uma ação do humano.
 - `LESSONS.md` — lições transversais. Skim; o índice do fim aponta as de máquina.
 
-### Passo 3 — Spec e plano vigentes
-- `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` — **por que** cada coisa é
-  como é. A spec de 08/09 continua valendo no que esta não contrariar, e esta declara onde prevalece.
-- `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` — o plano vigente.
-  ⛔ **Leia as seções de EMENDAS antes do corpo.** Precedência declarada no topo de cada uma.
-  Cada seção do corpo que foi derrubada carrega um marcador `⛔` nomeando a emenda que a derruba.
-  **Não leia o plano inteiro de uma vez:** leia as emendas, as "Global Constraints" e só a task da vez.
-  ⚠ **A ordem de execução NÃO é a numeração das tasks** — o `_TODO.md` traz a ordem real.
+### Passo 3 — Spec e plano da frente da vez
+A §6 do state file diz qual frente está ativa. Para cada frente há uma spec e um plano em
+`docs/superpowers/{specs,plans}/` com a data em que nasceram; o state file §7 aponta os vigentes.
+
+- **Spec da frente** — o *porquê*. A spec de consolidação de 16/09 continua valendo para a arquitetura.
+- **Plano da frente** — leia "Global Constraints", "Estrutura de arquivos" e **só a task da vez**.
+  ⚠ Planos têm dois formatos: (a) **emendas dobradas no corpo** (a triagem de cada rodada adversarial fica
+  no topo como registro; o corpo já está corrigido; ordem = numeração) — é o caso do plano da frente 2;
+  (b) **seções de emendas no topo** que prevalecem sobre o corpo (precedência declarada em cada seção; cada
+  seção do corpo derrubada tem marcador `⛔`; a ordem real está no `_TODO.md`) — é o caso do plano de 16/09.
+  O topo do plano diz qual formato ele usa; não leia o corpo antes disso.
 
 ⛔ **Superados, histórico apenas — não execute:** `docs/superpowers/plans/2026-09-08-*`,
 `docs/superpowers/specs/2026-09-08-*` na parte contrariada, e `spec/buscador/tasks/`.
@@ -53,7 +56,7 @@ cadeia real é a do `git log`.
 
 Resumo curto (≤ 8 linhas):
 1. Fase do projeto e último commit.
-2. Qual task é a próxima (ordem real, não numérica).
+2. Qual frente e qual task são as próximas (a ordem real está no `_TODO.md`; no plano da frente 2 é a numeração).
 3. Decisões abertas e o que cada uma trava.
 4. As ressalvas da §3 do state file que afetam a task da vez.
 

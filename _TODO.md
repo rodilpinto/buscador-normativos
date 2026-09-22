@@ -70,6 +70,24 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
       - [x] 2026-09-16 · tag no remoto de A · [x] 2026-09-22 · tag no remoto de B
       - [x] README de arquivamento · [x] `gh repo archive`
 
+## v1.x — programa de 5 frentes (D-C11; ordem 1 → 2 → 5 → 3 → 4)
+
+- [x] **Frente 1 · rede de proteção** — ✅ T3 `4f36080` · T1 `d054d5b` · T2 `e18dd4b` (22/09). Baseline atual:
+      `BASELINE` em `tools/run_all_tests.py` (**única casa do número**; não restatar aqui).
+- [ ] **Frente 2 · honestidade das fontes** — 🟡 **spec e plano prontos, zero código.**
+      Spec: `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md`.
+      Plano **v4** (3 rodadas adversariais, tudo dobrado no corpo — não há seção de emendas a consultar):
+      `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, 10 tasks, TDD, BASELINE previsto
+      por task na tabela do próprio plano. ⚠ Ordem de execução = numeração (T1…T10). Executar em **sessão
+      nova**, subagente por task (`superpowers:subagent-driven-development`), runner + golden como gate.
+      - [ ] T1 vocabulário · [ ] T2 LexML · [ ] T3 TCU · [ ] T4 TCU esquema real · [ ] T5 Google
+      - [ ] T6 origem da nota · [ ] T7 `_merge` · [ ] T8 planilha (recongela golden) · [ ] T9 tela (V11) · [ ] T10 fechar
+- [ ] **Frente 5 · LM local** — T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
+      do conector do wiki-chat no `log.md` (22/09).
+- [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
+- [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
+- [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).
+
 ## Fase 2 — as features (plano ainda não escrito)
 
 - [ ] **F1** procedência (`catalogada` / `web-aberta`)
@@ -119,6 +137,10 @@ depois da **T3** (o merge). Antes disso, abra-os lá.
 - [ ] Reavaliar se Planalto e LEGIN fazem falta (D-B2 adiou; a lacuna não foi medida).
 - [ ] **Deploy** — pós-v2.0. Ver D-C14 (🟡) e B-06. `Dockerfile` nasce na T4 (ambiente reproduzível).
 - [ ] Escrever o plano da Fase 2.
+- [ ] **Sobras da frente 2 registradas nas rodadas adversariais (não entram nela):** sanitizar `ementa`/`nome` contra
+      fórmula na aba `Normativos`; dublar `test_lexml_cql_injection_sanitization` (faz rede real); na tela, agrupar
+      o detalhe do TCU por fonte (é idêntico por keyword); runner "sem LLM" de verdade — `st.secrets` vence a
+      variável vazia (frente 5); reduzir os ~390s dos testes LIVE (📝 `BUSCADOR_SKIP_LIVE=1`, não decidido).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
       ⛔ **Bloqueado em autorização** — é auto-memória; a regra `memory-write-policy` exige que o
       Rodrigo autorize antes.

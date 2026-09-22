@@ -44,7 +44,7 @@ de configuração: a interface de embeddings é a mesma, muda só quem gera o ve
 - **Aberto em:** 2026-09-16 · **Detalhe completo:** decisão **D-C9** em `_DECISOES-PENDENTES.md`
 - **Atualizado em 2026-09-22:** são **três** opções agora — a `c` (dobrar + split por task) foi
   acrescentada a pedido do Rodrigo. A recomendação mudou de `a` para `c`, força fraca.
-- **Bloqueia:** ⚠ **nada.** As três opções levam à mesma primeira task, a T3, que é git puro.
+- **Bloqueia:** ⚠ **nada.** T3/T1/T2 já foram executadas (22/09) e o plano da frente 2 já nasce dobrado. Só volta a importar na v2.0.
 
 Pergunta de uma linha, com as opções e a recomendação no ledger. Não exige pesquisa nem consulta
 a terceiros — é preferência de forma.

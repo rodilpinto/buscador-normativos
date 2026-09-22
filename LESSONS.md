@@ -4,6 +4,63 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-22 · Duas rodadas seguidas: o pior achado foi um CRUZAMENTO de duas correções da rodada anterior
+
+**Problema.** O plano da frente 2 passou por 3 rodadas adversariais (5 lentes, aplicando o plano num
+worktree e rodando os testes que o próprio plano escreve). Na rodada 2, o bloqueador mais grave era o
+cruzamento de **duas correções da rodada 1**: a H4 (`redigir(limite=300)` para não vazar chave de API)
+cortava a cadeia agregada que a B2 acrescentou — o fato central da frente (LexML bloqueado por WAF)
+**nunca chegaria à planilha**, e o teste passava porque o dublê usava URL de 16 chars. Na rodada 3, de
+novo: a R2-H5 (contar acórdãos "sem texto") pôs a contagem **fora** do `try` que a H2 criou, e o
+mapeamento não-total da T4 derrubava `search()` do TCU inteiro — com o próprio teste da T4. Nenhuma das
+duas correções era errada sozinha.
+
+**Causa-raiz.** Correções de uma rodada são escritas por lentes cegas entre si e dobradas no corpo
+**sem que ninguém execute o plano inteiro** depois de dobrar. O cruzamento só aparece quando alguém
+aplica tudo e roda. É a mesma lição de 16/09 ("uma emenda transforma em certeza o bug que a vizinha só
+supunha"), agora **medida duas vezes mais** — e o plano só ficou executável na **4ª versão**.
+
+**Conserto.** Rodada N+1 com a missão explícita de atacar as correções da rodada N, **aplicando o
+plano literalmente num worktree e rodando os testes do plano**; parar quando os vereditos dizem
+"executável" e sobram só achados localizados.
+
+**Regra.** **Plano com código literal não está pronto enquanto uma rodada com contexto zero não o
+aplicou e rodou.** Ler não pega cruzamento; só executar. E ao curar: cada correção nova é lida contra
+**todas** as anteriores que tocam a mesma função — o custo é de minutos; o cruzamento custou uma rodada.
+
+**Cobertura.** ✅ Aplicado ao plano da frente 2 (`02dc620`, v4). ⚠ **Não** reaplicado ao plano de 16/09
+(Fase 1): as tasks T4/T7/T8 dele continuam com 3 seções de emendas não dobradas — e nenhuma rodada
+aplicou aquele plano num worktree; é insumo da D-C9 quando a v2.0 começar.
+
+---
+
+## 2026-09-22 · Fixture escrita à mão sobre esquema não capturado é falsa testemunha — e escondeu um bug de produção
+
+**Problema.** O plano v1 da frente 2 trazia uma fixture de acórdão do TCU com chaves `numeroAcordao`/
+`anoAcordao`, escrita de memória. O código lia `numero`/`ano`/`ementa`. O teste de paginação falhava
+(20 itens colapsavam num id) — e a investigação mostrou que **a API real** (`curl` em 22/09) tem
+`numeroAcordao`, `anoAcordao`, `sumario`, `titulo` e **não tem** `ementa`/`numero`/`ano`. Ou seja: na v1.0
+**todo acórdão real colapsa num único id e nunca casa palavra-chave**; o endpoint de atos em 500
+escondia isso, e a fonte dizia "ok (500 itens)" entregando zero.
+
+**Causa-raiz.** Fixture sem procedência: nem o teste nem o código tinham sido confrontados com uma
+resposta real. Duas testemunhas falsas (código e fixture) que discordavam entre si — e foi a
+discordância, não o acerto, que revelou o bug.
+
+**Conserto.** Fixture **real** capturada e versionada (`levantamento-normativos/tests/fixtures/tcu_acordaos_real.json`,
+2 itens); T4 do plano mapeia o esquema real; o detalhe conta "N sem sumário" porque a rodada 2 mediu
+que acórdãos recentes chegam **sem** sumário (20/20 na sessão de 16/09).
+
+**Regra.** **Fixture de API é captura, não redação.** Se a fonte está fora do ar e a captura é impossível
+(caso do LexML hoje: `lexml_sru_valido.xml` é escrito à mão), a fixture leva `📝 escrita à mão, sem
+captura` no cabeçalho, e capturar vira item pendente — não se apaga a nota quando o teste passa.
+
+**Cobertura.** ✅ TCU: fixture real. ⚠ LexML: **sem captura real de SRU** (fonte bloqueada); registrado
+como pendência na T10 do plano. Google/DDG: dublê de objeto, sem fixture — aceitável, a forma da
+resposta é do pacote `ddgs`, não de uma API.
+
+---
+
 ## 2026-09-22 · Um gate de auditoria rodado DEPOIS do `git add` compara contra o vazio e dá verde
 
 **Problema.** Na T3, escrevi o `.gitignore` unido e rodei um script para provar que nenhuma

@@ -1,6 +1,34 @@
 # Log — Buscador de Base Normativa
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
+## [2026-09-22] frente 2 planejada | 3 rodadas adversariais; repo A aposentado; deploy em análise
+
+**Segunda metade da sessão de 22/09** (a primeira está na entrada abaixo).
+
+**Repo A aposentado (T9 antecipada).** Tag `levantamento-v1-streamlit` empurrada para o remoto de B; README
+de arquivamento em A (`af88593`); `rodilpinto/levantamento-normativos` **privado e arquivado**
+(`gh repo view` → `PRIVATE | arquivado=true`). Descoberta no caminho: o repo A estava **público** e o state
+file dizia "privado" — corrigido (`407b5a1`). Fluxo do espelho `git.camara.gov.br` (pelo PC do trabalho)
+registrado no state file §8. Deploy: **não existe nenhum**; opções e recomendação em **D-C14 🟡**; perguntas
+que só o Rodrigo responde em **B-06**.
+
+**Frente 2 — spec + plano.** Brainstorm com 3 perguntas ao Rodrigo (tela E planilha; heurística roda sem
+LLM; LexML sem conserto legítimo → detectar/avisar + fonte substituta + B-05). Spec `b489d00`. Plano v1
+`b1a6d3c` → **rodada 1** (55 achados; TCU: esquema real da API não tem `ementa`/`numero`/`ano` — bug de
+produção da v1.0; Google entra no vocabulário) → v2 `1e24933` → **rodada 2** (68 achados; bloqueador
+principal = cruzamento H4×B2, `redigir(300)` cortava a cadeia agregada) → v3 `46cdb0e` → **rodada 3**
+(59 achados; bloqueador = cruzamento R2-H5×H2 no TCU + `Optional` sem import derrubando o app) → **v4**
+`02dc620`/`a457e84`. Vereditos da rodada 3: T1, T2, T3, T6, T7, T8, T9 aplicam e fecham como previsto
+(um revisor rodou o app patchado e o V11 ao vivo); sobras localizadas, todas dobradas na v4. Lições em
+`LESSONS.md` (cruzamento de correções; fixture escrita à mão).
+
+**Decisões:** D-C10..D-C15 (`_DECISOES-PENDENTES.md`). **Ambiente:** Playwright sem navegadores baixados
+(`channel="chrome"`), `/tmp` do Git Bash ≠ `/tmp` do Python — em `~/.claude/ENVIRONMENT.md`.
+
+**Próximo:** sessão nova, contexto zerado, executar o plano v4 da frente 2 a partir da **T1**.
+
+---
+
 ## [2026-09-22] frente 1 | primeiro código entra; a rede de proteção existe
 
 **A sessão começou vendo a v1.0 rodar** (`python -m streamlit run app.py`, dirigida pelo
