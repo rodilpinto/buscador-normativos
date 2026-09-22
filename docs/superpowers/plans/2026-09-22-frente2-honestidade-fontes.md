@@ -1,4 +1,4 @@
-# Frente 2 — Honestidade das fontes — Implementation Plan (v3, pós 2 rodadas adversariais)
+# Frente 2 — Honestidade das fontes — Implementation Plan (v4, pós 3 rodadas adversariais)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -88,14 +88,14 @@ estável 2×; dedup intacto), M10, M11, M15; T1 fecha em 56. **Esta v3 dobra as 
 | R2-B3 | `test_lexml_timeout...` afirma o estado pré-retry: o retry re-consulta 'a', recebe SRU e zera o motivo (comportamento **correto**) | teste reescrito: Timeout nas chamadas 1 **e** 3 → `retried=True, motivo="timeout"`; caso "recuperado" fica em teste próprio |
 | R2-B4 | LexML parcial prefixa só `startRecord=N:` (TCU prefixa o motivo) → a página bloqueada vira "OK · — · startRecord=21: GET …" | `f"startRecord={n}: {e.motivo}: {e.detalhe}"`; `motivo` continua `""` em ok/empty (vocabulário intocado); o detalhe carrega o motivo |
 | R2-B5 | `"não informado" in "data/hora não informada"` → False | título e assert unificados em **"não informada"** |
-| R2-B6 | `nao_consultada` com `status="error"` vira "N indisponíveis", abre o expander em vermelho e grava "Indisponível" na planilha **no caminho feliz** (10 keywords + `max_results` atingido) | `rotulo_status(s)` em `models.py` usado por planilha e tela ("Não consultada"); tela separa `indisponiveis` / `nao_consultadas` / `parciais` e só abre por indisponível ou parcial; `diagnostico_fixo.json` ganha um `nao_consultada`; V11 ganha o cenário de sucesso |
+| R2-B6 | `nao_consultada` com `status="error"` vira "N indisponíveis", abre o expander em vermelho e grava "Indisponível" na planilha **no caminho feliz** (10 keywords + `max_results` atingido) | `rotulo_status(s)` em `models.py` é o rótulo da **planilha** ("Não consultada"); a **tela** agrupa por motivo com títulos de seção próprios (R3: não importa `rotulo_status`); só abre por indisponível ou parcial; `diagnostico_fixo.json` ganha um `nao_consultada`; V11 ganha o cenário de sucesso |
 
 ### Altos — ACEITOS
 
 | # | Achado | O que muda |
 |---|---|---|
 | R2-H1 | `redigir` só no `__post_init__`; os retries **mutam** `error_message`/`detalhe` depois (Google `:368`, LexML retry) → chave do CSE vaza pela porta dos fundos | `KeywordStatus.__setattr__` redige `detalhe`/`error_message` em **toda** atribuição; teste de mutação pós-construção |
-| R2-H2 | Retry pulado (cadeia morta) marcava `retried=True` sem requisição → "Retentado: Sim" falso na planilha; keywords 2-4 herdavam a URL com a **query da keyword 1** | ramo de cadeia morta **não** marca `retried`; detalhe ganha `retry pulado: os 3 URLs já falharam nesta busca`; causa cacheada diz `causa cacheada da palavra-chave "X"; esta não foi enviada` e a URL cacheada perde a query |
+| R2-H2 | Retry pulado (cadeia morta) marcava `retried=True` sem requisição → "Retentado: Sim" falso na planilha; keywords 2-4 herdavam a URL com a **query da keyword 1** | ramo de cadeia morta **não** marca `retried` (LexML **e** Google — R3); detalhe ganha `retry pulado: …`; causa cacheada diz `causa cacheada da palavra-chave "X" (esta palavra-chave não foi enviada)` e a URL cacheada perde a query |
 | R2-H3 | Google: **dois** call sites de `_search_urls` (`:261` e `:363`) + `:368`; `nao_consultada` só funciona **depois** do laço de retry; CSE 200 não-JSON → `AttributeError` dentro do handler | T5 com blocos literais para os 2 laços, posição pinada, `JSONDecodeError` tratado; 5º teste (retry que dá certo) |
 | R2-H4 | T3 3d colava `_texto_do_acordao` **dentro** de `search()` (o rabo original — callback final e `return` — caía dentro do método novo → `search()` devolve `None`); T2 Step 8 tinha `# inalterado` como placeholder | `_texto_do_acordao` vira step próprio; Step 8 colado inteiro |
 | R2-H5 | ✅ medido ao vivo: `sumario` é **nulo em 20/20** acórdãos recentes (sessão 16/09) e em ~40% da janela de 500 — "acórdãos voltaram a casar" é fato parcial | detalhe do TCU conta `N sem texto`; T10 registra como fato medido, não como vitória |
@@ -127,6 +127,62 @@ estável 2×; dedup intacto), M10, M11, M15; T1 fecha em 56. **Esta v3 dobra as 
 
 ---
 
+## Rodada 3 adversarial — triagem (2026-09-22)
+
+5 revisores frescos, **59 achados**, T1–T9 aplicadas literalmente em worktree; um deles rodou o app patchado e o
+gate V11 ao vivo. **Confirmado SÓLIDO por execução:** T1 (58), T2 (15 + `test_comprehensive` 98/98 + `test_searchers`
+13/13 ao vivo), T3 (23 + 1 xfail), T6 (63), T7 (61), T8 (71; golden diverge só na planilha, recongela, estável 2×,
+dedup intacto), T9 (AppTest em 4 cenários; V11 verde ao vivo); R2-B1..B4, R2-H1, R2-H2 (LexML) sólidas; `__setattr__`
+não quebra `replace`/`copy`/`pickle`/`==`; `from models import redigir` sem ciclo. **Esta v4 dobra o resto no corpo.**
+
+### Bloqueadores convergentes (5 lentes) — ACEITOS
+
+| # | Achado | O que muda |
+|---|---|---|
+| R3-B1 | **Cruzamento R2-H5 × H2:** `sem_texto` roda **fora** do `try` por keyword e chama `_texto_do_acordao`, que depois da T4 não é total → o próprio teste H2 (`sumario=123`) derruba `search()` do TCU inteiro. E o contador media a coisa errada: `titulo` está sempre preenchido, então "N sem texto" era **sempre 0** — no cenário exato (sumário nulo em 20/20) que a R2-H5 mandou expor | T3: contador defensivo `_sem_sumario(item)` (try/except) que olha o **campo** `sumario`/`ementa`, rotulado "N sem sumário (nesses só o título casa)"; `_texto_do_acordao` continua não-total de propósito (é o que o teste H2 exercita **dentro** do try); teste novo com `sumario=None` |
+| R3-B2 | T5 anota `Optional[...]` sem `from typing import Optional`; `google_searcher.py` não tem `from __future__ import annotations` → `NameError` na importação → **o app inteiro não sobe** | T5: import acrescentado à lista |
+| R3-B3 | Contagens erradas por 1 a partir da T4 (o teste do 500 contado duas vezes) | recomputadas de novo, agora com os testes novos desta rodada |
+
+### Altos — ACEITOS
+
+| # | Achado | O que muda |
+|---|---|---|
+| R3-H1 | R2-H2 só foi aplicada ao LexML: o ramo de retry **pulado** do Google (`:354-361`) segue marcando `retried=True` sem requisição | T5: ramo colado e corrigido; teste |
+| R3-H2 | M4 incompleta no Google: `break` por `max_results` dentro das 5 ativas não gera status | T5: `nao_consultada` antes do `break`; teste |
+| R3-H3 | Cruzamento B3 × H5: XML **ilegível** na página ≥2 do LexML levanta fora do `try` → keyword vira `error` e a página 1 é **descartada** (regressão vs HEAD) | T2 Step 8: `_parse_sru_response` dentro do `try`; teste |
+| R3-H4 | H3 ainda mente no cenário real: TCU com acórdãos 200 (0 match) + atos 500 cai em `mortas` — "tcu indisponível" enquanto metade foi pesquisada | T9: fonte é `morta` só se nenhum status dela é `parcial`; frase "respondeu parcialmente (0 resultado(s); …)"; V11 afirma |
+| R3-H5 | TCU com os dois endpoints ok e todos sem sumário → `empty` sem detalhe: "consultei e não há" quando 500 chegaram sem texto | T3: `detalhe` **sempre** gravado; T9: seção "sem resultado" mostra o detalhe quando houver |
+| R3-H6 | T5 3e ainda tinha um placeholder (`...` no ramo de sucesso) — `...` é Python válido e vira no-op | T5: laço de retry do Google colado **inteiro** |
+
+### Médios/baixos — ACEITOS ou ADAPTADOS
+
+| Achado | Verdict | O que muda |
+|---|---|---|
+| gate de `git grep` com `\b` não casa `score_relevance_com_origem`; faltam `_search_urls`, `_render_search_diagnostics`, `generate_excel`, `tools/` | aceito | Global Constraints |
+| `redigir` corta o **sufixo** sem marca — os appends `| retry pulado…` somem num detalhe de 1990 chars | aceito | corte no meio com marcador `[…cortado…]`; teste |
+| T4 muda precedência de data (`dataSessao` antes de `dataAta`) e troca `""` por `None` (muda o `id`) sem declarar | adaptado | declarado; mantém `""` (ids preservados); assert de `data`/`id` no teste antigo |
+| `indisponiveis` e `parciais` não são disjuntos (TCU error+parcial renderiza 2×) | aceito | `parciais` exclui `error`; badge `(parcial)` na seção de indisponíveis |
+| `rotulo_status` importado e não usado no app; R2-B6 prometia "planilha e tela" | adaptado | R2-B6 corrigida: a planilha usa `rotulo_status`; a tela agrupa por motivo; import removido |
+| T3 âncora `:73` (é `:72`); `_request_with_retry` vai até `:253` | aceito | corrigido; regra: âncora pelo **texto**, número é dica |
+| timeout/conexão do TCU e do LexML gravam URL sem query | aceito | `f"{url}?{urlencode(params)}"` |
+| `quando` do app naive; hora do 503 em BRT não bate | aceito | `datetime.now(ZoneInfo("America/Sao_Paulo"))` no app |
+| `ZoneInfo` no Windows depende de `tzdata` (vem por acidente via pandas) | aceito | `tzdata` no `requirements.txt` (T3) |
+| T8 Step 2 esperava "1 + 10 failed"; é `ImportError` na coleta | aceito | corrigido |
+| `statuses_para_falha_total` com lista vazia grava `(todas)` mesmo com tudo coberto | aceito | T9: só chama se sobrou keyword |
+| `assert` como validação de origem some com `-O`; `ORIGEM_CURTA[...]` é lookup duro | aceito | validação real + `.get` |
+| avisos antes do `st.header`; frase "(LexML, TCU)" e "web aberta" hardcoded | aceito | bloco depois do header; nomes vindos de `por_fonte`; "web aberta" só se houver status `google` |
+| `ConnectTimeout` herda de `ConnectionError` e `Timeout`; a ordem dos `except` rotula `conexao` | aceito | `Timeout` antes |
+| ramo não-cacheado de `_causa_da_cadeia_morta` deixa a URL no meio | aceito | `partition(" | GET ")`, URL por último |
+| hash do golden passa a depender de `redigir`/`rotulo_status`/`ORIGEM_LABEL`/`VAZIO`/título | aceito | dito na docstring e no commit da T8 |
+| `retried` tem 3 semânticas por fonte | aceito | docstring de `KeywordStatus.retried` fixa: "reenviada à fonte depois do passe principal; tentativas HTTP internas ficam no detalhe" |
+| `secrets.toml` vence a variável vazia do runner | aceito (nota) | comentário no runner + `LESSONS`; código na frente 5 |
+| `keyword`/`source` crus na aba nova (fórmula) | aceito | `redigir(s.keyword)` ao escrever |
+| CSE não coberto por teste (R2-H3 provada só por leitura) | aceito | T5: teste com `_BACKEND="cse"` e 200 não-JSON |
+| texto da triagem R2-H2 ≠ código | aceito | alinhado ao código |
+| detalhe do TCU idêntico por keyword impresso N vezes | adiado | `_TODO.md` P3 (agrupar por fonte na tela) |
+
+---
+
 ## Global Constraints
 
 - **Texto normativo NUNCA é parafraseado.** `nome`/`ementa` só recebem campos literais da API (T4 troca *qual* campo, não o texto).
@@ -135,13 +191,14 @@ estável 2×; dedup intacto), M10, M11, M15; T1 fecha em 56. **Esta v3 dobra as 
 - **Separar fato de sugestão:** `📝` no que for proposta não validada.
 - **UTF-8 explícito em todo `open()` / `read_text` / `write_text`.** `PYTHONIOENCODING=utf-8` em comando que imprime acento.
 - **Rodar Python via Bash, não PowerShell.** Acima de 260 caracteres o Python falha em silêncio no Windows.
-- **Documentação move junto com o código.** Gate ao fim de **cada** task, os dois comandos, lidos inteiros: `git diff -U0 HEAD~1 -- '*.py' | grep '^-' | grep -v '^---'` e `git grep -n -E 'score_relevance\b|_fetch_all_pages\b|_search_keyword_safe\b|_request_with_retry\b|_parse_sru_response\b' -- '*.py'` (todo call site e docstring de símbolo cuja assinatura mudou — **antes** de escrever o step de adaptação; R2-B2).
+- **Documentação move junto com o código.** Gate ao fim de **cada** task, os dois comandos, lidos inteiros: `git diff -U0 HEAD~1 -- '*.py' | grep '^-' | grep -v '^---'` e `git grep -n -E 'score_relevance|_fetch_all_pages|_search_keyword_safe|_request_with_retry|_parse_sru_response|_search_urls|_render_search_diagnostics|generate_excel|_texto_do_acordao|_map_acordao|rotulo_status' -- '*.py'` (**sem `\b`** — ele não casa `score_relevance_com_origem`; inclui `tools/` porque `golden_master.py` documenta `generate_excel`; todo call site e docstring de símbolo cuja assinatura mudou, **antes** de escrever o step de adaptação; R2-B2, R3).
 - **Golden-master:** `python tools/golden_master.py comparar` → OK ao fim de **toda** task, exceto a T8, que recongela **no mesmo commit** e diz por quê. `dedup_esperado.json` **nunca** muda nesta frente.
 - **Runner:** `python tools/run_all_tests.py` TUDO VERDE ao fim de toda task (≈9 min hoje; deve cair com o cache de falha da T2 — anotar). Task que acrescenta teste atualiza `BASELINE` **no mesmo commit**. ⚠ **Os números "Expected" abaixo são previsões**: se o observado divergir, **parar e reconciliar** (um teste a mais/menos é sinal de step aplicado errado), nunca "ajustar o BASELINE ao que deu".
-- **Sem LLM de verdade:** `tools/run_all_tests.py` roda as suítes com `env={**os.environ, "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}` (T1 Step 6); a suíte nova tem `monkeypatch.delenv` autouse.
+- **Sem LLM de verdade:** `tools/run_all_tests.py` roda as suítes com `env={**os.environ, "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}` (T1 Step 6); a suíte nova tem `monkeypatch.delenv` autouse. ⚠ `st.secrets` **vence** a variável: se existir `levantamento-normativos/.streamlit/secrets.toml` (hoje só há o `.example`), o runner acha que roda sem LLM e não roda — dito no comentário do runner e no `LESSONS`; o conserto de código é da frente 5.
 - **Push a cada task fechada** (D-C7).
 - **Vocabulário fechado** em `models.py`: `MOTIVOS` e `ORIGENS_RELEVANCIA`. Nenhum outro arquivo inventa valor.
 - **Diretório:** raiz do repo para `tools/`; `levantamento-normativos/` para `pytest` e os scripts de teste. Cada step diz qual.
+- **Âncoras:** onde um step diz "de `:N` até `:M`", o **texto** citado é a âncora e o número é dica (linhas mudam); substituir sempre do começo da linha que contém o texto-âncora inicial até o fim da linha do texto-âncora final, **inclusive**.
 
 ---
 
@@ -173,16 +230,16 @@ estável 2×; dedup intacto), M10, M11, M15; T1 fecha em 56. **Esta v3 dobra as 
 | Após | `test_searchers` | `test_llm_phase3` | `test_comprehensive` | `test_phase4` | `tests/test_fontes_indisponiveis.py` | total |
 |---|---|---|---|---|---|---|
 | T1 | 13 | 53 | 98 | **58** | — | 222 |
-| T2 | 13 | 53 | 98 | 58 | **15** | 237 |
-| T3 | 13 | 53 | 98 | 58 | **23** (+1 xfail) | 245 |
-| T4 | 13 | 53 | 98 | 58 | **28** | 250 |
-| T5 | 13 | 53 | 98 | 58 | **33** | 255 |
-| T6 | 13 | **63** | 98 | 58 | 33 | 265 |
-| T7 | 13 | 63 | 98 | **61** | 33 | 268 |
-| T8 | 13 | 63 | 98 | **71** | 33 | 278 |
-| T9 | 13 | 63 | 98 | 71 | 33 | 278 |
+| T2 | 13 | 53 | 98 | 58 | **16** | 238 |
+| T3 | 13 | 53 | 98 | 58 | **25** (26 coletados, 1 xfail) | 247 |
+| T4 | 13 | 53 | 98 | 58 | **29** | 251 |
+| T5 | 13 | 53 | 98 | 58 | **37** | 259 |
+| T6 | 13 | **63** | 98 | 58 | 37 | 269 |
+| T7 | 13 | 63 | 98 | **61** | 37 | 272 |
+| T8 | 13 | 63 | 98 | **71** | 37 | 282 |
+| T9 | 13 | 63 | 98 | 71 | 37 | 282 |
 
-⚠ Contagens **recomputadas na v3** a partir dos blocos literais (a v2 errou por 1 em três tasks). Ainda assim: **o observado manda**; se divergir, contar os `def test_` do bloco antes de suspeitar do código.
+⚠ Contagens **recomputadas na v4** (a v3 contou um teste duas vezes na T4). **O observado manda**; se divergir, `grep -c '^def test_'` no bloco da task **antes** de suspeitar do código — e a regra "parar e reconciliar" vale para a diferença entre o bloco e o observado, não entre a tabela e o observado.
 
 ---
 
@@ -271,10 +328,12 @@ class TestRedigir:
             "u?key=***&cx=***&api_key=***&token=***&access_token=***&client_secret=***&q=x"
         assert redigir("Authorization: Bearer eyJabc.def") == "Authorization: Bearer ***"
 
-    def test_remove_controle_e_corta_so_no_teto_de_celula(self):
+    def test_remove_controle_e_corta_no_meio_com_marcador(self):
         assert redigir("a\x00b\x07c\n") == "abc\n"
-        assert len(redigir("x" * 3000)) == 2000          # R2-B1: 300 cortava o detalhe real
         assert len(redigir("x" * 1500)) == 1500
+        cortado = redigir("A" * 1990 + " | GET https://fonte/x | retry pulado")
+        assert len(cortado) <= 2000 and "[…cortado" in cortado          # R3: sufixo (URL, 'retry pulado') sobrevive
+        assert cortado.startswith("AAAA") and cortado.endswith("| retry pulado")
 
     def test_neutraliza_so_formula(self):
         assert redigir('=HYPERLINK("http://evil","clique")').startswith("'=")
@@ -363,7 +422,14 @@ def redigir(texto: str, limite: int = 2000) -> str:
     texto = _RE_CONTROLE.sub("", texto)
     if texto[:1] == "=":
         texto = "'" + texto
-    return texto[:limite]
+    if len(texto) > limite:
+        # corta no MEIO, com marca: o comeco (fato) e o fim (URL, 'retry pulado')
+        # sao o que importa; cortar o sufixo em silencio apagava exatamente os
+        # appends que a T2/T5 fazem no detalhe (rodada 3)
+        marca = f" […cortado {len(texto) - limite} chars…] "
+        metade = (limite - len(marca)) // 2
+        texto = texto[:metade] + marca + texto[-metade:]
+    return texto
 
 
 def rotulo_status(s: "KeywordStatus") -> str:
@@ -397,7 +463,7 @@ campo `relevancia_origem: str = "padrao_fonte"` após `relevancia: float = 0.0`;
             )
 ```
 
-Em `KeywordStatus`: docstring ganha `motivo`, `detalhe`, `parcial` (texto da spec §3.1); a linha `status: str = "ok"  # "ok" | "empty" | "error"` vira `... | "error" (= fonte indisponivel; ver motivo)`; após `retried: bool = False`:
+Em `KeywordStatus`: docstring ganha `motivo`, `detalhe`, `parcial` (texto da spec §3.1); a linha `status: str = "ok"  # "ok" | "empty" | "error"` vira `... | "error" (= fonte indisponivel; ver motivo)`; após `retried: bool = False`: A docstring de `retried` passa a dizer (R3): *a palavra-chave foi REENVIADA à fonte depois do passe principal (LexML/Google); tentativas HTTP internas (o TCU faz 3) NÃO contam — ficam no detalhe; retry pulado NÃO marca*. E a de `parcial`: *a coleta NÃO terminou — paginação interrompida (ok/empty) ou, no TCU, um endpoint caído com o outro vivo (error)*.
 
 ```python
     motivo: str = ""
@@ -552,7 +618,7 @@ git push origin master
 </srw:searchRetrieveResponse>
 ```
 
-- [ ] **Step 2: Testes que falham** — criar `tests/test_fontes_indisponiveis.py` (15 testes):
+- [ ] **Step 2: Testes que falham** — criar `tests/test_fontes_indisponiveis.py` (16 testes):
 
 ```python
 # -*- coding: utf-8 -*-
@@ -761,6 +827,23 @@ def test_lexml_falha_na_segunda_pagina_e_ok_parcial_com_o_motivo_no_detalhe(monk
     assert st.detalhe.startswith("startRecord=21: bloqueio_waf: ")
 
 
+def test_lexml_xml_ilegivel_na_segunda_pagina_tambem_e_parcial(monkeypatch):
+    """R3-H3: XML truncado na pagina 2 nao pode virar erro fatal que descarta a pagina 1."""
+    vez = {"n": 0}
+    pagina1 = SRU_VALIDO.replace("<srw:numberOfRecords>1</srw:numberOfRecords>", "<srw:numberOfRecords>50</srw:numberOfRecords>")
+
+    def responder(u, p):
+        vez["n"] += 1
+        return RespostaFake(200, pagina1) if vez["n"] == 1 else RespostaFake(200, SRU_VALIDO[:200], "application/xml")
+
+    s, _ = _lexml_com(monkeypatch, responder)
+    resultados = s.search(["a"], max_results=50)
+    assert len(resultados) == 1
+    st = s.keyword_statuses[0]
+    assert (st.status, st.parcial, st.retried) == ("ok", True, False)
+    assert st.detalhe.startswith("startRecord=21: resposta_ilegivel: ")
+
+
 def test_lexml_keywords_nao_consultadas_por_cap_ganham_status(monkeypatch):
     """M4: max_results=1 atinge o cap na 1a keyword; 'b' e 'c' nao podem sumir do relatorio."""
     s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO))
@@ -810,11 +893,11 @@ def test_lexml_detalhe_de_erro_nao_carrega_segredo_nem_e_cortado_no_meio(monkeyp
     assert d.startswith("HTTP 500") and "| GET " in d and "operation=searchRetrieve" in d
 ```
 
-- [ ] **Step 3: Rodar e ver falhar** — `python -m pytest tests/test_fontes_indisponiveis.py -q` → 15 failed (assertions de status/motivo; nenhum `ImportError` — T1 já entregou os símbolos).
+- [ ] **Step 3: Rodar e ver falhar** — `python -m pytest tests/test_fontes_indisponiveis.py -q` → 16 failed (assertions de status/motivo; nenhum `ImportError` — T1 já entregou os símbolos).
 
 - [ ] **Step 4: `lexml_searcher.py` — imports, `SOURCE_ID`, `__init__`**
 
-Import (`:20`): `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`. Conferir `import re` no topo (existe: `URN_PATTERN` usa).
+Import (`:20`): `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`; acrescentar `from urllib.parse import urlencode`. Conferir `import re` no topo (existe: `URN_PATTERN` usa).
 
 Na classe (`:70-77`), logo após `RATE_LIMIT_JITTER = 0.5`: `SOURCE_ID = "lexml"`. O `__init__` **já existe** em `:76-77` — acrescentar 3 linhas mantendo o comentário existente:
 
@@ -852,19 +935,19 @@ Na classe (`:70-77`), logo após `RATE_LIMIT_JITTER = 0.5`: `SOURCE_ID = "lexml"
         for attempt in range(2):  # Max 2 attempts (initial + 1 retry)
             try:
                 response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+            except requests.exceptions.Timeout as e:   # ANTES de ConnectionError: ConnectTimeout herda dos dois
+                logger.warning(f"LexML timeout ({REQUEST_TIMEOUT}s) for {url}")
+                raise FonteIndisponivel("timeout", f"sem resposta em {REQUEST_TIMEOUT}s | GET {url}?{urlencode(params)}") from e
             except requests.exceptions.ConnectionError as e:
                 if attempt == 0:
                     logger.warning(f"LexML connection error: {e}. Retrying in 3s...")
                     time.sleep(3)
                     continue
                 logger.error(f"LexML connection error after retry: {e}")
-                raise FonteIndisponivel("conexao", f"conexao recusada/sem rota ({str(e)[:120]}) | GET {url}") from e
-            except requests.exceptions.Timeout as e:
-                logger.warning(f"LexML timeout ({REQUEST_TIMEOUT}s) for {url}")
-                raise FonteIndisponivel("timeout", f"sem resposta em {REQUEST_TIMEOUT}s | GET {url}") from e
+                raise FonteIndisponivel("conexao", f"conexao recusada/sem rota ({str(e)[:120]}) | GET {url}?{urlencode(params)}") from e
             except requests.exceptions.RequestException as e:
                 logger.error(f"LexML request error: {e}")
-                raise FonteIndisponivel("erro_interno", f"{type(e).__name__}: {str(e)[:120]} | GET {url}") from e
+                raise FonteIndisponivel("erro_interno", f"{type(e).__name__}: {str(e)[:120]} | GET {url}?{urlencode(params)}") from e
 
             efetiva = getattr(response, "url", None) or url
             sc = response.status_code
@@ -977,12 +1060,12 @@ Docstring: `Returns ([], 0) on parse error.` → `Raises FonteIndisponivel("resp
             f"{u.split('gov.br/', 1)[-1]}: {c.motivo} (HTTP {self._status_http(c)})" for u, c in causas.items()
         )
         keyword_da_causa = getattr(principal, "keyword", "")
+        fato, _, url_com_query = principal.detalhe.partition(" | GET ")
         if keyword_da_causa and keyword_da_causa != self._keyword_atual:
-            fato, _, _ = principal.detalhe.partition(" | GET ")
             detalhe = (f'causa cacheada da palavra-chave "{keyword_da_causa}" (esta palavra-chave não foi enviada): '
                        f"{fato} | cadeia: {cadeia} | GET {url_principal}")
         else:
-            detalhe = f"{principal.detalhe} | cadeia: {cadeia}"
+            detalhe = f"{fato} | cadeia: {cadeia} | GET {url_com_query or url_principal}"   # URL por ULTIMO (R2-B1)
         e = FonteIndisponivel(motivo, detalhe)
         e.keyword = keyword_da_causa or self._keyword_atual
         return e
@@ -1010,6 +1093,9 @@ Docstring: `Returns ([], 0) on parse error.` → `Raises FonteIndisponivel("resp
 
             try:
                 xml_text = self._fetch_sru(params)
+                # R3-H3: o parse fica DENTRO do try — XML ilegivel na pagina 2 e
+                # falha de paginacao (parcial), nao erro fatal que joga fora a pagina 1
+                records, total_count = self._parse_sru_response(xml_text, keyword)
             except FonteIndisponivel as e:
                 if not getattr(e, "keyword", ""):
                     e.keyword = keyword          # de qual keyword e esta causa (cache)
@@ -1026,7 +1112,6 @@ Docstring: `Returns ([], 0) on parse error.` → `Raises FonteIndisponivel("resp
                 break
 
             first_page = False
-            records, total_count = self._parse_sru_response(xml_text, keyword)
             all_results.extend(records)
 
             # Check if there are more pages
@@ -1223,12 +1308,12 @@ def test_lexml_parse_sru_response_malformed_xml():
 
 - [ ] **Step 12: Rodar e ver passar**
 
-`python -m pytest tests/test_fontes_indisponiveis.py -q` → `15 passed`.
+`python -m pytest tests/test_fontes_indisponiveis.py -q` → `16 passed`.
 `python test_comprehensive.py | tail -3` → `Total: 98 | Passed: 98 | Failed: 0`.
 `python test_searchers.py | tail -2` → `13/13 passed` (anotar o tempo: era ~390s).
 `python -m pytest test_phase4.py -q` → `58 passed`.
 
-- [ ] **Step 13: Runner** — `SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py"]`, `BASELINE["tests/test_fontes_indisponiveis.py"] = 15`; atualizar o comentário sobre "nasce com UMA suite". Na raiz: `python tools/run_all_tests.py` → TUDO VERDE; `python tools/golden_master.py comparar` → OK.
+- [ ] **Step 13: Runner** — `SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py"]`, `BASELINE["tests/test_fontes_indisponiveis.py"] = 16`; atualizar o comentário sobre "nasce com UMA suite". Na raiz: `python tools/run_all_tests.py` → TUDO VERDE; `python tools/golden_master.py comparar` → OK.
 
 - [ ] **Step 14: Auditoria (os 2 comandos) + commit**
 
@@ -1244,7 +1329,7 @@ marca retried e diz que pulou (B2, R2-H2). Sniff permissivo. Falha em
 pagina seguinte vira parcial com pagina e motivo no detalhe (H5, R2-B4).
 Keyword pulada por max_results vira nao_consultada. Retry que da certo
 diz de que recuperou. test_comprehensive: 3 call sites adaptados (98
-mantidos). Suite nova: 15."
+mantidos). XML ilegivel em pagina seguinte e parcial, nao fatal. Suite nova: 16."
 git push origin master
 ```
 
@@ -1253,9 +1338,10 @@ git push origin master
 ### Task 3: TCU — 5xx/4xx/503/HTML declarados, paginação parcial, classificação por endpoint
 
 **Files:**
-- Modify: `levantamento-normativos/searchers/tcu_searcher.py` — imports (`:1-20`); classe (`:33-40`, `SOURCE_ID`); `search()` (`:62-147`); `_fetch_all_pages_safe`/`_fetch_all_pages` (`:153-206`); `_request_with_retry` (`:208-256`)
+- Modify: `levantamento-normativos/searchers/tcu_searcher.py` — imports (`:1-20`); classe (`:33-40`, `SOURCE_ID`); `search()` (`:62-147`); `_fetch_all_pages_safe`/`_fetch_all_pages` (`:153-206`); `_request_with_retry` (`:208-253`)
+- Modify: `levantamento-normativos/requirements.txt` (`tzdata`)
 - Modify: `levantamento-normativos/test_comprehensive.py:473-477`
-- Test: `tests/test_fontes_indisponiveis.py` (seção TCU, 9 testes)
+- Test: `tests/test_fontes_indisponiveis.py` (seção TCU, 10 testes)
 - Modify: `tools/run_all_tests.py`
 
 **Interfaces — Produces:**
@@ -1263,7 +1349,7 @@ git push origin master
 - `TCUSearcher._request_with_retry(url, params) -> dict | list` — levanta `FonteIndisponivel` (nunca `None`).
 - `TCUSearcher._fetch_all_pages(url) -> tuple[list[dict], Optional[FonteIndisponivel], bool]` = `(itens, erro, parcial)`; idem `_fetch_all_pages_safe`.
 - `TCUSearcher._texto_do_acordao(item) -> str` (nesta task lê só `ementa`; a T4 troca).
-- Formato do `detalhe` por keyword: `Acórdãos: <ok (N itens, M sem texto) | parcial (...) | <motivo> em <fato>>; Atos: <idem>`.
+- Formato do `detalhe` por keyword — gravado **sempre** (R3-H5): `Acórdãos: <ok (N itens, M sem sumário — nesses só o título casa) | parcial (...) | <motivo> em <fato>>; Atos: <idem>`.
 
 - [ ] **Step 1: Testes que falham** — acrescentar a `tests/test_fontes_indisponiveis.py`:
 
@@ -1311,7 +1397,7 @@ def test_tcu_500_num_endpoint_e_error_parcial_mesmo_com_o_outro_ok(monkeypatch):
     assert (st.status, st.motivo, st.source) == ("error", "http_5xx", "tcu")
     assert st.parcial is True            # R2: um endpoint respondeu -> a coleta e parcial
     assert "recupera-atos-normativos" in st.detalhe and "404 Not Found" in st.detalhe
-    assert "Acórdãos: ok (2 itens" in st.detalhe and "sem texto" in st.detalhe
+    assert "Acórdãos: ok (2 itens, 0 sem sumário" in st.detalhe
     assert sum(1 for u in chamadas if "atos" in u) == 3  # 3 retries no 5xx
 
 
@@ -1396,6 +1482,18 @@ def test_tcu_dois_endpoints_ok_sem_match_continua_empty(monkeypatch):
     s.search(["assunto-que-nao-existe"], max_results=5)
     st = s.keyword_statuses[0]
     assert (st.status, st.motivo, st.parcial) == ("empty", "", False)
+    assert st.detalhe.startswith("Acórdãos: ok (2 itens")       # R3-H5: o resumo vai SEMPRE
+
+
+def test_tcu_acordaos_sem_sumario_sao_contados_e_nao_casam(monkeypatch):
+    """R3-B1: o contador olha o CAMPO sumario; titulo esta sempre preenchido e nao conta."""
+    sem = [dict(a, sumario=None) for a in ACORDAOS_REAIS]
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=sem),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo"], max_results=5)
+    assert resultados == []
+    st = s.keyword_statuses[0]
+    assert st.status == "empty" and "2 sem sumário" in st.detalhe
 
 
 @pytest.mark.xfail(reason="so na T4 _texto_do_acordao le sumario/titulo; ate la o item nem e mapeado", strict=True)
@@ -1410,13 +1508,13 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
     assert "TypeError" in st.detalhe
 ```
 
-(9 testes; 8 passam nesta task, 1 `xfail strict` que a T4 destrava. Suíte: 15 + 9 = 24 coletados; `pytest -q` imprime **`23 passed, 1 xfailed`** e o runner lê **23**.)
+(10 testes; 9 passam nesta task, 1 `xfail strict` que a T4 destrava. Suíte: 16 + 10 = 26 coletados; `pytest -q` imprime **`25 passed, 1 xfailed`** e o runner lê **25**.)
 
 - [ ] **Step 2: Ver falhar** — `python -m pytest tests/test_fontes_indisponiveis.py -q -k tcu` → falhas de status/motivo (o `xfail` aparece como `xfailed`).
 
 - [ ] **Step 3: `tcu_searcher.py`**
 
-**3a.** Imports: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`; conferir `import time`, `import re` (acrescentar se faltar) e acrescentar `from datetime import datetime` e `from zoneinfo import ZoneInfo`. Na classe, após `RATE_LIMIT_JITTER = 0.5`: `SOURCE_ID = "tcu"`.
+**3a.** Imports: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`; conferir `import time`, `import re` (acrescentar se faltar) e acrescentar `from datetime import datetime`, `from zoneinfo import ZoneInfo` e `from urllib.parse import urlencode`. Em `requirements.txt`: `tzdata  # ZoneInfo no Windows nao tem base tz do sistema (rodada 3)`. Na classe, após `RATE_LIMIT_JITTER = 0.5`: `SOURCE_ID = "tcu"`.
 
 **3b.** `_request_with_retry` — reescrever:
 
@@ -1471,10 +1569,10 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
                 logger.warning(f"TCU API error (attempt {attempt + 1}/{MAX_RETRIES}): {ultimo}. Retrying in {delay}s...")
                 time.sleep(delay)
         logger.error(f"TCU API failed after {MAX_RETRIES} attempts: {ultimo}")
-        if isinstance(ultimo, requests.exceptions.Timeout):
-            raise FonteIndisponivel("timeout", f"sem resposta em {REQUEST_TIMEOUT}s x {MAX_RETRIES} | GET {url}")
+        if isinstance(ultimo, requests.exceptions.Timeout):   # ANTES de ConnectionError: ConnectTimeout herda dos dois
+            raise FonteIndisponivel("timeout", f"sem resposta em {REQUEST_TIMEOUT}s x {MAX_RETRIES} | GET {url}?{urlencode(params)}")
         if isinstance(ultimo, requests.exceptions.ConnectionError):
-            raise FonteIndisponivel("conexao", f"conexao recusada/sem rota ({str(ultimo)[:120]}) | GET {url}")
+            raise FonteIndisponivel("conexao", f"conexao recusada/sem rota ({str(ultimo)[:120]}) | GET {url}?{urlencode(params)}")
         resp = getattr(ultimo, "response", None)
         corpo = (getattr(resp, "text", "") or "")[:160]
         raise FonteIndisponivel("http_5xx",
@@ -1544,7 +1642,7 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
             return [], FonteIndisponivel("erro_interno", f"{type(e).__name__}: {e}"[:200]), False
 ```
 
-**3d.** `search()` — substituir **de** `acordao_items, acordao_error = self._fetch_all_pages_safe(` (`:73`) **até a última linha do `for keyword in keywords:`** (`:137`, o `))` que fecha o `KeywordStatus(... status="ok")`), **mantendo** o que vem depois (`# Final callback`, o `progress_callback` final e `return list(results_by_id.values())`):
+**3d.** `search()` — substituir **de** `acordao_items, acordao_error = self._fetch_all_pages_safe(` (**`:72`**, a linha que abre a chamada; a URL está em `:73` e o `)` em `:74`) **até a última linha do `for keyword in keywords:`** (`:137`, o `))` que fecha o `KeywordStatus(... status="ok")`), **inclusive os dois extremos, mantendo** o que vem depois (`# Final callback`, o `progress_callback` final e `return list(results_by_id.values())`):
 
 ```python
         acordao_items, acordao_erro, acordao_parcial = self._fetch_all_pages_safe(f"{API_BASE_URL}{ACORDAOS_PATH}")
@@ -1556,7 +1654,15 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
         atos_items, atos_erro, atos_parcial = self._fetch_all_pages_safe(f"{API_BASE_URL}{ATOS_PATH}")
         logger.info(f"TCU: {len(atos_items)} atos normativos fetched, filtering by keywords")
 
-        sem_texto = sum(1 for i in acordao_items if not self._texto_do_acordao(i).strip())
+        def _sem_sumario(item) -> bool:
+            # R3-B1: olha o CAMPO (titulo esta sempre preenchido e nao diz nada), e e
+            # DEFENSIVO — roda fora do try por keyword; item malformado conta como
+            # "sem sumario" aqui e vira erro_interno la dentro, nunca derruba search()
+            try:
+                return not str(item.get("sumario") or item.get("ementa") or "").strip()
+            except Exception:
+                return True
+        sem_sumario = sum(1 for i in acordao_items if _sem_sumario(i))
 
         def _resumo(nome, itens, erro, parcial, extra=""):
             if erro is not None and not itens:
@@ -1565,9 +1671,11 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
                 return f"{nome}: parcial ({len(itens)} itens{extra}; {erro.detalhe})"
             return f"{nome}: ok ({len(itens)} itens{extra})"
 
-        # R2-H5: acordaos recentes chegam SEM sumario; "ok (500 itens)" sugeriria 500 avaliados
+        # R2-H5/R3: acordaos recentes chegam SEM sumario — nesses so o titulo casa;
+        # "ok (500 itens)" sugeriria 500 avaliados por texto
         detalhe = "; ".join([
-            _resumo("Acórdãos", acordao_items, acordao_erro, acordao_parcial, f", {sem_texto} sem texto" if acordao_items else ""),
+            _resumo("Acórdãos", acordao_items, acordao_erro, acordao_parcial,
+                    f", {sem_sumario} sem sumário — nesses só o título casa" if acordao_items else ""),
             _resumo("Atos", atos_items, atos_erro, atos_parcial),
         ])
         # Um endpoint que caiu na PRIMEIRA pagina torna a busca "error" mesmo que
@@ -1617,7 +1725,7 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
                 status, motivo = "ok", ""
             self.keyword_statuses.append(KeywordStatus(
                 keyword=keyword, source=self.SOURCE_ID, result_count=kw_count, status=status, motivo=motivo,
-                detalhe=detalhe if (status == "error" or parcial) else "",
+                detalhe=detalhe,   # R3-H5: SEMPRE — "empty" com 500 acordaos sem sumario nao e "nao ha acordao"
                 error_message=detalhe if status == "error" else "", parcial=parcial))
 ```
 
@@ -1634,14 +1742,14 @@ Docstring de `search()`: acrescentar `Um endpoint que falha na primeira pagina m
 
 - [ ] **Step 4: Adaptar `test_comprehensive.py:473-477`** (B3): `s._fetch_all_pages = lambda url: []` → `s._fetch_all_pages = lambda url: ([], None, False)`, com a docstring do teste ganhando `Contrato de _fetch_all_pages mudou na frente 2 (2026-09-22): (itens, erro, parcial).` Conferir com `git grep -n "_fetch_all_pages\|_request_with_retry" -- '*.py'` que não há outro call site.
 
-- [ ] **Step 5: Ver passar** — suíte nova `23 passed, 1 xfailed`; `python test_comprehensive.py` → 98/98; `python test_searchers.py` → 13/13.
+- [ ] **Step 5: Ver passar** — suíte nova `25 passed, 1 xfailed`; `python test_comprehensive.py` → 98/98; `python test_searchers.py` → 13/13.
 
-- [ ] **Step 6: BASELINE** `tests/test_fontes_indisponiveis.py = 23`; runner TUDO VERDE; golden OK.
+- [ ] **Step 6: BASELINE** `tests/test_fontes_indisponiveis.py = 25`; runner TUDO VERDE; golden OK.
 
 - [ ] **Step 7: Auditoria + commit**
 
 ```bash
-git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/test_comprehensive.py levantamento-normativos/tests/ tools/run_all_tests.py
+git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/requirements.txt levantamento-normativos/test_comprehensive.py levantamento-normativos/tests/ tools/run_all_tests.py
 git commit -m "feat(frente2): TCU classifica 5xx/4xx/503/HTML e declara paginacao parcial
 
 _request_with_retry levanta FonteIndisponivel por classe de erro (4xx sem
@@ -1649,9 +1757,9 @@ retry; 503 com hora BRT e hipotese marcada; 200 nao-JSON e bloqueio ou
 ilegivel); _fetch_all_pages devolve (itens, erro, parcial). Um endpoint
 caido marca error E parcial mesmo com o outro ok; item que quebra o
 mapeamento vira erro_interno por keyword; keyword pulada pelo cap vira
-nao_consultada; o detalhe conta acordaos sem texto. Fixture: 2 acordaos
-REAIS de 22/09. test_comprehensive adaptado (98). Suite: 15 -> 23 (+1
-xfail para a T4)."
+nao_consultada; o detalhe (gravado sempre) conta acordaos sem sumario.
+Fixture: 2 acordaos REAIS de 22/09. test_comprehensive adaptado (98).
+Suite: 16 -> 25 (+1 xfail para a T4)."
 git push origin master
 ```
 
@@ -1663,7 +1771,7 @@ git push origin master
 
 ✅ **Limite medido pela rodada 2 (ao vivo):** `sumario` vem **nulo em 20/20** acórdãos das sessões mais recentes e em ~40% da janela de 500 registros; `titulo` é só "ACÓRDÃO N/AAAA ATA X/AAAA - PLENÁRIO". Ou seja: depois desta task, casam os acórdãos **que a API já preencheu** — a contagem "N sem texto" do detalhe (T3) é o que diz isso ao usuário. Não é "voltaram a casar"; é "deixaram de ser invisíveis".
 
-📝 **Mapeamento** (literal, sem parafrasear): `nome ← titulo`; `numero ← f"{numeroAcordao}/{anoAcordao}"`; `data ← dataSessao`; `orgao_emissor ← f"TCU - {colegiado}"`; `ementa ← sumario`; `link ← urlAcordao` (fallback `_build_acordao_link`); `situacao ← situacao` (a API traz `"OFICIALIZADO"` em 100% dos medidos — vai literal; a docstring de `NormativoResult.situacao` passa a admitir "o valor literal da fonte"). O filtro procura em `sumario` **e** `titulo`. Chaves antigas continuam aceitas como fallback.
+📝 **Mapeamento** (literal, sem parafrasear): `nome ← titulo`; `numero ← f"{numeroAcordao}/{anoAcordao}"`; `data ← dataSessao` (⚠ R3: a precedência **inverte** — antes era `dataAta or dataSessao`; a API real só tem `dataSessao`; e o vazio continua `""`, **não** `None`, porque `data` entra no `id` e `None` mudaria o id de todo acórdão sem data); `orgao_emissor ← f"TCU - {colegiado}"`; `ementa ← sumario`; `link ← urlAcordao` (fallback `_build_acordao_link`); `situacao ← situacao` (a API traz `"OFICIALIZADO"` em 100% dos medidos — vai literal; a docstring de `NormativoResult.situacao` passa a admitir "o valor literal da fonte"). O filtro procura em `sumario` **e** `titulo`. Chaves antigas continuam aceitas como fallback.
 
 **Files:** `tcu_searcher.py` (`_map_acordao`, `_texto_do_acordao`); `models.py` (docstring de `situacao`); `tests/test_fontes_indisponiveis.py`; `tools/run_all_tests.py`; spec §3.7.
 
@@ -1701,7 +1809,7 @@ def test_tcu_pagina_cheia_com_numeros_distintos_da_page_size_resultados(monkeypa
     assert len({r.id for r in resultados}) == tcu_searcher.PAGE_SIZE
 ```
 
-- [ ] **Step 2: Ver falhar** — `-k "acordao_real or pagina_cheia or quebra_o_mapeamento or 500_num"` → 4 failed.
+- [ ] **Step 2: Ver falhar** — `-k "acordao_real or pagina_cheia or quebra_o_mapeamento or 500_num"` → 4 failed. E em `test_comprehensive.py`, no teste `test_tcu_map_acordao_missing_fields` (`:465-468`), acrescentar `assert r.data == ""` (R3: fixa que o vazio continua `""`).
 
 - [ ] **Step 3: Implementar** — em `tcu_searcher.py`:
 
@@ -1726,8 +1834,8 @@ def test_tcu_pagina_cheia_com_numeros_distintos_da_page_size_resultados(monkeypa
         numero = str(item.get("numeroAcordao") or item.get("numero") or "")
         ano = str(item.get("anoAcordao") or item.get("ano") or "")
         colegiado = item.get("colegiado", "")
-        date_raw = item.get("dataSessao") or item.get("dataAta") or ""
-        date_str = self._safe_date_format(str(date_raw)) if date_raw else None
+        date_raw = item.get("dataSessao") or item.get("dataAta") or ""   # precedencia invertida de proposito (API real)
+        date_str = self._safe_date_format(str(date_raw)) if date_raw else ""  # "" e nao None: `data` entra no id
         return NormativoResult(
             nome=item.get("titulo") or f"Acordao {numero}/{ano} - TCU - {colegiado}",
             tipo="Acordao TCU",
@@ -1746,21 +1854,21 @@ def test_tcu_pagina_cheia_com_numeros_distintos_da_page_size_resultados(monkeypa
 
 Em `models.py`, docstring de `NormativoResult.situacao`: `"Vigente", "Revogado" ou "Nao identificado" (default)` → `"Vigente", "Revogado", "Nao identificado" (default) ou o valor literal da fonte (ex.: "OFICIALIZADO" do TCU).`
 
-- [ ] **Step 4: Ver passar** — suíte `28 passed` (23 + 1 ex-xfail + 3 + o do 500 que já contava). `test_comprehensive` 98/98; `test_searchers` 13/13 (✅ rodada 2 verificou: nenhum teste antigo afirma o nome antigo; `test_comprehensive:424-441,461-468` passam pelo fallback). Golden OK (o corpus fixo não passa por `_map_acordao`).
+- [ ] **Step 4: Ver passar** — suíte `29 passed` (26 coletados na T3, o xfail vira passed, + 3 novos). `test_comprehensive` 98/98; `test_searchers` 13/13 (✅ rodada 2 verificou: nenhum teste antigo afirma o nome antigo; `test_comprehensive:424-441,461-468` passam pelo fallback). Golden OK (o corpus fixo não passa por `_map_acordao`).
 
-- [ ] **Step 5: BASELINE 28; spec; commit**
+- [ ] **Step 5: BASELINE 29; spec; commit**
 
 Na spec §3.7: `> ⚠ Emendado em 22/09 (plano v3, T4): o mapeamento do acórdão do TCU MUDA — a API real não devolve as chaves que o código lia. Ver a fixture real. Limite medido: sumário vazio nos acórdãos recentes.`
 
 ```bash
-git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/models.py levantamento-normativos/tests/ tools/run_all_tests.py docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md
+git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/models.py levantamento-normativos/test_comprehensive.py levantamento-normativos/tests/ tools/run_all_tests.py docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md
 git commit -m "fix(frente2): TCU le o esquema REAL do acordao (titulo/sumario/numeroAcordao/anoAcordao/urlAcordao/situacao)
 
 Medido em 22/09: a API nao devolve ementa/numero/ano; _map_acordao lia so
 essas chaves, entao todo acordao colapsava num id e nunca casava
 palavra-chave. Emenda a spec 3.7. Textos literais, sem parafrase. Limite
 medido (rodada 2): acordaos recentes chegam sem sumario — o detalhe conta
-'N sem texto'. Suite: 23 -> 28."
+'N sem sumario'. Data vazia continua \"\" (id preservado). Suite: 25 -> 29."
 git push origin master
 ```
 
@@ -1768,11 +1876,11 @@ git push origin master
 
 ### Task 5: Google/DDG — vocabulário mínimo (⚠ emenda à spec §5)
 
-**Files:** `searchers/google_searcher.py` — classe (`SOURCE_ID`), `_search_ddgs` (`:145-167`), `_search_cse_api` (`:169-205`), `_search_scraping` (`:207-215`), `_search_urls` (`:127-143`), `search()` laço principal (`:252-271`) **e laço de retry (`:344-403`)**, callback final; `tests/test_fontes_indisponiveis.py`; `tools/run_all_tests.py`.
+**Files:** `searchers/google_searcher.py` — imports (`:13-23`: **acrescentar `from typing import Optional`** — o módulo não tem `from __future__ import annotations`; sem isso o app inteiro não importa, R3-B2); classe (`SOURCE_ID`); `_search_urls` (`:127-143`); `_search_ddgs` (`:145-167`); `_search_cse_api` (`:169-205`); `_search_scraping` (`:207-215`); `search()` laço principal (`:252-271`) **e laço de retry inteiro (`:344-403`)**; callback final; `tests/test_fontes_indisponiveis.py`; `tools/run_all_tests.py`.
 
 **Interfaces — Produces:** `GoogleSearcher.SOURCE_ID = "google"`; `_search_urls(keyword) -> tuple[list[dict], Optional[FonteIndisponivel]]` (era `(list, str)`); `DDGSException("No results found.")` → lista vazia **sem** erro.
 
-- [ ] **Step 1: Testes** (5):
+- [ ] **Step 1: Testes** (8):
 
 ```python
 # ---------------------------------------------------------------------------
@@ -1791,6 +1899,10 @@ def _ddg_com(monkeypatch, text_impl):
     import ddgs
     monkeypatch.setattr(ddgs, "DDGS", DDGSFake)
     return google_searcher.GoogleSearcher()
+
+
+def _um_resultado(q):
+    return [{"href": f"https://www.gov.br/{abs(hash(q)) % 10**6}", "title": f"Guia {q}", "body": "texto"}]
 
 
 def test_ddg_no_results_e_empty_nao_error(monkeypatch):
@@ -1827,6 +1939,16 @@ def test_google_keywords_alem_de_5_ganham_nao_consultada(monkeypatch):
     assert len(s.keyword_statuses) == 7
 
 
+def test_google_cap_de_max_results_dentro_das_5_tambem_e_nao_consultada(monkeypatch):
+    """R3-H2: o break por max_results dentro das 5 ativas nao pode sumir com keywords."""
+    s = _ddg_com(monkeypatch, _um_resultado)
+    s.search([f"k{i}" for i in range(7)], max_results=2)
+    assert len(s.keyword_statuses) == 7
+    assert [st.status for st in s.keyword_statuses[:2]] == ["ok", "ok"]
+    assert all(st.motivo == "nao_consultada" for st in s.keyword_statuses[2:])
+    assert "max_results=2" in s.keyword_statuses[2].detalhe and "MAX_GOOGLE_KEYWORDS" in s.keyword_statuses[5].detalhe
+
+
 def test_ddg_retry_que_da_certo_zera_motivo(monkeypatch):
     """R2-H3: o laco de retry tambem fala FonteIndisponivel, senao a aba diz 'Sem resultado · timeout'."""
     from ddgs.exceptions import TimeoutException
@@ -1842,13 +1964,59 @@ def test_ddg_retry_que_da_certo_zera_motivo(monkeypatch):
     assert (st.status, st.motivo, st.retried, st.result_count) == ("ok", "", True, 1)
     assert st.detalhe == "recuperado no retry após timeout"
     assert len(resultados) == 1
+
+
+def test_ddg_retry_pulado_nao_marca_retried(monkeypatch):
+    """R3-H1: so a 1a keyword e reenviada; as outras NAO podem sair 'Retentado: Sim'."""
+    from ddgs.exceptions import TimeoutException
+    def sempre(q): raise TimeoutException("t")
+    s = _ddg_com(monkeypatch, sempre)
+    s.search(["a", "b", "c"], max_results=5)
+    assert [st.retried for st in s.keyword_statuses] == [True, False, False]
+    assert all(st.motivo == "timeout" for st in s.keyword_statuses)
+    assert all("retry pulado" in st.detalhe for st in s.keyword_statuses[1:])
+
+
+def test_cse_200_nao_json_e_resposta_ilegivel(monkeypatch):
+    """R2-H3 (CSE): 200 que nao e JSON caia num handler que assumia e.response."""
+    from searchers import google_searcher
+    monkeypatch.setattr(google_searcher, "_BACKEND", "cse")
+    monkeypatch.setattr("searchers.google_searcher.requests.get",
+                        lambda url, params=None, timeout=None, **kw: RespostaFake(200, "<html>oi</html>", "text/html", url=url + "?key=AIzaSECRET&cx=1"))
+    s = google_searcher.GoogleSearcher()
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert st.motivo == "resposta_ilegivel" and "AIzaSECRET" not in st.detalhe
 ```
 
 - [ ] **Step 2: Ver falhar.**
 
-- [ ] **Step 3: Implementar** — `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`; na classe: `SOURCE_ID = "google"`.
+- [ ] **Step 3: Implementar**
 
-**3a.** `_search_ddgs` — corpo do `try` inteiro:
+**3a.** Imports: `from typing import Optional` (**novo — R3-B2**) e `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`. Na classe: `SOURCE_ID = "google"`.
+
+**3b.** `_search_urls` (`:127-143`) — inteira:
+
+```python
+    def _search_urls(self, keyword: str) -> tuple[list[dict], Optional[FonteIndisponivel]]:
+        """Search for results matching the keyword.
+
+        Returns:
+            (results, erro). Each result is a dict with keys: url, title, snippet.
+            erro e None em sucesso (inclusive "sem resultado"); FonteIndisponivel
+            quando a fonte nao pode ser consultada (frente 2).
+        """
+        if _BACKEND == "cse":
+            return self._search_cse_api(keyword)
+        elif _BACKEND == "ddgs":
+            return self._search_ddgs(keyword)
+        elif _BACKEND == "scraping":
+            return self._search_scraping(keyword)
+        else:
+            return [], FonteIndisponivel("erro_interno", "Nenhum backend de busca disponivel. Instale 'ddgs': pip install ddgs")
+```
+
+**3c.** `_search_ddgs` — corpo do `try` inteiro:
 
 ```python
         try:
@@ -1865,7 +2033,9 @@ def test_ddg_retry_que_da_certo_zera_motivo(monkeypatch):
         return [{"url": r.get("href", ""), "title": r.get("title", ""), "snippet": r.get("body", "")} for r in raw_results], None
 ```
 
-**3b.** `_search_cse_api` — bloco `try` inteiro:
+Tipo de retorno na assinatura: `-> tuple[list[dict], Optional[FonteIndisponivel]]`.
+
+**3d.** `_search_cse_api` — bloco `try` inteiro (assinatura idem):
 
 ```python
         try:
@@ -1897,11 +2067,37 @@ def test_ddg_retry_que_da_certo_zera_motivo(monkeypatch):
             return [], FonteIndisponivel("erro_interno", f"Google CSE: {type(e).__name__}: {e}")
 ```
 
-**3c.** `_search_scraping`: `except Exception as e: return [], FonteIndisponivel("erro_interno", f"googlesearch: {type(e).__name__}: {e}")`; sucesso devolve `(..., None)`. `_search_urls`: o ramo "Nenhum backend" → `return [], FonteIndisponivel("erro_interno", "Nenhum backend de busca disponivel. Instale 'ddgs': pip install ddgs")`. Tipo de retorno das quatro: `tuple[list[dict], Optional[FonteIndisponivel]]`; docstrings ajustadas.
-
-**3d.** Laço principal (`:261-271`):
+**3e.** `_search_scraping` — inteira:
 
 ```python
+    def _search_scraping(self, keyword: str) -> tuple[list[dict], Optional[FonteIndisponivel]]:
+        """Search using googlesearch-python (scraping, no API key needed)."""
+        from googlesearch import search as google_search
+
+        query = f"{keyword} {SITE_RESTRICTION}"
+        try:
+            urls = list(google_search(query, num_results=RESULTS_PER_QUERY, lang="pt"))
+            return [{"url": u, "title": "", "snippet": ""} for u in urls], None
+        except Exception as e:
+            return [], FonteIndisponivel("erro_interno", f"googlesearch: {type(e).__name__}: {e}")
+```
+
+**3f.** Laço principal — substituir de `if len(results) >= max_results:` / `break` (`:253-254`) até `continue` do bloco `if error_msg:` (`:271`):
+
+```python
+            if len(results) >= max_results:
+                # R3-H2 (M4): keyword nunca enviada nao pode sumir do relatorio
+                for restante in active_keywords[idx:]:
+                    self.keyword_statuses.append(KeywordStatus(
+                        keyword=restante, source=self.SOURCE_ID, result_count=0, status="error", motivo="nao_consultada",
+                        detalhe=f"busca parou em max_results={max_results} antes desta palavra-chave"))
+                break
+
+            if progress_callback:
+                progress_callback(idx, total_steps, f"Google: buscando '{keyword}'")
+
+            logger.info(f"Google [{idx+1}/{total_steps}]: buscando '{keyword}'")
+
             search_results, erro = self._search_urls(keyword)
 
             if erro is not None:
@@ -1916,26 +2112,76 @@ def test_ddg_retry_que_da_certo_zera_motivo(monkeypatch):
 
 O bloco "Detect possible blocking (scraping mode only)" (`:275-292`) ganha `motivo="bloqueio_waf"` no `KeywordStatus`. Todos os `KeywordStatus(... source="google"` do arquivo → `source=self.SOURCE_ID`.
 
-**3e.** Laço de retry (`:344-403`) — os **dois** pontos (R2-H3): `search_results, error_msg = self._search_urls(keyword)` (`:363`) → `search_results, erro = ...`; e o bloco que atualiza `kws` (`:365-399`) vira:
+**3g.** Laço de retry — substituir **inteiro**, de `# --- Retry failed keywords (max 3, bail if API is down) ---` (`:344`) até `self._rate_limit()` (`:403`, o último do laço), **inclusive**, por:
 
 ```python
-                if erro is not None:
-                    kws.error_message = f"Retry failed: {erro}"
-                    kws.motivo, kws.detalhe = erro.motivo, erro.detalhe
-                    api_still_down = True
-                else:
-                    recuperado = f"recuperado no retry após {kws.motivo}"
-                    kws.error_message, kws.motivo = "", ""
-                    kws.detalhe = recuperado
-                    ...  # o restante do ramo de sucesso (status ok/empty, result_count, results.extend) fica como esta
-```
+        # --- Retry failed keywords (max 3, bail if API is down) ---
+        MAX_RETRIES = 3
+        if failed_keywords:
+            retry_count = min(len(failed_keywords), MAX_RETRIES)
+            logger.info(f"Google: retrying {retry_count} of {len(failed_keywords)} failed keywords")
+            import time
+            time.sleep(5)
 
-⚠ Abrir o laço de retry e ler antes de editar: a variável se chama `kws` lá (não `st`); manter o restante.
+            api_still_down = False
+            for keyword in failed_keywords[:MAX_RETRIES]:
+                if len(results) >= max_results or api_still_down:
+                    # R3-H1: sem requisicao NAO marca retried — so registra que pulou
+                    for kws in self.keyword_statuses:
+                        if kws.keyword == keyword and kws.source == self.SOURCE_ID and kws.status == "error":
+                            motivo_pulo = "a retentativa anterior falhou" if api_still_down else "max_results atingido"
+                            kws.detalhe = f"{kws.detalhe} | retry pulado: {motivo_pulo}"
+                            break
+                    continue
 
-**3f.** `nao_consultada` — posição pinada (R2-H3): **depois** do laço de retry e **antes** do `if progress_callback:` final de `search()`:
+                search_results, erro = self._search_urls(keyword)
+                for kws in self.keyword_statuses:
+                    if kws.keyword == keyword and kws.source == self.SOURCE_ID and kws.status == "error":
+                        kws.retried = True
+                        if erro is not None:
+                            kws.error_message = f"Retry failed: {erro}"
+                            kws.motivo, kws.detalhe = erro.motivo, erro.detalhe
+                            api_still_down = True
+                        else:
+                            recuperado = f"recuperado no retry após {kws.motivo}"   # ANTES de zerar o motivo
+                            kw_count = 0
+                            for sr in search_results:
+                                if len(results) >= max_results:
+                                    break
+                                url = sr.get("url", "")
+                                if not url:
+                                    continue
+                                normalized_url = self._normalize_url(url)
+                                if normalized_url in seen_urls:
+                                    continue
+                                seen_urls.add(normalized_url)
+                                title = sr.get("title", "")
+                                description = sr.get("snippet", "")
+                                if not title or not description:
+                                    ft, fd = self._fetch_page_metadata(url)
+                                    title = title or ft
+                                    description = description or fd
+                                org = self._extract_org(url)
+                                results.append(NormativoResult(
+                                    nome=title if title else url,
+                                    tipo="Framework/Padrao", numero="", data=None,
+                                    orgao_emissor=org, ementa=description, link=url,
+                                    source="google", found_by=keyword, relevancia=0.3,
+                                    raw_data={"url": url, "title": title, "description": description},
+                                ))
+                                kw_count += 1
+                            kws.status = "ok" if kw_count > 0 else "empty"
+                            kws.error_message, kws.motivo = "", ""
+                            kws.detalhe = recuperado
+                            kws.result_count = kw_count
+                        break
 
-```python
-        # M4: palavra-chave alem de MAX_GOOGLE_KEYWORDS nunca foi enviada — nao pode sumir do relatorio
+                if not api_still_down:
+                    self._rate_limit()
+
+        # M4 (R2-H3): keyword alem de MAX_GOOGLE_KEYWORDS nunca foi enviada — nao pode sumir do relatorio.
+        # Posicao pinada: DEPOIS do retry e ANTES do callback final (antes do laco ela era apagada
+        # pela reinicializacao de keyword_statuses).
         for restante in keywords[MAX_GOOGLE_KEYWORDS:]:
             self.keyword_statuses.append(KeywordStatus(
                 keyword=restante, source=self.SOURCE_ID, result_count=0, status="error", motivo="nao_consultada",
@@ -1945,7 +2191,7 @@ O bloco "Detect possible blocking (scraping mode only)" (`:275-292`) ganha `moti
 
 ⚠ `git grep -n "_search_urls\|error_msg" -- levantamento-normativos/searchers/google_searcher.py levantamento-normativos/test_*.py` antes de fechar: nenhum resto de `error_msg`; se `test_searchers.py`/`test_comprehensive.py` afirmarem `_search_urls(...)[1] == ""` ou `error_message` literal do Google, adaptar no mesmo commit e registrar.
 
-- [ ] **Step 4: Ver passar** — suíte `33 passed`; `test_searchers` 13/13; `test_comprehensive` 98/98. BASELINE 33. Runner, golden. Commit `feat(frente2): Google/DDG entra no vocabulario — 'No results' e empty, nao error; retry fala FonteIndisponivel`. Push.
+- [ ] **Step 4: Ver passar** — suíte `37 passed`; `test_searchers` 13/13; `test_comprehensive` 98/98; `python -c "from searchers import GoogleSearcher"` importa. BASELINE 37. Runner, golden. Commit `feat(frente2): Google/DDG entra no vocabulario — 'No results' e empty, nao error; retry honesto; cap declarado`. Push.
 
 ---
 
@@ -2218,11 +2464,11 @@ class TestRotulosSincronizados:
         assert STATUS_LABEL is rotulo_status   # unico lugar (R2-B6)
 ```
 
-- [ ] **Step 2: Ver falhar** — `1 + 10 failed` (M12: dos três testes de contagem só `test_has_10_columns` falha hoje).
+- [ ] **Step 2: Ver falhar** — na coleta: `ImportError: cannot import name 'ORIGEM_LABEL' from 'excel_export'` (nenhum teste roda — R3). Depois do Step 3c só, `1 + 10 failed` (M12: dos três testes de contagem só `test_has_10_columns` falha hoje).
 
 - [ ] **Step 3: `excel_export.py`**
 
-**3a.** Imports (`:14-30`): `from typing import Optional`; `from models import KeywordStatus, NormativoResult, rotulo_status`.
+**3a.** Imports (`:14-30`): `from typing import Optional`; `from models import KeywordStatus, NormativoResult, redigir, rotulo_status`.
 
 **3b.** `COLUMNS` ganha, após `("Relevancia", 12, "relevancia")`: `("Origem da nota", 16, "relevancia_origem"),` com o comentário `# ⚠ test_phase4.py fixa len(COLUMNS); mudar aqui = mudar la no mesmo commit`.
 
@@ -2286,7 +2532,8 @@ def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordS
         return
     sim_nao = lambda b: "Sim" if b else "Não"
     for row, s in enumerate(diagnostico, start=3):
-        valores = [s.source, s.keyword, STATUS_LABEL(s), s.motivo or VAZIO,
+        # keyword e source vem do usuario/LLM: '=1+1' viraria formula (R3); redigir neutraliza
+        valores = [redigir(s.source), redigir(s.keyword), STATUS_LABEL(s), s.motivo or VAZIO,
                    (s.detalhe or s.error_message) or VAZIO, s.result_count, sim_nao(s.parcial), sim_nao(s.retried)]
         for col, v in enumerate(valores, start=1):
             c = ws.cell(row=row, column=col)
@@ -2320,6 +2567,11 @@ def _sha_planilha(itens: list) -> str:
     ali passaria com 'golden-master OK'. O diagnostico fixo cobre: error com
     motivo e detalhe; ok parcial; empty; nao_consultada; error retentado sem
     detalhe (so error_message). `quando` e fixo para o hash ser estavel.
+
+    ⚠ O hash da aba de diagnostico depende de models.redigir e rotulo_status e
+    de excel_export.ORIGEM_LABEL, VAZIO e do titulo com `quando` fixo (rodada 3):
+    mudanca INTENCIONAL em qualquer um deles = recongelar com justificativa,
+    nao regressao do dedup/export.
 
     A funcao publica e generate_excel(results, topic, diagnostico=None, quando=None)
     (excel_export.py) — e o que app.py e test_phase4.py usam.
@@ -2369,7 +2621,9 @@ busca, rotulo unico (models.rotulo_status: 'Nao consultada' nao e
 2000 chars). GOLDEN-MASTER RECONGELADO DE PROPOSITO (spec 3.5 + M7):
 coluna nova e hash de todas as abas com diagnostico_fixo.json (5 linhas).
 dedup_esperado.json inalterado — conferido pelo ramo do dedup antes de
-recongelar. test_phase4: 61 -> 71."
+recongelar. O hash da aba nova depende de redigir/rotulo_status/
+ORIGEM_LABEL/VAZIO: mudanca intencional neles = recongelar.
+test_phase4: 61 -> 71."
 git push origin master
 ```
 
@@ -2379,7 +2633,7 @@ git push origin master
 
 **Files:** `app.py` — imports (`:21-24`); `except` do laço de fontes (`:545-564`); pontuação (`:570-596`); `_render_search_diagnostics` (`:840-905`); `render_step4` (`:907-946`); card (`:1049-1065`); `generate_excel` (`:1195`); preview (`:1221-1232`). ⚠ **Linhas do HEAD:** os Steps 1-3 inserem ~20 linhas antes de `:840`; a partir daí, ancorar pelo **nome da função**, não pelo número. `tools/dirigir_app.py` (novo); `.gitignore`.
 
-- [ ] **Step 1: Imports** — `from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, rotulo_status, statuses_para_falha_total`; `from datetime import datetime` (⚠ **não** `import datetime`); no topo, `ORIGEM_CURTA = {"modelo": "modelo", "heuristica": "heurística", "fallback_erro": "fallback", "padrao_fonte": "padrão da fonte"}` seguido de `assert set(ORIGEM_CURTA) == ORIGENS_RELEVANCIA` (M13).
+- [ ] **Step 1: Imports** — `from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, statuses_para_falha_total` (⚠ **não** importar `rotulo_status`: a tela agrupa por motivo, só a planilha rotula — R3); `from datetime import datetime` (⚠ **não** `import datetime`); `from zoneinfo import ZoneInfo`; no topo, `ORIGEM_CURTA = {"modelo": "modelo", "heuristica": "heurística", "fallback_erro": "fallback", "padrao_fonte": "padrão da fonte"}`. O teste de sincronia `set(ORIGEM_CURTA) == ORIGENS_RELEVANCIA` **não** fica como `assert` no app (some com `-O`, R3): vai para `test_phase4.py::TestRotulosSincronizados` como `test_origem_curta_do_app_cobre_o_vocabulario` (`from app import ORIGEM_CURTA` — ⚠ importar `app` executa `st.set_page_config`; se isso levantar fora do Streamlit, mover `ORIGEM_CURTA` para `models.py` e importar de lá nos dois lugares). ⚠ Isso muda a contagem da T8/T9: +1 em `test_phase4` = **72** e total **283** — o executor atualiza a tabela e o BASELINE no commit da T9.
 
 - [ ] **Step 2: Fonte que levanta não some (H2, R2)** — no `except Exception as e:` de `:556`, **antes** do `status_text.write`:
 
@@ -2388,8 +2642,9 @@ git push origin master
                 ja = getattr(searcher, "keyword_statuses", []) or []
                 all_keyword_statuses.extend(ja)
                 cobertas = {s.keyword for s in ja}
-                all_keyword_statuses.extend(statuses_para_falha_total(
-                    searcher.SOURCE_ID, [k for k in keywords if k not in cobertas], e))
+                faltam = [k for k in keywords if k not in cobertas]
+                if faltam or not keywords:   # R3: com tudo coberto, nao inventar uma linha "(todas)"
+                    all_keyword_statuses.extend(statuses_para_falha_total(searcher.SOURCE_ID, faltam, e))
 ```
 
 - [ ] **Step 3: Pontuação sempre** — `app.py:570-596`, trocar o bloco por:
@@ -2408,7 +2663,9 @@ git push origin master
             pares = gemini_client.score_relevance_com_origem(topic, result_dicts, keywords)
             for i, (score, origem) in enumerate(pares):
                 if i < len(all_results):
-                    assert origem in ORIGENS_RELEVANCIA, origem   # M8: atribuicao pos-construcao nao passa pelo __post_init__
+                    if origem not in ORIGENS_RELEVANCIA:   # M8/R3: validacao real, nao assert (some com -O)
+                        logger.error("origem de relevancia desconhecida %r; gravando padrao_fonte", origem)
+                        origem = "padrao_fonte"
                     all_results[i].relevancia = score
                     all_results[i].relevancia_origem = origem
 
@@ -2439,7 +2696,7 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
     nao_consultadas = [s for s in kw_statuses if s.motivo == "nao_consultada"]
     empty_statuses = [s for s in kw_statuses if s.status == "empty"]
     ok_statuses = [s for s in kw_statuses if s.status == "ok"]
-    parciais = [s for s in kw_statuses if s.parcial]
+    parciais = [s for s in kw_statuses if s.parcial and s.status != "error"]   # R3: disjunto de indisponiveis
     total = len(kw_statuses)
 
     label = (f"Relatório da busca — {len(ok_statuses)} OK · {len(indisponiveis)} indisponíveis · "
@@ -2458,8 +2715,9 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
             for s in indisponiveis:
                 retry_badge = " (retentado)" if s.retried else ""
                 extra = f" — {s.result_count} resultado(s) do endpoint que respondeu" if s.result_count else ""
+                badge_parcial = " (parcial)" if s.parcial else ""
                 st.markdown(f"- :red[**{html_module.escape(s.keyword)}**] em *{html_module.escape(s.source)}*"
-                            f"{retry_badge}: `{html_module.escape(s.motivo or 'erro')}`{extra}")
+                            f"{retry_badge}{badge_parcial}: `{html_module.escape(s.motivo or 'erro')}`{extra}")
                 st.code(s.detalhe or s.error_message or "(sem detalhe)", language=None)   # M13: nao passa pelo Markdown
             st.caption("A fonte não pôde ser consultada. Isso NÃO significa que não existem normativos — "
                        "significa que esta busca não os viu. Motivo e detalhe acima; a aba "
@@ -2482,8 +2740,10 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
             st.markdown("**:orange[Palavras-chave sem resultados (nenhum normativo encontrado):]**")
             for s in empty_statuses:
                 st.markdown(f"- :orange[**{html_module.escape(s.keyword)}**] em *{html_module.escape(s.source)}*")
+                if s.detalhe:   # R3-H5: "500 acordaos sem sumario" nao e "nao ha acordao"
+                    st.code(s.detalhe, language=None)
             st.caption("Essas palavras-chave foram buscadas com sucesso, mas nenhum normativo "
-                       "correspondente foi encontrado na fonte.")
+                       "correspondente foi encontrado na fonte. Quando há detalhe, ele diz o que a fonte entregou.")
 
         if ok_statuses:
             st.markdown("**:green[Palavras-chave com resultados:]**")
@@ -2494,25 +2754,32 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
 
 ⚠ A assinatura mudou (só `kw_statuses`): as **duas** chamadas em `render_step4` (`:934` e `:946`) passam a `_render_search_diagnostics(kw_statuses)`, e as três listas `error_statuses/empty_statuses/ok_statuses` de `:914-916` saem — o `st.error` do ramo `if not results:` passa a usar `indisponiveis` calculado ali (Step 5).
 
-- [ ] **Step 5: Avisos por fonte (H3, R2)** — em `render_step4`, logo após `kw_statuses = ...` e **antes** do `if not results:`:
+- [ ] **Step 5: Avisos por fonte (H3, R2, R3-H4)** — em `render_step4`, o bloco abaixo entra **depois** do `st.header(...)` de cada um dos dois ramos (com e sem resultados — R3: antes do header ficava acima do título); as listas `catalogadas`/`indisponiveis`/`por_fonte` são calculadas uma vez, logo após `kw_statuses = ...`:
 
 ```python
     catalogadas = [s for s in kw_statuses if s.source in ("lexml", "tcu")]
     indisponiveis = [s for s in kw_statuses if s.status == "error" and s.motivo != "nao_consultada"]
     por_fonte = {}
     for s in catalogadas:
-        f = por_fonte.setdefault(s.source, {"entregues": 0, "erros": 0, "total": 0, "motivos": set()})
+        f = por_fonte.setdefault(s.source, {"entregues": 0, "erros": 0, "total": 0, "motivos": set(), "parcial": False})
         f["total"] += 1
         f["entregues"] += s.result_count
         if s.status == "error" and s.motivo != "nao_consultada":
             f["erros"] += 1
             f["motivos"].add(s.motivo)
-    mortas = [f for f, v in por_fonte.items() if v["total"] and v["erros"] == v["total"] and v["entregues"] == 0]
+        f["parcial"] = f.get("parcial", False) or s.parcial
+    # R3-H4: "morta" exige que NENHUM status da fonte seja parcial — TCU com acordaos 200
+    # (0 match) e atos 500 respondeu pela metade, nao "esta indisponivel"
+    mortas = [f for f, v in por_fonte.items() if v["total"] and v["erros"] == v["total"]
+              and v["entregues"] == 0 and not v["parcial"]]
     parciais_fonte = [f for f, v in por_fonte.items() if v["erros"] and f not in mortas]
-    if mortas and not parciais_fonte and all(v["entregues"] == 0 for v in por_fonte.values()):
-        st.warning("Nenhuma fonte catalogada (LexML, TCU) entregou resultado nesta busca: "
+    nomes = ", ".join(sorted(por_fonte)) or "nenhuma selecionada"
+    tem_web_aberta = any(s.source == "google" for s in kw_statuses)
+    if mortas and not parciais_fonte:
+        resto = " O que aparece abaixo vem só da web aberta." if tem_web_aberta else " Nenhuma outra fonte foi consultada."
+        st.warning(f"Nenhuma fonte catalogada ({nomes}) entregou resultado nesta busca: "
                    + "; ".join(f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas)
-                   + ". O que aparece abaixo vem só da web aberta. Veja o relatório da busca.")
+                   + "." + resto + " Veja o relatório da busca.")
     elif mortas or parciais_fonte:
         partes = [f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas]
         partes += [f"{f} respondeu parcialmente ({por_fonte[f]['entregues']} resultado(s); "
@@ -2526,7 +2793,7 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
 
 E no ramo `if not results:`, o `st.error` passa a ser: `if indisponiveis: st.error(f"Nenhum normativo encontrado. {len(indisponiveis)} busca(s) não puderam consultar a fonte (indisponível). Isso não significa que o normativo não existe — veja o relatório.")`.
 
-- [ ] **Step 6: Card, preview, exportação** — card (`Relevancia:` na `:1065`): `f"<b>Relevancia:</b> {relevancia_pct}% <i>({ORIGEM_CURTA[item.relevancia_origem]})</i> &middot; "`; preview (`:1221-1232`): depois de `"Relevancia": ...,` acrescentar `"Origem": ORIGEM_CURTA[item.relevancia_origem],`; exportação (`:1195`): `generate_excel(selected, topic, diagnostico=st.session_state.get("keyword_statuses", []), quando=datetime.now().strftime("%d/%m/%Y %H:%M"))`.
+- [ ] **Step 6: Card, preview, exportação** — card (`Relevancia:` na `:1065`): `f"<b>Relevancia:</b> {relevancia_pct}% <i>({ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem)})</i> &middot; "` (`.get`: lookup duro vira traceback na página — R3); preview (`:1221-1232`): depois de `"Relevancia": ...,` acrescentar `"Origem": ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem),`; exportação (`:1195`): `generate_excel(selected, topic, diagnostico=st.session_state.get("keyword_statuses", []), quando=datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"))` (BRT como o 503 do TCU — R3).
 
 - [ ] **Step 7: Gate visual V11** — `tools/dirigir_app.py`:
 
@@ -2580,6 +2847,7 @@ checks = {
     "relatório mostra ≥1 indisponível": bool(re.search(r"·\s*[1-9]\d*\s*indisponíveis", texto)),
     "bloqueio_waf visível na tela": "bloqueio_waf" in texto,
     "aviso por fonte presente": ("indisponível (" in texto),
+    "TCU declarado parcial (acórdãos 200, atos 500 — cenário de 22/09)": ("tcu respondeu parcialmente" in texto),
     "origem no card": any(o in texto for o in ("(heurística)", "(modelo)", "(fallback)")),
     "nenhum card sumiu (cards == N do cabeçalho)": n_cab > 0 and n_cards == n_cab,
     "'0 erros' não aparece": "0 erros" not in texto,   # mantido por historia; nao e o gate
@@ -2588,7 +2856,7 @@ for k, v in checks.items():
     print(f"  {'OK ' if v else 'FALHOU'} {k}")
 if not checks["relatório mostra ≥1 indisponível"]:
     print("  ⚠ Se o LexML voltou a responder, este gate nao se aplica hoje — confirmar no relatório.")
-assert all(v for k, v in checks.items() if k != "'0 erros' não aparece"), "gate V11 reprovou"
+assert all(v for k, v in checks.items() if k not in ("'0 erros' não aparece",)), "gate V11 reprovou"
 print("GATE V11 OK — abrir e OLHAR:", SAIDA)
 ```
 
@@ -2601,15 +2869,14 @@ print("GATE V11 OK — abrir e OLHAR:", SAIDA)
 ### Task 10: Fechar a frente
 
 - [ ] Critérios de pronto da spec §7 (com os comandos e saídas no commit): 9 commits das tasks; runner TUDO VERDE sem `[AVISO] cresceu`; `golden_master.py comparar` OK e `git diff d054d5b -- tests/golden/dedup_esperado.json` vazio; V11 rodado de novo; auditoria dos 2 comandos sobre `dc99d73..HEAD`.
-- [ ] Duráveis: `_TODO.md` (frente 2 ✅; F9 perde os achados que viraram código; P3 ganha: "sanitizar ementa/nome contra fórmula na aba Normativos", "dublar `test_lexml_cql_injection_sanitization` — faz rede"); `log.md`; `SESSION-ONBOARD` §2/§6 (próxima: frente 5); `BLOCKED-ON-RODRIGO.md` B-04 (`✅ a UI e a planilha distinguem indisponível de sem resultado; acórdãos do TCU deixaram de ser invisíveis — mas os recentes chegam sem sumário (medido), a lacuna continua`); `LESSONS.md`: (1) fixture escrita à mão sobre esquema não capturado é falsa testemunha — a real derrubou o teste e revelou um bug de produção (B5); (2) correção que tapa um bug abre outro: `redigir(300)` × cadeia agregada (R2-B1) — só rodada seguinte pega; (3) falta captura real de SRU do LexML — capturar quando a fonte responder.
+- [ ] Duráveis: `_TODO.md` (frente 2 ✅; F9 perde os achados que viraram código; P3 ganha: "sanitizar ementa/nome contra fórmula na aba Normativos", "dublar `test_lexml_cql_injection_sanitization` — faz rede", "tela: agrupar o detalhe do TCU por fonte (é idêntico por keyword)", "runner sem LLM de verdade: `st.secrets` vence a variável vazia — frente 5"); `log.md`; `SESSION-ONBOARD` §2/§6 (próxima: frente 5); `BLOCKED-ON-RODRIGO.md` B-04 (`✅ a UI e a planilha distinguem indisponível de sem resultado; acórdãos do TCU deixaram de ser invisíveis — mas os recentes chegam sem sumário (medido), a lacuna continua`); `LESSONS.md`: (1) fixture escrita à mão sobre esquema não capturado é falsa testemunha — a real derrubou o teste e revelou um bug de produção (B5); (2) correção que tapa um bug abre outro: `redigir(300)` × cadeia agregada (R2-B1) e `sem_texto` fora do try × `_texto_do_acordao` não-total (R3-B1) — em duas rodadas seguidas, o pior achado foi um **cruzamento de duas correções da rodada anterior**; só rodada seguinte pega, e o plano só ficou executável na 4ª versão; (3) falta captura real de SRU do LexML — capturar quando a fonte responder.
 - [ ] Commit `docs: fecha a frente 2`; push; `/checkpoint`.
 
 ---
 
-## Self-review (v3)
+## Self-review (v4)
 
-**Cobertura da spec + emendas:** §3.1 → T1 · §3.2 → T2 · §3.3 → T3 · §3.4 → T6+T7+T9 · §3.5 → T8 · §3.6 → T9 · §3.7 → gates de golden (exceção declarada em T4) · §4 V1–V11 → T1..T9 · §5 → estrutura (+ google, tcu mapping) · §7 → T10. Emendas à spec: §3.1 (motivos; redigir em toda atribuição; rotulo_status; parcial com empty/error), §3.7 (T4), §5 (T5), §3.5 (`quando`, `—`, golden nas 2 abas, detalhe até 2000).
-**Contagens (recomputadas dos blocos):** T1 41+17=58 · T2 +15 · T3 +9 (23 passed +1 xfail) · T4 +3 e −xfail = 28 · T5 +5 = 33 · T6 63 · T7 61 · T8 71 · **final 13 + 63 + 98 + 71 + 33 = 278**. A tabela do topo bate.
-**Delegações à v1:** nenhuma — a seção 9, `_write_diagnostico_sheet`, o relatório e o driver estão colados aqui.
-**Placeholders:** nenhum `TBD`/`TODO`/`# inalterado`.
-**Nomes:** `FonteIndisponivel(motivo, detalhe)` · `SOURCE_ID` · `_search_keyword_safe -> (list, erro_fatal, erro_paginacao)` · `_fetch_all_pages -> (itens, erro, parcial)` · `_search_urls -> (list, erro)` · `score_relevance_com_origem -> list[tuple[float, str]]` · `generate_excel(results, topic, diagnostico=None, quando=None)` · `redigir(texto, limite=2000)` · `rotulo_status(s)` · `statuses_para_falha_total(source, keywords, exc)` · `_render_search_diagnostics(kw_statuses)`.
+**Cobertura da spec + emendas:** §3.1 → T1 · §3.2 → T2 · §3.3 → T3 · §3.4 → T6+T7+T9 · §3.5 → T8 · §3.6 → T9 · §3.7 → gates de golden (exceção declarada em T4) · §4 V1–V11 → T1..T9 · §5 → estrutura (+ google, tcu mapping) · §7 → T10. Emendas à spec: §3.1 (motivos; redigir em toda atribuição; rotulo_status na planilha; parcial com empty/error), §3.7 (T4; data vazia continua `""`), §5 (T5), §3.5 (`quando`, `—`, golden nas 2 abas, detalhe até 2000 com corte marcado).
+**Contagens (recomputadas dos blocos, v4):** T1 41+17=58 · T2 16 · T3 +10 = 26 coletados (25 passed + 1 xfail) · T4 xfail→passed +3 = 29 · T5 +8 = 37 · T6 63 · T7 61 · T8 71 · T9 +1 (`test_origem_curta_do_app…`) = 72 · **final 13 + 63 + 98 + 72 + 37 = 283**. ⚠ A tabela do topo mostra 282/71 na T8/T9 porque o teste da T9 nasce na T9; o executor corrige a tabela e o BASELINE no commit da T9.
+**Delegações à v1:** nenhuma. **Placeholders:** nenhum `TBD`/`TODO`/`# inalterado`/`...`.
+**Nomes:** `FonteIndisponivel(motivo, detalhe)` · `SOURCE_ID` · `_search_keyword_safe -> (list, erro_fatal, erro_paginacao)` · `_fetch_all_pages -> (itens, erro, parcial)` · `_search_urls -> (list, erro)` · `_texto_do_acordao` (não-total, sempre dentro de `try`) · `_sem_sumario` (total) · `score_relevance_com_origem -> list[tuple[float, str]]` · `generate_excel(results, topic, diagnostico=None, quando=None)` · `redigir(texto, limite=2000)` (corte no meio, marcado) · `rotulo_status(s)` (só planilha) · `statuses_para_falha_total(source, keywords, exc)` · `_render_search_diagnostics(kw_statuses)`.
