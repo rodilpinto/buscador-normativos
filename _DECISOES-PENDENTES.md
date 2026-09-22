@@ -69,7 +69,9 @@ risco de alguém executar um trecho do corpo que uma emenda derrubou.
 ⚠ **CORRIGIDO em 22/09 (noite):** a frase original dizia "não existe deploy nenhum" — **errado**. Existe o app
 `https://levantamento-normativos.streamlit.app/` no Community Cloud, **privado** (GET → `303` para o login do
 `share.streamlit.io`). A verificação só olhou o repo; deploy no Community Cloud não deixa arquivo no repo.
-Origem (repo/branch) não confirmada — B-06. ✅ Continua valendo: sem Dockerfile/Procfile. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
+Vinha do repo A. ✅ **Redeploy feito em 22/09 (noite)** a partir do repo B, branch `master`:
+`https://buscador-normativos.streamlit.app/`, privado; B continua privado. ⚠ Push em `master` = deploy.
+✅ Continua valendo: sem Dockerfile/Procfile. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
 herda a visibilidade do repo (privado → só convidados, login Google/e-mail); **limite de 1 app
 privada por conta**. A nuvem da Streamlit **não alcança o LM local** (`10.10.111.125`) — lá só
 Gemini, e cada tema digitado sai da rede.

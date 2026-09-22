@@ -6,6 +6,10 @@
 Rodrigo apontou `https://levantamento-normativos.streamlit.app/`. GET → `303` para login (app privado). Docs
 que diziam "nenhum deploy" corrigidos (state §8, D-C14); origem do app a confirmar no painel (B-06 item 4);
 lição em `LESSONS.md`. Nada muda na ordem: a frente 2 continua sendo a próxima.
+Depois: o app vinha do repo A (arquivado); o Streamlit não enxergava B por ser privado. Cogitado tornar B público —
+varredura do histórico: **nenhum segredo** (só placeholders), mas IP interno, nomes e ledgers ficariam expostos →
+Rodrigo decidiu **manter privado** e dar ao Streamlit acesso a repo privado. Redeploy:
+`https://buscador-normativos.streamlit.app/` (B, `master`). ⚠ push em `master` agora é deploy.
 
 ---
 

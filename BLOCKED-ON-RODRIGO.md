@@ -119,7 +119,10 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
 3. O servidor tem **saída para a internet** (LexML, TCU, DuckDuckGo)? Sem ela, só a web aberta some, mas as
    fontes catalogadas também dependem de rede.
 
-4. ➕ **(22/09, noite) O app `https://levantamento-normativos.streamlit.app/` já existe** (privado). No painel
+4. ✅ **Resolvido em parte (22/09, noite):** o Rodrigo deu ao Streamlit acesso a repo privado e subiu
+   **`https://buscador-normativos.streamlit.app/`** a partir de B (`master`). **Resta:** o app antigo
+   (`levantamento-normativos.streamlit.app`, do repo A arquivado) ainda responde — apagar? E confirmar que os segredos
+   foram copiados para o app novo. Histórico do item: ~~O app `https://levantamento-normativos.streamlit.app/` já existe~~ (privado). No painel
    `share.streamlit.io` → app → *Settings*: **qual repo, branch e main file** ele usa, e **quais segredos** estão
    lá (há `GEMINI_API_KEY`?). ⚠ Se for o repo A: ele foi **arquivado e ficou privado hoje** — o app fica congelado
    em `af88593`/`eb91277` e pode perder acesso ao repo num reboot. ⚠ O Community Cloud **não troca o repo de um
