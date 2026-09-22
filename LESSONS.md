@@ -4,6 +4,16 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-22 · Deploy em PaaS não deixa rastro no repo — "não existe deploy" exige olhar o painel
+
+**Problema:** state file e D-C14 afirmavam "não existe deploy nenhum (sem Dockerfile/Procfile/streamlit.app)".
+O Rodrigo achou `https://levantamento-normativos.streamlit.app/` rodando, privado.
+**Causa raiz:** a verificação só procurou **arquivos** no repo. Streamlit Community Cloud (como Vercel, Render,
+HF Spaces) só precisa de `requirements.txt` + `app.py`; o vínculo mora no painel do provedor, não no git.
+**Conserto:** docs corrigidos com a prova (GET → `303` para o login do `share.streamlit.io`); B-06 item 4.
+**Regra:** afirmar "não há deploy" exige checar a URL provável (`<nome-do-repo>.streamlit.app`) e/ou o painel,
+não só o repo. Mesma família da lição de 16/09 (varredura que não cobre o lugar certo).
+
 ## 2026-09-22 · Duas rodadas seguidas: o pior achado foi um CRUZAMENTO de duas correções da rodada anterior
 
 **Problema.** O plano da frente 2 passou por 3 rodadas adversariais (5 lentes, aplicando o plano num

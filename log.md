@@ -1,6 +1,14 @@
 # Log — Buscador de Base Normativa
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
+## [2026-09-22] deploy descoberto | o app já estava no Streamlit Community Cloud
+
+Rodrigo apontou `https://levantamento-normativos.streamlit.app/`. GET → `303` para login (app privado). Docs
+que diziam "nenhum deploy" corrigidos (state §8, D-C14); origem do app a confirmar no painel (B-06 item 4);
+lição em `LESSONS.md`. Nada muda na ordem: a frente 2 continua sendo a próxima.
+
+---
+
 ## [2026-09-22] frente 2 planejada | 3 rodadas adversariais; repo A aposentado; deploy em análise
 
 **Segunda metade da sessão de 22/09** (a primeira está na entrada abaixo).

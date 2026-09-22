@@ -119,7 +119,7 @@ D-C14 (deploy). Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.m
 | Rodar o app | `python -m streamlit run app.py`, a partir da pasta do código |
 | Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
 | **Espelho na Câmara** | `git.camara.gov.br` **não é alcançável desta máquina**; é do PC do trabalho. Fluxo decidido em 22/09: este GitHub (B) é a origem → no PC do trabalho `git pull` + `git push camara master`. ⚠ **A URL do projeto lá e o `git remote add camara <url>` não estão registrados** — só o Rodrigo sabe (B-06). O push para B a cada task **continua**; a Câmara é espelho, nunca única cópia. Segredos fora do git nos dois lados. |
-| Hospedagem / deploy | **nenhum** (verificado em 22/09: sem Dockerfile/Procfile/streamlit.app; só roda local). Único endereço de infra conhecido: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
+| Hospedagem / deploy | ⚠ **CORRIGIDO 22/09 (noite):** existe **deploy no Streamlit Community Cloud** — `https://levantamento-normativos.streamlit.app/`, apontado pelo Rodrigo. Prova: GET → `303` para `share.streamlit.io/-/auth/app` (app **privado**, exige login). A verificação anterior ("nenhum") só olhou arquivos do repo, e deploy no Community Cloud **não deixa rastro no repo**. ❓ Repo/branch/arquivo de origem **não confirmados** (exige login; provável: repo A `main`, `levantamento-normativos/app.py`) — ver B-06. Único outro endereço de infra: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
 
 ⚠ **Assimetria de branch:** A usa `main`, B usa `master`. No merge (T3) isso aparece como
 `git fetch levantamento` + `levantamento/main`, enquanto o push daqui é `origin master`.

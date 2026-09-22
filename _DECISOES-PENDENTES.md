@@ -66,8 +66,10 @@ risco de alguém executar um trecho do corpo que uma emenda derrubou.
   então continuamos no servidor local dessa máquina até mover para o servidor nuati"*.
 - **Trava:** nada da v1.x. Só o `Dockerfile` (T4, v2.0) e a frente de deploy pós-v2.0.
 
-✅ **Fatos verificados em 22/09:** não existe deploy nenhum (sem Dockerfile/Procfile/streamlit.app);
-o app roda só local. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
+⚠ **CORRIGIDO em 22/09 (noite):** a frase original dizia "não existe deploy nenhum" — **errado**. Existe o app
+`https://levantamento-normativos.streamlit.app/` no Community Cloud, **privado** (GET → `303` para o login do
+`share.streamlit.io`). A verificação só olhou o repo; deploy no Community Cloud não deixa arquivo no repo.
+Origem (repo/branch) não confirmada — B-06. ✅ Continua valendo: sem Dockerfile/Procfile. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
 herda a visibilidade do repo (privado → só convidados, login Google/e-mail); **limite de 1 app
 privada por conta**. A nuvem da Streamlit **não alcança o LM local** (`10.10.111.125`) — lá só
 Gemini, e cada tema digitado sai da rede.
