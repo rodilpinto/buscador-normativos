@@ -12,8 +12,8 @@ novos** (404 `NOT_FOUND`), mantendo-o para os antigos. Mascarado por dois compor
 import (primeiro sintoma: "IA nao disponivel" até o reboot) e `_generate` engole a exceção (segundo sintoma: "Nenhuma
 palavra-chave gerada", sem motivo). **Conserto:** `MODEL_NAME = "gemini-3.5-flash-lite"` (sugerido pelo próprio 404,
 provado com chamada real). Diagnóstico feito com script local que pede a chave via `getpass` e **tira
-`GOOGLE_API_KEY`/`GEMINI_API_KEY` do ambiente** (o SDK prefere `GOOGLE_API_KEY` global a... o que for passado por
-engano) — a chave nunca passou pelo chat nem por arquivo.
+`GOOGLE_API_KEY`/`GEMINI_API_KEY` do ambiente** (esta máquina tem as duas globais; o SDK avisa e prefere
+`GOOGLE_API_KEY`) — a chave nunca passou pelo chat nem por arquivo.
 **Regra:** "funciona aqui" com credencial antiga não prova nada sobre credencial nova; testar com a credencial **do
 ambiente de destino**. Erro de API engolido é a mesma doença que a frente 2 trata nas fontes.
 
