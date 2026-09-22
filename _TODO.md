@@ -89,7 +89,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
 - [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).
-      📝 Tag `v1.0` **pode** ser criada agora (o commit de A está na história de B) — não criada; espera a D-C10.1.
+      ✅ Tags `v1.0` (`eb91277`) e **`v1.0.1`** (`e2cd56a`, ponto de retorno funcional) criadas e empurradas em 22/09 (D-C10.1).
 
 ## Fase 2 — as features (plano ainda não escrito)
 

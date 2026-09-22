@@ -77,6 +77,10 @@ revisado (mar/2026)."* — ou seja, o estado **ANTES** da consolidação.
 cd ~/Documents/projeto-nuati-normativos-levantamento && git checkout levantamento-v1-streamlit
 ```
 
+**Pontos de retorno neste repo (22/09, empurrados):** `v1.0` → `eb91277` (= `levantamento-v1-streamlit`) ·
+**`v1.0.1`** → `e2cd56a`: estado **funcional** (IA na nuvem confirmada pelo Rodrigo), com LexML/TCU ainda quebrados.
+`git checkout v1.0.1`. ⚠ O app da nuvem segue a **branch** `master`, não tag: voltar o app = apontar uma branch para a tag.
+
 ## 5. Disciplina de trabalho
 
 Um chunk = uma task do plano. Fechar cada chunk: rodar a suíte → golden-master → atualizar

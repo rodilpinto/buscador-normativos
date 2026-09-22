@@ -91,7 +91,11 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 
 ---
 
-## 🟡 D-C10.1 — Tag a cada task fechada, ou só nos marcos v1.0 / v1.x / v2.0?
+## 🟢 D-C10.1 — Tag a cada task fechada, ou só nos marcos v1.0 / v1.x / v2.0?
+
+> ✅ **Decidida em 22/09 (noite), na prática:** Rodrigo, ao ver a IA funcionando na nuvem: *"podemos guardar essa
+> versão como um ponto de retorno e seguir para as próximas versões"* → **tags nos marcos funcionais**, não por task.
+> Criadas e empurradas: `v1.0` (`eb91277`) e `v1.0.1` (`e2cd56a`). 📝 Leitura minha da frase; corrigir se não for isso.
 
 - **Onde aparece:** 22/09, pergunta minha ao registrar a D-C10; **não respondida**.
 - **Trava:** nada. 📝 Recomendação: só nos marcos — o push por task (D-C7) + golden + runner já dão o
