@@ -122,7 +122,8 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
 4. ✅ **Resolvido em parte (22/09, noite):** o Rodrigo deu ao Streamlit acesso a repo privado e subiu
    **`https://buscador-normativos.streamlit.app/`** a partir de B (`master`). **Resta:** o app antigo
    (`levantamento-normativos.streamlit.app`, do repo A arquivado) ainda responde — apagar? E confirmar que os segredos
-   foram copiados para o app novo. Histórico do item: ~~O app `https://levantamento-normativos.streamlit.app/` já existe~~ (privado). No painel
+   foram copiados para o app novo. ✅ **22/09:** app antigo **apagado**; chave Gemini `nuati.secin` gravada nos Secrets
+   do app novo. ❓ Falta só: confirmar que o nome do segredo é exatamente `GEMINI_API_KEY` e que uma busca pontua. Histórico do item: ~~O app `https://levantamento-normativos.streamlit.app/` já existe~~ (privado). No painel
    `share.streamlit.io` → app → *Settings*: **qual repo, branch e main file** ele usa, e **quais segredos** estão
    lá (há `GEMINI_API_KEY`?). ⚠ Se for o repo A: ele foi **arquivado e ficou privado hoje** — o app fica congelado
    em `af88593`/`eb91277` e pode perder acesso ao repo num reboot. ⚠ O Community Cloud **não troca o repo de um

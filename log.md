@@ -9,7 +9,8 @@ lição em `LESSONS.md`. Nada muda na ordem: a frente 2 continua sendo a próxim
 Depois: o app vinha do repo A (arquivado); o Streamlit não enxergava B por ser privado. Cogitado tornar B público —
 varredura do histórico: **nenhum segredo** (só placeholders), mas IP interno, nomes e ledgers ficariam expostos →
 Rodrigo decidiu **manter privado** e dar ao Streamlit acesso a repo privado. Redeploy:
-`https://buscador-normativos.streamlit.app/` (B, `master`). ⚠ push em `master` agora é deploy.
+`https://buscador-normativos.streamlit.app/` (B, `master`). ⚠ push em `master` agora é deploy. App antigo apagado. Chave Gemini do projeto `nuati.secin` nos Secrets do app novo
+(valor fora do chat e do repo); regra: nada de `secrets.toml` local até a frente 5. Insumos da frente 5 no `_TODO.md`.
 
 ---
 
