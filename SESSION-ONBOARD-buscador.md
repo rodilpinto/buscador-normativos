@@ -25,6 +25,10 @@ board de 16/09 (decisão D-C2).
 `levantamento-normativos/` **neste repo**, com história preservada; **repo A privado e arquivado**.
 Nenhuma linha de produção mudou. Contagem atual de testes: `BASELINE` em `tools/run_all_tests.py`.
 
+🟢 **Noite de 22/09 — app na nuvem funcional:** `https://buscador-normativos.streamlit.app/` (privado), IA gerando
+palavras-chave (chave `nuati.secin`, modelo `gemini-3.5-flash-lite`). Ponto de retorno: tag **`v1.0.1`**. A nuvem
+segue a branch **`deploy`** (congelada em `v1.0.1`); o trabalho segue em `master`. Detalhe em §4 e §8.
+
 🟡 **Frente 2 (honestidade das fontes): spec e plano v4 prontos, revisados em 3 rodadas adversariais,
 zero código.** É a próxima. Tudo está dobrado no corpo do plano — **não há seção de emendas a consultar**.
 
@@ -79,7 +83,8 @@ cd ~/Documents/projeto-nuati-normativos-levantamento && git checkout levantament
 
 **Pontos de retorno neste repo (22/09, empurrados):** `v1.0` → `eb91277` (= `levantamento-v1-streamlit`) ·
 **`v1.0.1`** → `e2cd56a`: estado **funcional** (IA na nuvem confirmada pelo Rodrigo), com LexML/TCU ainda quebrados.
-`git checkout v1.0.1`. ⚠ O app da nuvem segue a **branch** `master`, não tag: voltar o app = apontar uma branch para a tag.
+`git checkout v1.0.1`. O app da nuvem segue a **branch `deploy`** (criada em 22/09 = `v1.0.1`), não tag: voltar o app =
+`git push -f origin <tag>:deploy` (**só com ok do Rodrigo**).
 
 ## 5. Disciplina de trabalho
 
@@ -97,7 +102,7 @@ parar" vale para a diferença entre o **bloco de testes** e o observado — cont
 suspeitar do código.
 
 Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C10.1 🟡 (tag por task ou só nos marcos),
-D-C14 (deploy). Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a T1.
+D-C14 (deploy). ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a T1.
 
 ## 7. Ponteiros
 
@@ -124,7 +129,8 @@ D-C14 (deploy). Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.m
 | **Chave do LLM no app da nuvem** | Chave Gemini do projeto Google **`nuati.secin`**, gravada pelo Rodrigo em 22/09 nos *Secrets* do app `buscador-normativos` (share.streamlit.io) — **o valor nunca passa pelo chat nem pelo repo**. O v1.0 só lê o segredo **`GEMINI_API_KEY`** (`llm/gemini_client.py:58`, SDK `google-genai`, modelo **`gemini-3.5-flash-lite`** desde 22/09 — o `2.5-flash-lite` dá 404 para chave nova). ⚠ O segredo só é lido **no import do módulo**: depois de mudar Secrets, **Reboot app**. O app antigo `levantamento-normativos.streamlit.app` foi **apagado** pelo Rodrigo em 22/09. ⛔ **Não criar `levantamento-normativos/.streamlit/secrets.toml` nesta máquina até a frente 5:** `st.secrets` vence a variável vazia do runner e a suíte passaria a chamar o Gemini de verdade. Para LLM local, variável só no terminal do `streamlit run`. |
 | Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
 | **Espelho na Câmara** | `git.camara.gov.br` **não é alcançável desta máquina**; é do PC do trabalho. Fluxo decidido em 22/09: este GitHub (B) é a origem → no PC do trabalho `git pull` + `git push camara master`. ⚠ **A URL do projeto lá e o `git remote add camara <url>` não estão registrados** — só o Rodrigo sabe (B-06). O push para B a cada task **continua**; a Câmara é espelho, nunca única cópia. Segredos fora do git nos dois lados. |
-| Hospedagem / deploy | ⚠ **CORRIGIDO 22/09 (noite):** existe **deploy no Streamlit Community Cloud** — `https://levantamento-normativos.streamlit.app/`, apontado pelo Rodrigo. Prova: GET → `303` para `share.streamlit.io/-/auth/app` (app **privado**, exige login). A verificação anterior ("nenhum") só olhou arquivos do repo, e deploy no Community Cloud **não deixa rastro no repo**. Esse app vinha do **repo A** (confirmado pelo Rodrigo). ✅ **22/09 (noite): redeploy a partir deste repo B** → **`https://buscador-normativos.streamlit.app/`**, privado (GET → `303` para login), branch **`master`** (única branch de B; `main file` = `levantamento-normativos/app.py`). Streamlit recebeu acesso a repo privado; B **segue privado** (decisão do Rodrigo, depois de ver o que ficaria exposto: IP interno, nomes, ledgers — nenhum segredo no histórico). ⚠ **Todo push em `master` vai para o ar automaticamente** — inclusive estados intermediários da frente 2. ❓ O app antigo (`levantamento-normativos.streamlit.app`) ainda responde `303` em 22/09 — apagar ou não é do Rodrigo (B-06 item 4). Único outro endereço de infra: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
+| Hospedagem / deploy | ⚠ **CORRIGIDO 22/09 (noite):** existe **deploy no Streamlit Community Cloud** — `https://levantamento-normativos.streamlit.app/`, apontado pelo Rodrigo. Prova: GET → `303` para `share.streamlit.io/-/auth/app` (app **privado**, exige login). A verificação anterior ("nenhum") só olhou arquivos do repo, e deploy no Community Cloud **não deixa rastro no repo**. Esse app vinha do **repo A** (confirmado pelo Rodrigo). ✅ **22/09 (noite): redeploy a partir deste repo B** → **`https://buscador-normativos.streamlit.app/`**, privado (GET → `303` para login), branch **`master`** (única branch de B; `main file` = `levantamento-normativos/app.py`). Streamlit recebeu acesso a repo privado; B **segue privado** (decisão do Rodrigo, depois de ver o que ficaria exposto: IP interno, nomes, ledgers — nenhum segredo no histórico). ⚠ **Branch do deploy: `deploy`**, não `master` (22/09) — congelada em `v1.0.1`; **só avança num marco, com ok do Rodrigo**
+(`git push origin master:deploy`). ❓ Até o Rodrigo trocar a branch no painel do Streamlit, o app ainda segue `master`. ❓ O app antigo (`levantamento-normativos.streamlit.app`) ainda responde `303` em 22/09 — apagar ou não é do Rodrigo (B-06 item 4). Único outro endereço de infra: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
 
 ⚠ **Assimetria de branch:** A usa `main`, B usa `master`. No merge (T3) isso aparece como
 `git fetch levantamento` + `levantamento/main`, enquanto o push daqui é `origin master`.

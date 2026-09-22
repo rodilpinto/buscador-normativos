@@ -15,6 +15,8 @@ IA da nuvem não funcionava: (1) chave lida só no import → reboot; (2) `gemin
 `MODEL_NAME = "gemini-3.5-flash-lite"` (provado com chamada real). Runner 205/205 com as chaves fora do ambiente; golden OK.
 Rodrigo confirmou palavras-chave geradas na nuvem → tags anotadas `v1.0` (`eb91277`) e **`v1.0.1`** (`e2cd56a`), empurradas;
 D-C10.1 fechada como "tags nos marcos".
+Branch **`deploy`** criada em `v1.0.1` e empurrada; a nuvem passa a segui-la (troca no painel: Rodrigo). Frente 2 fica para
+sessão nova (D-C15).
 
 ---
 
