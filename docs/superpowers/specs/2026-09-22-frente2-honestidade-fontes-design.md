@@ -232,7 +232,7 @@ ver passar → commit + push):
 | V4 | LexML: 404 no primário e nos 2 fallbacks → **cada URL é tentado uma vez por busca**, não uma vez por palavra-chave (contar chamadas do dublê) | idem |
 | V5 | TCU: 500 × 3 no endpoint de atos, 200 no de acórdãos → `status="error"`, `motivo="http_5xx"`, `result_count` dos acórdãos, `detalhe` nomeia o endpoint | idem |
 | V6 | TCU: 503 → `manutencao_503`; `None` na 2ª página → `ok` com `parcial=True` | idem |
-| V7 | `score_relevance_com_origem`: sem LLM → `heuristica` e nota = fração de keywords; lote vazio → `fallback_erro`; `score_relevance` continua devolvendo `list[float]` idêntico | `test_llm_phase3.py` (script; **BASELINE 53 → 5x**, atualizado no mesmo commit) |
+| V7 | `score_relevance_com_origem`: sem LLM → `heuristica` e nota = fração de keywords; lote vazio → `fallback_erro`; `score_relevance` continua devolvendo `list[float]` idêntico | `test_llm_phase3.py` (script; o BASELINE de 53 **cresce**; o número exato é fixado no commit que acrescenta os testes) |
 | V8 | `_merge` leva a origem da nota vencedora; `dedup_esperado.json` **não** muda (`golden_master.py comparar`, ramo do dedup) | `test_phase4.py` + golden-master |
 | V9 | `generate_excel`: 11 colunas; célula de origem em português; aba `Diagnostico da busca` existe, com N+2 linhas para N statuses e 3 linhas para `None`; `wb.active.title == "Normativos"` | `test_phase4.py` (asserts de 10 → 11 atualizados) |
 | V10 | Golden-master recongelado **no commit de V9**, com a mensagem citando §3.5 | `git log` + `ambiente.txt` |
