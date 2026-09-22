@@ -1,31 +1,90 @@
-# Frente 2 — Honestidade das fontes — Implementation Plan
+# Frente 2 — Honestidade das fontes — Implementation Plan (v2, pós-rodada adversarial)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fazer o app dizer a verdade quando uma fonte não pôde ser consultada e de onde veio cada nota de relevância — na tela e na planilha — sem mudar o que ele busca nem como deduplica.
+**Goal:** Fazer o app dizer a verdade quando uma fonte não pôde ser consultada e de onde veio cada nota de relevância — na tela e na planilha — sem mudar como ele deduplica.
 
-**Architecture:** Uma exceção tipada (`FonteIndisponivel`, com `motivo` e `detalhe`) nasce nos searchers e sobe até `KeywordStatus`, que ganha os mesmos campos mais `parcial`. A nota de relevância ganha um campo irmão `relevancia_origem` preenchido por uma função nova ao lado da existente. A planilha ganha uma coluna e uma aba; a tela, rótulos honestos. Cada mudança é provada por teste sem rede (fixtures, dublês de `requests.get`) e pelo golden-master.
+**Architecture:** Uma exceção tipada (`FonteIndisponivel`, com `motivo` e `detalhe`) nasce nos searchers e sobe até `KeywordStatus`, que ganha os mesmos campos mais `parcial`. A nota de relevância ganha um campo irmão `relevancia_origem`. A planilha ganha uma coluna e uma aba; a tela, rótulos honestos. Cada mudança é provada por teste sem rede (fixtures reais capturadas em 22/09, dublês de `requests.get`) e pelo golden-master, que passa a cobrir as duas abas.
 
-**Tech Stack:** Python 3.13.7 · Streamlit 1.55 · requests · openpyxl 3.1.5 · pytest 9 · Playwright (Python, `channel="chrome"`) só para o gate visual.
+**Tech Stack:** Python 3.13.7 · Streamlit 1.55 · requests 2.32 · openpyxl 3.1.5 · pytest 9 · ddgs 9.12 · Playwright (Python, `channel="chrome"`) só para o gate visual.
 
-**Spec:** `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` — seções citadas como §3.x.
+**Spec:** `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` (§3.x). **Esta v2 emenda a spec em 4 pontos**, listados na triagem abaixo e marcados `⚠ emenda à spec` no corpo.
+
+---
+
+## Rodada 1 adversarial — triagem (2026-09-22)
+
+5 lentes independentes (regressão · dados/API · risco · arquitetura · testes), **55 achados brutos, todos os 5 vereditos "não executável como está"**, a maioria provada aplicando a v1 do plano num clone e rodando os testes do próprio plano. **Esta v2 dobra as emendas aceitas no corpo** (não há seção separada de emendas a consultar). O registro abaixo é a trilha de auditoria: o que entrou, o que foi adaptado e o que foi rejeitado, com a razão.
+
+### Bloqueadores convergentes (≥2 lentes, provados por execução) — todos ACEITOS
+
+| # | Achado | Lentes | O que muda no plano |
+|---|---|---|---|
+| B1 | `_try_fetch` mantinha os `except ... return None`: timeout/conexão/5xx do LexML viravam `endpoint_inexistente`; o teste do próprio plano falhava | 1, 3, 4, 5 | T2: `_try_fetch` reescrito inteiro; só 404 devolve `None`; o resto **levanta** com o motivo certo. `_fetch_sru` só mata URL em 404 / bloqueio / ilegível — timeout e 5xx sobem sem matar o URL |
+| B2 | Cache de falha + laço de retry **sobrescreviam `bloqueio_waf` por `endpoint_inexistente`** no cenário real de 22/09 (primário WAF, fallbacks 404) — o fato central da frente nunca chegava à tela | 2, 3, 4 | T2: cache guarda a **causa** por URL; esgotada a cadeia, relevanta a causa mais específica com detalhe agregado; retry **pula** cadeia morta (sem sleep) e nunca rebaixa motivo. Teste V2 vira o cenário misto |
+| B3 | `test_comprehensive.py` perde 2 testes (LexML parse malformado; TCU mock de `_fetch_all_pages`) já na T2; o plano dizia "98 intactos" | 1, 3, 5 | T2 e T3 ganham step de **adaptação nomeada** das duas asserções, no mesmo commit; `test_comprehensive` entra nas listas de "rodar" |
+| B4 | Step 5g deixava `error_msg` na linha 196 → `NameError` no retry; 6 de 7 testes crashavam | 2 | T2: o laço de retry é colado **inteiro**, literal |
+| B5 | Fixture do TCU usava `numeroAcordao`/`anoAcordao`, chaves que `_map_acordao` não lê → 20 itens colapsam em 1. **E a lente 2 mediu por `curl` que o esquema REAL da API é esse** — não há `ementa`/`numero`/`ano`: **todo acórdão real colapsa e nunca casa palavra-chave** | 1, 2, 3, 4, 5 | ✅ confirmado por mim em 22/09 (`tests/fixtures/tcu_acordaos_real.json`). **T4 nova: mapear o esquema real** (`⚠ emenda à spec §3.7`). O teste de paginação usa a fixture real |
+| B6 | openpyxl devolve `None` para célula `""` no round-trip; teste da aba falhava | 1, 2, 4, 5 | T8: célula vazia grava `"—"` de propósito (leitor sabe que o campo foi considerado); teste espera `"—"` |
+
+### Altos — ACEITOS
+
+| # | Achado | Lente | O que muda |
+|---|---|---|---|
+| H1 | Ramo `if self._sru_url` de `_fetch_sru` devolvia `None` num 404 tardio → `TypeError` → `erro_interno` com traceback no detalhe | 5 | T2: `None` no URL cacheado invalida o cache e cai na cadeia; teste `200 → 404` |
+| H2 | `app.py` engole exceção do `search()` e a fonte **some** do relatório e da aba — a mentira que a frente quer matar | 3 | T1: `statuses_para_falha_total()` em `models.py` (testável sem Streamlit); T9 usa no `except`; T3 envolve o mapeamento de item |
+| H3 | Aviso "nenhuma catalogada respondeu" disparava com acórdãos do TCU na tela (T3 marca `error` com `result_count>0`); o gate V11 **premiava** o bug | 3, 5 | T9: critério = soma de `result_count` das catalogadas; frase distinta para "respondeu parcialmente"; V11 checa a frase certa ao cenário |
+| H4 | `error_message` do Google CSE carrega a URL com `key=`/`cx=` → chave na tela e, com a aba nova, na planilha | 3 | T1: `redigir()` em `models.py`, aplicada no `__post_init__` de `KeywordStatus` (segredos, chars de controle, prefixo `=` de fórmula, 300 chars) |
+| H5 | `parcial` só existia no TCU; LexML com falha na página ≥2 seguia `ok` sem declarar | 3 | T2: `_search_keyword` registra o erro de paginação; `search()` grava `parcial=True` + detalhe; teste de 2 páginas |
+| H6 | 4xx do TCU retentado 3× e rotulado `http_5xx`; 200 HTML → `JSONDecodeError` → `http_5xx`; 503 com causa afirmada como fato | 2, 3, 4 | T3: classificação por status (404 → `endpoint_inexistente`, 429 → `rate_limit`, outro 4xx → `http_4xx`, sem retry); JSON ilegível → sniff HTML → `bloqueio_waf`/`resposta_ilegivel`; 503 com hora e hipótese marcada (`⚠ emenda à spec §3.1`: `rate_limit`, `http_4xx`) |
+
+### Médios/baixos — ACEITOS ou ADAPTADOS
+
+| # | Achado | Verdict | O que muda |
+|---|---|---|---|
+| M1 | Retry-depois-sucesso sem teste; TCU timeout/conexão sem teste | aceito | T2/T3: testes acrescentados |
+| M2 | `MOTIVOS` validado só no `KeywordStatus`: typo num searcher derruba a fonte inteira; `e.detalhe = ...` não atualiza `str(e)` | adaptado | T1: `FonteIndisponivel.__init__` mapeia motivo desconhecido → `erro_interno` (com o original no detalhe) em vez de levantar; `__str__` dinâmico; `KeywordStatus` continua validando (cinto) |
+| M3 | `__init__` do LexML **já existe** em `:76-77`; a v1 tinha dois textos concorrentes | aceito | T2: "acrescentar 2 linhas mantendo o comentário" |
+| M4 | Palavras-chave nunca consultadas (cap de `max_results`, `MAX_GOOGLE_KEYWORDS=5`) não geram status → lidas como "não existe" | adaptado | `⚠ emenda à spec §3.1`: motivo `nao_consultada` com `status="error"`; T2/T3/T5 gravam para cada keyword pulada |
+| M5 | `google_searcher.py` fora do vocabulário: `DDGSException('No results')` vira `error`; nada tem `motivo` | adaptado | `⚠ emenda à spec §5`: **T5 nova, mínima** — mapear ddgs/CSE para `empty`/`timeout`/`rate_limit`/`http_4xx`/`erro_interno`; 4 testes com dublê |
+| M6 | Aba de diagnóstico sem data/hora; detalhe sem query string | aceito | T8: `generate_excel(..., quando: str \| None)`; T2/T3: detalhe usa `response.url` (já redigido) |
+| M7 | Golden-master lia só a aba ativa: a aba nova ficava sem proteção | aceito | T8: `_sha_planilha` hasheia **todas** as abas; `diagnostico_fixo.json` (3 statuses) ao lado de `entrada_fixa.json`; recongelar no mesmo commit |
+| M8 | `_merge` com origem nunca é exercitado pelo app (dedup roda antes da pontuação); origem atribuída depois não passa pelo `__post_init__` | adaptado | T7 fica como **invariante declarado** na docstring; T9 valida a origem no ponto de atribuição. Inverter a ordem dedup/pontuação **rejeitado**: muda o dedup, exige task própria com golden |
+| M9 | Docstring de módulo de `gemini_client.py:11` fica falsa; o gate de auditoria só vê linhas removidas | aceito | T6 edita a linha; gate de cada task ganha `git grep` dos símbolos renomeados |
+| M10 | Sniff SRU estrito demais (BOM U+FEFF; prefixo `zs:`) — declararia "indisponível" um LexML que voltasse noutro formato | aceito | T2: sniff permissivo — só HTML explícito é bloqueio/ilegível; o resto o `ET` decide. `LESSONS`: falta captura real de SRU |
+| M11 | `_urls_mortos` por instância nunca limpo; comentário prometia "nesta busca" | aceito | T2: `clear()` no início de `search()`; teste de reuso |
+| M12 | T6 (agora T8) Step 2 previa "7 failed"; só 1 falha (os outros iteram `range(1, 11)` e passam por omissão) | aceito | corrigido |
+| M13 | PNG do V11 em `tests/golden/`; docstring de `golden_master.py` cita assinatura velha; dicts de rótulo sem teste de sincronia; `RespostaFake.headers` dict simples; `detalhe` renderizado via Markdown | aceito | `tests/evidencia/` + `.gitignore`; T8 atualiza a docstring; asserts `set(ORIGEM_LABEL) == ORIGENS_RELEVANCIA` etc.; `CaseInsensitiveDict` no dublê; `st.code` para o detalhe |
+| M14 | Sem LLM, ementa vazia → 0% onde antes 50%; ordem dos cards muda | aceito | T9: linha explicando "0% = nenhuma palavra-chave na ementa"; V11 confere que nenhum card sumiu |
+| M15 | `diagnostico=[]` não testado separado de `None` | aceito | T8 |
+
+### Rejeitados — com a razão
+
+| Achado | Por quê |
+|---|---|
+| Pontuar antes de deduplicar para `_merge` valer de verdade (lente 5, opção b) | Muda o dedup e o golden; é task própria, fora desta frente. A origem está protegida pela atribuição pós-dedup (M8). |
+| Retentar 503 uma vez (lente 3) | 503 é manutenção declarada; retentar só atrasa. Fica sem retry, com hora no detalhe. |
+| Novo motivo `acesso_negado` para 401/403 (lente 3) | Coberto por `http_4xx` + detalhe com o status; vocabulário menor envelhece melhor. |
+| Sanitizar `ementa`/`nome` na aba `Normativos` contra fórmula (lente 3) | Pré-existente, fora do escopo desta frente; registrado em `_TODO.md` P3. |
+
+✅ **Verificado pela lente 4 e registrado para o executor não gastar tempo:** `python -m pytest tests/...` de dentro de `levantamento-normativos/` importa `searchers` sem `conftest`/`__init__` (cwd entra no `sys.path` via `-m`); `monkeypatch.setattr("searchers.lexml_searcher.requests.get")` patcha o módulo `requests` compartilhado (vale para TCU e Google); `"time.sleep"` global cobre o `import time` local de `_try_fetch`; `app.py:23` importa `gemini_client` como módulo; `searchers.base` não importa `models` (sem ciclo — `FonteIndisponivel` fica sem validar contra `MOTIVOS` por import; ver T1); searchers são instanciados por busca (`app.py:490-494`).
+
+---
 
 ## Global Constraints
 
-- **Texto normativo NUNCA é parafraseado.** Nada aqui toca `nome`/`ementa`.
+- **Texto normativo NUNCA é parafraseado.** `nome`/`ementa` só recebem campos literais da API (T4 troca *qual* campo, não o texto).
 - **O sistema roda inteiro sem LLM.** Todo teste novo roda com `GEMINI_API_KEY` vazia; nenhum teste novo faz rede.
-- **Rastreabilidade é essência:** `motivo` e `detalhe` têm de bastar para reproduzir o problema com `curl`.
-- **Separar fato de sugestão:** marcar `📝` o que for proposta não validada.
-- **UTF-8 explícito em todo `open()` / `read_text` / `write_text`.**
-- **Rodar Python via Bash, não PowerShell.** Prefixar `PYTHONIOENCODING=utf-8` em comando que imprime acento.
-- **Acima de 260 caracteres o Python falha em silêncio no Windows.**
-- **Documentação move junto com o código.** Toda docstring alterada é reescrita, não apagada. Gate no fim de cada task: `git diff -U0 HEAD~1 -- '*.py' | grep '^-' | grep -v '^---'` lido **inteiro**, sem `head`.
-- **Golden-master:** `python tools/golden_master.py comparar` tem de dar OK ao fim de **toda** task, exceto a Task 6, que recongela **no mesmo commit** e diz por quê. `dedup_esperado.json` **nunca** muda nesta frente.
-- **Runner:** `python tools/run_all_tests.py` TUDO VERDE ao fim de toda task (≈9 min; as suítes LIVE são lentas por causa das fontes quebradas — é esperado). Task que acrescenta teste atualiza `BASELINE` **no mesmo commit** (o runner avisa `cresceu` se esquecer).
-- **Push a cada task fechada** (D-C7). `git push origin master`.
-- **Vocabulário fechado.** `MOTIVOS` e `ORIGENS_RELEVANCIA` vivem em `models.py`; nenhum outro arquivo inventa valor.
-- **Diretório de trabalho dos comandos:** a raiz do repo (`~/Documents/solucoes/buscador-normativos/`) para `tools/`; `levantamento-normativos/` para `pytest` e os scripts de teste. Cada step diz qual.
-- ⚠ **Emenda à spec §3.1 (feita neste plano):** `MOTIVOS` ganha dois valores que a spec não listou e a implementação exige: `endpoint_inexistente` (404 em todos os URLs — não é `conexao`) e `erro_interno` (exceção não prevista — não é `resposta_ilegivel`). Registrado na spec na Task 1, Step 6.
+- **Rastreabilidade:** `motivo` e `detalhe` bastam para reproduzir com `curl` (URL efetiva com query, status, content-type, hora quando relevante) — **com segredos redigidos**.
+- **Separar fato de sugestão:** `📝` no que for proposta não validada.
+- **UTF-8 explícito em todo `open()` / `read_text` / `write_text`.** `PYTHONIOENCODING=utf-8` em comando que imprime acento.
+- **Rodar Python via Bash, não PowerShell.** Acima de 260 caracteres o Python falha em silêncio no Windows.
+- **Documentação move junto com o código.** Gate ao fim de **cada** task, os dois comandos, lidos inteiros: `git diff -U0 HEAD~1 -- '*.py' | grep '^-' | grep -v '^---'` e `git grep -n -E 'score_relevance\b|_fetch_all_pages\b|_search_keyword_safe\b|_request_with_retry\b|_parse_sru_response\b' -- '*.py'` (linhas de docstring que citam símbolo cuja assinatura mudou).
+- **Golden-master:** `python tools/golden_master.py comparar` → OK ao fim de **toda** task, exceto a T8, que recongela **no mesmo commit** e diz por quê. `dedup_esperado.json` **nunca** muda nesta frente.
+- **Runner:** `python tools/run_all_tests.py` TUDO VERDE ao fim de toda task (≈9 min hoje; deve cair com o cache de falha da T2 — anotar). Task que acrescenta teste atualiza `BASELINE` **no mesmo commit**. ⚠ **Os números "Expected" abaixo são previsões**: se o observado divergir, **parar e reconciliar** (um teste a mais/menos é sinal de step aplicado errado), nunca "ajustar o BASELINE ao que deu".
+- **Push a cada task fechada** (D-C7).
+- **Vocabulário fechado** em `models.py`: `MOTIVOS` e `ORIGENS_RELEVANCIA`. Nenhum outro arquivo inventa valor.
+- **Diretório:** raiz do repo para `tools/`; `levantamento-normativos/` para `pytest` e os scripts de teste. Cada step diz qual.
 
 ---
 
@@ -33,64 +92,80 @@
 
 | Arquivo | Responsabilidade nesta frente |
 |---|---|
-| `levantamento-normativos/models.py` | vocabulário (`MOTIVOS`, `ORIGENS_RELEVANCIA`), campos novos em `KeywordStatus` e `NormativoResult` |
+| `levantamento-normativos/models.py` | `MOTIVOS`, `ORIGENS_RELEVANCIA`, `redigir()`, `statuses_para_falha_total()`; campos novos em `KeywordStatus` e `NormativoResult` |
 | `levantamento-normativos/searchers/base.py` | `FonteIndisponivel` |
-| `levantamento-normativos/searchers/lexml_searcher.py` | sniff de conteúdo, `ParseError` levanta, cache de falha, mapeamento para `motivo` |
-| `levantamento-normativos/searchers/tcu_searcher.py` | `_request_with_retry` levanta; `_fetch_all_pages` → `(itens, erro, parcial)`; classificação por endpoint |
-| `levantamento-normativos/llm/gemini_client.py` | `score_relevance_com_origem`; `score_relevance` vira wrapper |
-| `levantamento-normativos/llm/__init__.py` | exporta a função nova |
-| `levantamento-normativos/deduplicator.py` | `_merge` leva `relevancia_origem` |
-| `levantamento-normativos/excel_export.py` | coluna "Origem da nota"; aba "Diagnostico da busca"; `diagnostico=` |
-| `levantamento-normativos/app.py` | pontuação sempre; relatório; aviso; card; preview; `diagnostico=` |
+| `levantamento-normativos/searchers/lexml_searcher.py` | sniff permissivo; `_try_fetch` levanta; cache de causa por URL; parcial; `nao_consultada`; retry que não rebaixa motivo |
+| `levantamento-normativos/searchers/tcu_searcher.py` | `_request_with_retry` classifica por status e levanta; `_fetch_all_pages` → `(itens, erro, parcial)`; classificação por endpoint; **mapeamento do esquema real do acórdão** |
+| `levantamento-normativos/searchers/google_searcher.py` | mapeamento mínimo ddgs/CSE → motivo; `nao_consultada` para keywords além de 5 |
+| `levantamento-normativos/llm/gemini_client.py` · `llm/__init__.py` | `score_relevance_com_origem`; wrapper; docstrings |
+| `levantamento-normativos/deduplicator.py` | `_merge` leva `relevancia_origem` (invariante) |
+| `levantamento-normativos/excel_export.py` | coluna "Origem da nota"; aba "Diagnostico da busca"; `diagnostico=`, `quando=` |
+| `levantamento-normativos/app.py` | pontuação sempre; relatório; avisos; card; preview; `statuses_para_falha_total`; `diagnostico=`/`quando=` |
 | `levantamento-normativos/tests/test_fontes_indisponiveis.py` | **novo** — pytest, sem rede |
-| `levantamento-normativos/tests/fixtures/lexml_desafio_senado.html` | ✅ **já capturado em 22/09** (9.049 bytes, o HTML real do desafio) |
-| `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml` | **novo** — SRU mínimo com 1 registro |
-| `levantamento-normativos/test_phase4.py` | asserts 10 → 11; testes de vocabulário, `_merge` e planilha |
-| `levantamento-normativos/test_llm_phase3.py` | seção 9: origem da nota |
+| `levantamento-normativos/tests/fixtures/lexml_desafio_senado.html` | ✅ capturado 22/09 (9.049 bytes, HTML real do desafio) |
+| `levantamento-normativos/tests/fixtures/tcu_acordaos_real.json` | ✅ capturado 22/09 (2 acórdãos reais; chaves `numeroAcordao`, `anoAcordao`, `sumario`, `titulo`, `dataSessao`, `urlAcordao`…) |
+| `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml` | **novo** — SRU mínimo, 📝 escrito à mão (não há captura real: a fonte está bloqueada) |
+| `levantamento-normativos/test_phase4.py` · `test_llm_phase3.py` · `test_comprehensive.py` | asserts adaptados; testes novos |
 | `tools/run_all_tests.py` | suíte nova em `SUITES_PYTEST`; `BASELINE` por task |
-| `tools/dirigir_app.py` | **novo** — gate visual V11 (Playwright) |
-| `tests/golden/planilha_sha256.txt` · `ambiente.txt` | recongelados na Task 6 |
+| `tools/golden_master.py` | hash de **todas** as abas; `diagnostico_fixo.json` |
+| `tests/golden/diagnostico_fixo.json` · `planilha_sha256.txt` · `ambiente.txt` | novo · recongelados na T8 |
+| `tools/dirigir_app.py` · `tests/evidencia/` | gate visual V11 (PNG **não** versionado) |
+
+**BASELINE previsto por task** (o runner avisa `cresceu`; o commit da task o atualiza):
+
+| Após | `test_searchers` | `test_llm_phase3` | `test_comprehensive` | `test_phase4` | `tests/test_fontes_indisponiveis.py` | total |
+|---|---|---|---|---|---|---|
+| T1 | 13 | 53 | 98 | **56** | — | 220 |
+| T2 | 13 | 53 | 98 | 56 | **13** | 233 |
+| T3 | 13 | 53 | 98 | 56 | **20** (+1 xfail) | 240 |
+| T4 | 13 | 53 | 98 | 56 | **24** | 244 |
+| T5 | 13 | 53 | 98 | 56 | **28** | 248 |
+| T6 | 13 | **63** | 98 | 56 | 28 | 258 |
+| T7 | 13 | 63 | 98 | **59** | 28 | 261 |
+| T8 | 13 | 63 | 98 | **67** | 28 | 269 |
+| T9 | 13 | 63 | 98 | 67 | 28 | 269 |
 
 ---
 
-### Task 1: Vocabulário e campos novos (`models.py`)
+### Task 1: Vocabulário, `redigir()`, `statuses_para_falha_total()`, `FonteIndisponivel`
 
 **Files:**
-- Modify: `levantamento-normativos/models.py:59-63` (defaults de `NormativoResult`) e `:95-100` (`KeywordStatus`)
-- Test: `levantamento-normativos/test_phase4.py` (classe nova no fim)
-- Modify: `tools/run_all_tests.py:47-52` (`BASELINE["test_phase4.py"]`)
-- Modify: `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` §3.1 (emenda dos 2 motivos)
+- Modify: `levantamento-normativos/models.py` (topo; `NormativoResult:59-63` e `__post_init__:65-76`; `KeywordStatus:95-100`)
+- Modify: `levantamento-normativos/searchers/base.py` (fim do arquivo)
+- Test: `levantamento-normativos/test_phase4.py` (classes novas no fim)
+- Modify: `tools/run_all_tests.py` (`BASELINE["test_phase4.py"]`)
+- Modify: spec §3.1 (emenda dos motivos novos)
 
-**Interfaces:**
-- Produces:
-  - `MOTIVOS: frozenset[str]` = `{"", "bloqueio_waf", "http_5xx", "manutencao_503", "timeout", "conexao", "resposta_ilegivel", "endpoint_inexistente", "erro_interno"}`
-  - `ORIGENS_RELEVANCIA: frozenset[str]` = `{"modelo", "heuristica", "fallback_erro", "padrao_fonte"}`
-  - `KeywordStatus(..., motivo: str = "", detalhe: str = "", parcial: bool = False)`; `__post_init__` levanta `ValueError` se `motivo not in MOTIVOS`
-  - `NormativoResult(..., relevancia_origem: str = "padrao_fonte")`; `__post_init__` levanta `ValueError` se fora de `ORIGENS_RELEVANCIA`
+**Interfaces — Produces:**
+- `MOTIVOS: frozenset[str]` = `{"", "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503", "timeout", "conexao", "resposta_ilegivel", "endpoint_inexistente", "nao_consultada", "erro_interno"}`
+- `ORIGENS_RELEVANCIA: frozenset[str]` = `{"modelo", "heuristica", "fallback_erro", "padrao_fonte"}`
+- `redigir(texto: str, limite: int = 300) -> str` — redige `key=`/`cx=`/`api_key=`/`token=`/`apikey=` (valor → `***`), remove chars de controle (exceto `\n`, `\t`), prefixa `'` se começar com `=`, `+`, `-`, `@`, corta em `limite`.
+- `KeywordStatus(..., motivo: str = "", detalhe: str = "", parcial: bool = False)`; `__post_init__`: `ValueError` se `motivo ∉ MOTIVOS`; **aplica `redigir` a `detalhe` e `error_message`**.
+- `NormativoResult(..., relevancia_origem: str = "padrao_fonte")`; `__post_init__`: `ValueError` se fora de `ORIGENS_RELEVANCIA`.
+- `statuses_para_falha_total(source: str, keywords: list[str], exc: BaseException) -> list[KeywordStatus]` — um `error`/`erro_interno` por keyword.
+- `searchers.base.FonteIndisponivel(motivo, detalhe="")` — **não** valida contra `MOTIVOS` (evita ciclo de import); `str(e)` lê `self.motivo`/`self.detalhe` dinamicamente.
 
-- [ ] **Step 1: Escrever os testes que falham** — acrescentar ao **fim** de `levantamento-normativos/test_phase4.py`:
+- [ ] **Step 1: Testes que falham** — ao fim de `levantamento-normativos/test_phase4.py`:
 
 ```python
 # ===========================================================================
-#  FRENTE 2 — VOCABULARIO DE HONESTIDADE (spec 2026-09-22 §3.1)
+#  FRENTE 2 — VOCABULARIO DE HONESTIDADE (spec 2026-09-22 §3.1, plano v2 T1)
 # ===========================================================================
 
-from models import KeywordStatus, MOTIVOS, ORIGENS_RELEVANCIA
+from models import (KeywordStatus, MOTIVOS, ORIGENS_RELEVANCIA, redigir,
+                    statuses_para_falha_total)
 
 
 class TestVocabularioHonestidade:
-    """KeywordStatus e NormativoResult carregam motivo/detalhe/parcial e origem da nota."""
-
     def test_motivos_fechados(self):
         assert MOTIVOS == frozenset({
-            "", "bloqueio_waf", "http_5xx", "manutencao_503", "timeout", "conexao",
-            "resposta_ilegivel", "endpoint_inexistente", "erro_interno",
+            "", "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503",
+            "timeout", "conexao", "resposta_ilegivel", "endpoint_inexistente",
+            "nao_consultada", "erro_interno",
         })
 
     def test_origens_fechadas(self):
-        assert ORIGENS_RELEVANCIA == frozenset(
-            {"modelo", "heuristica", "fallback_erro", "padrao_fonte"}
-        )
+        assert ORIGENS_RELEVANCIA == frozenset({"modelo", "heuristica", "fallback_erro", "padrao_fonte"})
 
     def test_keyword_status_construtor_antigo_continua_valido(self):
         s = KeywordStatus(keyword="lgpd", source="lexml", result_count=0, status="empty")
@@ -98,41 +173,65 @@ class TestVocabularioHonestidade:
 
     def test_keyword_status_aceita_motivo_valido(self):
         s = KeywordStatus(keyword="lgpd", source="lexml", status="error",
-                          motivo="bloqueio_waf", detalhe="HTTP 200 text/html", parcial=False)
+                          motivo="bloqueio_waf", detalhe="HTTP 200 text/html")
         assert s.motivo == "bloqueio_waf"
 
     def test_keyword_status_rejeita_motivo_inventado(self):
         with pytest.raises(ValueError, match="motivo"):
             KeywordStatus(keyword="lgpd", source="lexml", status="error", motivo="waf")
 
+    def test_keyword_status_redige_detalhe_e_error_message(self):
+        s = KeywordStatus(keyword="k", source="google", status="error", motivo="http_4xx",
+                          detalhe="GET https://g/api?key=AIzaSECRET&cx=abc&q=x -> 403",
+                          error_message="500 for url: https://g/x?key=AIzaSECRET")
+        assert "AIzaSECRET" not in s.detalhe and "key=***" in s.detalhe
+        assert "AIzaSECRET" not in s.error_message
+
     def test_normativo_origem_default_e_padrao_fonte(self):
         assert _make_result().relevancia_origem == "padrao_fonte"
-
-    def test_normativo_aceita_origem_valida(self):
-        r = NormativoResult(nome="x", tipo="Lei", numero="1", data=None, orgao_emissor="",
-                            ementa="", link="", source="lexml", found_by="k",
-                            relevancia_origem="heuristica")
-        assert r.relevancia_origem == "heuristica"
 
     def test_normativo_rejeita_origem_inventada(self):
         with pytest.raises(ValueError, match="relevancia_origem"):
             NormativoResult(nome="x", tipo="Lei", numero="1", data=None, orgao_emissor="",
                             ementa="", link="", source="lexml", found_by="k",
                             relevancia_origem="ia")
+
+
+class TestRedigir:
+    def test_redige_segredos_em_query(self):
+        assert redigir("u?key=ABC&cx=DEF&api_key=GHI&token=JKL&q=x") == "u?key=***&cx=***&api_key=***&token=***&q=x"
+
+    def test_remove_controle_e_corta(self):
+        assert redigir("a\x00b\x07c\n") == "abc\n"
+        assert len(redigir("x" * 1000)) == 300
+
+    def test_neutraliza_formula(self):
+        assert redigir('=HYPERLINK("http://evil","clique")').startswith("'=")
+        assert redigir("+1").startswith("'+") and redigir("-1").startswith("'-") and redigir("@x").startswith("'@")
+
+    def test_texto_normal_intacto(self):
+        assert redigir("GET https://x/y?q=lgpd -> 200 text/html") == "GET https://x/y?q=lgpd -> 200 text/html"
+
+
+class TestStatusesParaFalhaTotal:
+    def test_um_status_por_keyword(self):
+        sts = statuses_para_falha_total("tcu", ["a", "b"], AttributeError("'int' object has no attribute 'strip'"))
+        assert [s.keyword for s in sts] == ["a", "b"]
+        assert all((s.source, s.status, s.motivo) == ("tcu", "error", "erro_interno") for s in sts)
+        assert "AttributeError" in sts[0].detalhe and "strip" in sts[0].detalhe
+
+    def test_lista_vazia_de_keywords_da_um_status_generico(self):
+        sts = statuses_para_falha_total("lexml", [], RuntimeError("x"))
+        assert len(sts) == 1 and sts[0].keyword == "(todas)"
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [ ] **Step 2: Rodar e ver falhar** — em `levantamento-normativos/`: `python -m pytest test_phase4.py -q` → `ImportError: cannot import name 'MOTIVOS'` na coleta.
 
-Run (em `levantamento-normativos/`): `python -m pytest test_phase4.py -q -k Vocabulario`
-Expected: `ImportError: cannot import name 'MOTIVOS'` (a coleta falha antes de rodar) — é a falha esperada.
-
-- [ ] **Step 3: Implementar em `models.py`**
-
-Logo após `from dataclasses import dataclass, field`:
+- [ ] **Step 3: `models.py`** — logo após `from dataclasses import dataclass, field`, acrescentar `import re` e:
 
 ```python
 # ---------------------------------------------------------------------------
-# Vocabulario fechado de honestidade (spec 2026-09-22 §3.1)
+# Vocabulario fechado de honestidade (spec 2026-09-22 §3.1; plano v2 T1)
 # ---------------------------------------------------------------------------
 
 # Por que uma fonte NAO pode ser consultada. String (nao Enum) para caber na
@@ -141,11 +240,14 @@ MOTIVOS: frozenset[str] = frozenset({
     "",
     "bloqueio_waf",          # HTTP 200 com pagina de desafio (Senado/LexML, medido em 22/09)
     "http_5xx",              # 5xx depois dos retries
-    "manutencao_503",        # janela diaria do TCU (20h-21h BRT)
+    "http_4xx",              # 4xx que nao e 404 nem 429 (401, 403...) — sem retry
+    "rate_limit",            # 429 / RatelimitException — esperar, nao "fonte caiu"
+    "manutencao_503",        # 503 (o TCU tem janela diaria 20h-21h BRT; hipotese, ver detalhe)
     "timeout",               # requests.Timeout
     "conexao",               # requests.ConnectionError
     "resposta_ilegivel",     # HTTP 200, mas o corpo nao e o formato esperado
     "endpoint_inexistente",  # 404 em todos os URLs da cadeia
+    "nao_consultada",        # a busca parou antes desta palavra-chave (limite de resultados/keywords)
     "erro_interno",          # excecao nao prevista — bug nosso, nao da fonte
 })
 
@@ -157,9 +259,27 @@ ORIGENS_RELEVANCIA: frozenset[str] = frozenset({
     "fallback_erro",  # o LLM falhou nesse lote; 0.5 rotulado como tal
     "padrao_fonte",   # constante que o searcher atribui; nenhuma avaliacao rodou
 })
+
+_RE_SEGREDO = re.compile(r"(?i)\b(key|cx|api_key|apikey|token)=([^&\s]+)")
+_RE_CONTROLE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def redigir(texto: str, limite: int = 300) -> str:
+    """Torna um texto vindo de fora seguro para tela e planilha.
+
+    Redige segredos em query string (a mensagem do requests inclui a URL
+    inteira: `?key=AIza...` ia para a aba de diagnostico), remove chars de
+    controle (openpyxl levanta IllegalCharacterError), neutraliza formula
+    (celula que comeca com '=' vira formula no Excel) e corta em `limite`.
+    """
+    texto = _RE_SEGREDO.sub(lambda m: f"{m.group(1)}=***", texto or "")
+    texto = _RE_CONTROLE.sub("", texto)
+    if texto[:1] in ("=", "+", "-", "@"):
+        texto = "'" + texto
+    return texto[:limite]
 ```
 
-Em `NormativoResult`, na docstring, depois da linha de `relevancia`:
+Em `NormativoResult`: docstring ganha (após `relevancia`):
 
 ```
         relevancia_origem: De onde veio ``relevancia``. Um de ORIGENS_RELEVANCIA.
@@ -167,13 +287,7 @@ Em `NormativoResult`, na docstring, depois da linha de `relevancia`:
               nenhuma avaliacao rodou ainda.
 ```
 
-Depois de `relevancia: float = 0.0`:
-
-```python
-    relevancia_origem: str = "padrao_fonte"
-```
-
-No `__post_init__` de `NormativoResult`, **antes** do cálculo do `id`:
+campo `relevancia_origem: str = "padrao_fonte"` após `relevancia: float = 0.0`; e no `__post_init__`, **antes** do hash:
 
 ```python
         if self.relevancia_origem not in ORIGENS_RELEVANCIA:
@@ -183,18 +297,7 @@ No `__post_init__` de `NormativoResult`, **antes** do cálculo do `id`:
             )
 ```
 
-Em `KeywordStatus`, docstring ganha:
-
-```
-        motivo: Por que a fonte nao pode ser consultada (um de MOTIVOS).
-              "" quando status != "error". Ex: "bloqueio_waf".
-        detalhe: O que um humano precisa para reproduzir com curl: URL, HTTP
-              status, content-type, primeiros chars do corpo.
-        parcial: True quando status == "ok" mas a paginacao parou por erro
-              ("achei 40, a fonte caiu na pagina 3").
-```
-
-E depois de `retried: bool = False`:
+Em `KeywordStatus`: docstring ganha `motivo`, `detalhe`, `parcial` (texto da spec §3.1); a linha `status: str = "ok"  # "ok" | "empty" | "error"` vira `... | "error" (= fonte indisponivel; ver motivo)`; após `retried: bool = False`:
 
 ```python
     motivo: str = ""
@@ -203,63 +306,110 @@ E depois de `retried: bool = False`:
 
     def __post_init__(self) -> None:
         if self.motivo not in MOTIVOS:
-            raise ValueError(
-                f"motivo={self.motivo!r} fora de MOTIVOS {sorted(MOTIVOS)}"
-            )
+            raise ValueError(f"motivo={self.motivo!r} fora de MOTIVOS {sorted(MOTIVOS)}")
+        # Tudo que vem de fora passa por redigir(): e AQUI, no unico construtor,
+        # que a tela e a planilha ficam protegidas de uma vez.
+        self.detalhe = redigir(self.detalhe)
+        self.error_message = redigir(self.error_message)
 ```
 
-Atualizar a linha `status: str = "ok"  # "ok" | "empty" | "error"` para:
-`status: str = "ok"  # "ok" | "empty" | "error" (= fonte indisponivel; ver motivo)`.
+Ao fim de `models.py`:
 
-- [ ] **Step 4: Rodar e ver passar**
+```python
+def statuses_para_falha_total(source: str, keywords: list[str], exc: BaseException) -> list[KeywordStatus]:
+    """Quando search() de uma fonte LEVANTA, a fonte nao pode sumir do relatorio.
 
-Run: `python -m pytest test_phase4.py -q`
-Expected: `49 passed` (41 + 8).
+    Antes, app.py engolia a excecao e nao gravava status nenhum: a fonte
+    desaparecia da tela e da aba de diagnostico, e o Passo 4 dizia "nenhum
+    normativo encontrado" (achado H2 da rodada adversarial de 22/09).
+    """
+    detalhe = f"{type(exc).__name__}: {exc}"
+    alvo = keywords or ["(todas)"]
+    return [
+        KeywordStatus(keyword=k, source=source, result_count=0, status="error",
+                      motivo="erro_interno", detalhe=detalhe, error_message=detalhe)
+        for k in alvo
+    ]
+```
 
-- [ ] **Step 5: Atualizar o BASELINE e o golden-master**
+- [ ] **Step 4: `searchers/base.py`** — ao fim:
 
-Em `tools/run_all_tests.py`: `"test_phase4.py": 41,` → `"test_phase4.py": 49,`.
-Run (na raiz): `python tools/golden_master.py comparar` → `golden-master OK` (campo novo com default não muda célula nem id).
+```python
+class FonteIndisponivel(Exception):
+    """A fonte NAO pode ser consultada — distinto de "consultei e nao achei".
 
-- [ ] **Step 6: Emendar a spec** — em §3.1, na linha do `motivo`, trocar a lista por
-`"" | bloqueio_waf | http_5xx | manutencao_503 | timeout | conexao | resposta_ilegivel | endpoint_inexistente | erro_interno`
-e acrescentar abaixo do bloco:
-`> ⚠ **Emendado em 2026-09-22, Task 1 do plano:** `endpoint_inexistente` (404 em toda a cadeia não é `conexao`) e `erro_interno` (exceção imprevista não é `resposta_ilegivel`).`
+    Nasce no searcher (bloqueio, 5xx, timeout, corpo ilegivel) e sobe ate o
+    KeywordStatus como status="error" + motivo + detalhe. Antes, um HTML de
+    desafio com HTTP 200 virava lista vazia e a UI dizia "0 erros" (22/09).
 
-- [ ] **Step 7: Auditoria de documentação + commit**
+    Nao valida `motivo` contra models.MOTIVOS (seria import circular); quem
+    valida e o KeywordStatus. Um motivo desconhecido aqui vira erro_interno
+    com o valor original no detalhe — barulho, nunca crash da fonte inteira.
+    """
 
-Run: `git diff -U0 -- '*.py' | grep '^-' | grep -v '^---'` — ler tudo; a única linha removida deve ser o comentário de `status` (substituído).
+    _CONHECIDOS = {
+        "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503", "timeout",
+        "conexao", "resposta_ilegivel", "endpoint_inexistente", "nao_consultada", "erro_interno",
+    }
+
+    def __init__(self, motivo: str, detalhe: str = "") -> None:
+        if motivo not in self._CONHECIDOS:
+            detalhe = f"motivo desconhecido {motivo!r}: {detalhe}"
+            motivo = "erro_interno"
+        super().__init__(motivo)
+        self.motivo = motivo
+        self.detalhe = detalhe
+
+    def __str__(self) -> str:  # dinamico: quem edita .detalhe depois nao deixa str() velho
+        return f"{self.motivo}: {self.detalhe}" if self.detalhe else self.motivo
+```
+
+Um teste em `test_phase4.py` (classe `TestVocabularioHonestidade`) para isso:
+
+```python
+    def test_fonte_indisponivel_motivo_desconhecido_vira_erro_interno_e_str_dinamico(self):
+        from searchers.base import FonteIndisponivel
+        e = FonteIndisponivel("http5xx", "GET x -> 500")
+        assert (e.motivo, "http5xx" in e.detalhe) == ("erro_interno", True)
+        e.detalhe = "novo"
+        assert str(e) == "erro_interno: novo"
+```
+
+- [ ] **Step 5: Rodar e ver passar** — `python -m pytest test_phase4.py -q` → **`56 passed`** (41 + 15 novos: 9 em `TestVocabularioHonestidade`, 4 em `TestRedigir`, 2 em `TestStatusesParaFalhaTotal`). ⚠ Use o observado: se não for 56, algum step foi aplicado errado.
+
+- [ ] **Step 6: BASELINE, golden, spec** — `BASELINE["test_phase4.py"] = 56`. `python tools/golden_master.py comparar` → OK. Spec §3.1: trocar a lista de `motivo` pela de `MOTIVOS` acima e acrescentar `> ⚠ Emendado em 22/09 (plano v2, T1): endpoint_inexistente, erro_interno, http_4xx, rate_limit, nao_consultada; redigir() aplicada no __post_init__.`
+
+- [ ] **Step 7: Auditoria + commit**
 
 ```bash
-git add levantamento-normativos/models.py levantamento-normativos/test_phase4.py tools/run_all_tests.py docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md
-git commit -m "feat(frente2): vocabulario de honestidade — motivo/detalhe/parcial e origem da nota
+git add levantamento-normativos/models.py levantamento-normativos/searchers/base.py levantamento-normativos/test_phase4.py tools/run_all_tests.py docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md
+git commit -m "feat(frente2): vocabulario de honestidade, redigir() e FonteIndisponivel
 
-MOTIVOS e ORIGENS_RELEVANCIA fechados em models.py, validados no
-__post_init__. Emenda a spec 3.1: endpoint_inexistente e erro_interno.
-test_phase4: 41 -> 49; BASELINE atualizado no mesmo commit."
+MOTIVOS/ORIGENS_RELEVANCIA fechados; KeywordStatus ganha motivo/detalhe/
+parcial e redige segredos/controle/formula no __post_init__ (a chave do
+Google CSE ia para a planilha). statuses_para_falha_total() para a fonte
+que levanta nao sumir do relatorio. FonteIndisponivel em searchers/base.
+test_phase4: 41 -> 56."
 git push origin master
 ```
 
 ---
 
-### Task 2: LexML — sniff de conteúdo, `ParseError` levanta, cache de falha
+### Task 2: LexML — sniff permissivo, falhas declaradas, cache de causa, parcial, `nao_consultada`
 
 **Files:**
-- Create: `levantamento-normativos/searchers/base.py` (classe nova ao fim do arquivo)
-- Modify: `levantamento-normativos/searchers/lexml_searcher.py:104-137` (laço de `search`), `:180-203` (laço de retry), `:228-241` (`_search_keyword_safe`), `:279-286` (primeira página `None`), `:314-343` (`_fetch_sru`), `:345-382` (`_try_fetch`), `:393-397` (`_parse_sru_response`)
-- Create: `levantamento-normativos/tests/test_fontes_indisponiveis.py`
-- Create: `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml`
-- Modify: `tools/run_all_tests.py` (`SUITES_PYTEST` + `BASELINE`)
+- Modify: `levantamento-normativos/searchers/lexml_searcher.py` — `:15-19` (imports), `:76-77` (`__init__`), `:106-118` (início de `search`, cap), `:124-137` (laço), `:157-212` (retry), `:228-241` (`_search_keyword_safe`), `:271-304` (`_search_keyword`), `:314-343` (`_fetch_sru`), `:345-382` (`_try_fetch`), `:393-397` (`_parse_sru_response`)
+- Modify: `levantamento-normativos/test_comprehensive.py:362-367`
+- Create: `levantamento-normativos/tests/test_fontes_indisponiveis.py`, `tests/fixtures/lexml_sru_valido.xml`
+- Modify: `tools/run_all_tests.py`
 
-**Interfaces:**
-- Consumes: `KeywordStatus(motivo=, detalhe=)` da Task 1.
-- Produces:
-  - `searchers.base.FonteIndisponivel(Exception)` com `motivo: str`, `detalhe: str`; `str(e)` = `f"{motivo}: {detalhe}"`.
-  - `LexMLSearcher._search_keyword_safe(keyword, max_results) -> tuple[list[NormativoResult], FonteIndisponivel | None]` (era `tuple[list, str]`).
-  - `LexMLSearcher._urls_mortos: set[str]` (por instância).
-  - Convenção de dublê usada por todas as tasks de searcher: `monkeypatch.setattr("searchers.lexml_searcher.requests.get", fake)` e `monkeypatch.setattr("time.sleep", lambda s: None)`.
+**Interfaces — Produces:**
+- `LexMLSearcher._search_keyword_safe(keyword, max_results) -> tuple[list[NormativoResult], Optional[FonteIndisponivel], Optional[FonteIndisponivel]]` = `(resultados, erro_fatal, erro_paginacao)`.
+- `LexMLSearcher._urls_mortos: dict[str, FonteIndisponivel]` (limpo a cada `search()`).
+- `LexMLSearcher._try_fetch(url, params) -> Optional[str]`: `None` **só** em 404; senão texto ou `FonteIndisponivel`.
+- Convenção de dublê (todas as tasks de searcher): `monkeypatch.setattr("searchers.<mod>.requests.get", fake)`; `time.sleep` dublado pela fixture `autouse`.
 
-- [ ] **Step 1: Fixture SRU válido** — criar `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml`:
+- [ ] **Step 1: Fixture SRU** — `tests/fixtures/lexml_sru_valido.xml` (📝 escrito à mão; sem captura real porque a fonte está bloqueada):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -281,25 +431,27 @@ git push origin master
 </srw:searchRetrieveResponse>
 ```
 
-- [ ] **Step 2: Escrever os testes que falham** — criar `levantamento-normativos/tests/test_fontes_indisponiveis.py`:
+- [ ] **Step 2: Testes que falham** — criar `tests/test_fontes_indisponiveis.py`:
 
 ```python
 # -*- coding: utf-8 -*-
-"""Frente 2 — fonte indisponivel != fonte sem resultado (spec 2026-09-22 §3.2/§3.3).
+"""Frente 2 — fonte indisponivel != fonte sem resultado (spec 2026-09-22 §3.2/§3.3; plano v2).
 
-Nenhum teste aqui faz rede: requests.get e time.sleep sao dublados. As
-respostas vem de fixtures — inclusive o HTML REAL do desafio do Senado,
-capturado em 2026-09-22.
+Nenhum teste faz rede: requests.get e time.sleep sao dublados. As respostas
+vem de fixtures — inclusive o HTML REAL do desafio do Senado e 2 acordaos
+REAIS do TCU, capturados em 2026-09-22.
 
 Rodar de dentro de levantamento-normativos/:
     python -m pytest tests/test_fontes_indisponiveis.py -q
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 import requests
+from requests.structures import CaseInsensitiveDict
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DESAFIO_HTML = (FIXTURES / "lexml_desafio_senado.html").read_text(encoding="utf-8")
@@ -310,18 +462,20 @@ class RespostaFake:
     """O minimo de requests.Response que os searchers tocam."""
 
     def __init__(self, status: int, corpo: str = "", content_type: str = "application/xml",
-                 json_data=None, url: str = "http://fake"):
+                 json_data=None, url: str = "http://fake/?q=x"):
         self.status_code = status
         self.text = corpo
-        self.headers = {"Content-Type": content_type}
+        self.headers = CaseInsensitiveDict({"content-type": content_type})
         self._json = json_data
         self.url = url
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise requests.HTTPError(f"{self.status_code} Server Error", response=self)
+            raise requests.HTTPError(f"{self.status_code} Error for url: {self.url}", response=self)
 
     def json(self):
+        if self._json is None:
+            raise requests.exceptions.JSONDecodeError("Expecting value", self.text, 0)
         return self._json
 
 
@@ -335,7 +489,7 @@ def sem_espera(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def _lexml_com(monkeypatch, responder):
-    """Instala `responder(url, params) -> RespostaFake` como requests.get do LexML."""
+    """responder(url, params) -> RespostaFake (ou levanta). Devolve (searcher, chamadas)."""
     from searchers import lexml_searcher
 
     chamadas: list[str] = []
@@ -348,323 +502,572 @@ def _lexml_com(monkeypatch, responder):
     return lexml_searcher.LexMLSearcher(), chamadas
 
 
-def test_lexml_desafio_do_senado_e_bloqueio_waf(monkeypatch):
-    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, DESAFIO_HTML, "text/html; charset=UTF-8"))
-    resultados = s.search(["licitacao"], max_results=5)
-    assert resultados == []
-    st = s.keyword_statuses[0]
-    assert (st.status, st.motivo) == ("error", "bloqueio_waf")
-    assert "Verificação de segurança" in st.detalhe
-    assert "text/html" in st.detalhe
+def _cenario_real_22_09(url, params):
+    """O que o curl mediu em 22/09: primario = 200 HTML de desafio; fallbacks = 404."""
+    if url.endswith("/busca/SRU"):
+        return RespostaFake(200, DESAFIO_HTML, "text/html; charset=UTF-8", url=url + "?operation=searchRetrieve")
+    return RespostaFake(404, "nao", "text/html", url=url)
+
+
+def test_lexml_cenario_real_toda_keyword_e_bloqueio_waf_e_3_requisicoes(monkeypatch):
+    """B2 da rodada adversarial: o retry e o cache NAO podem rebaixar bloqueio_waf."""
+    s, chamadas = _lexml_com(monkeypatch, _cenario_real_22_09)
+    assert s.search(["a", "b", "c"], max_results=5) == []
+    assert len(chamadas) == 3 and len(set(chamadas)) == 3          # cada URL uma vez por busca
+    assert [st.motivo for st in s.keyword_statuses] == ["bloqueio_waf"] * 3
+    assert all("Verificação de segurança" in st.detalhe for st in s.keyword_statuses)
+    assert all("text/html" in st.detalhe for st in s.keyword_statuses)
+    assert all("404" in st.detalhe for st in s.keyword_statuses)   # detalhe agregado por URL
+    assert s.keyword_statuses[0].retried is True                   # retentado sem rede, motivo mantido
 
 
 def test_lexml_html_generico_e_resposta_ilegivel(monkeypatch):
-    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, "<html><body>oi</body></html>", "text/html"))
-    s.search(["licitacao"], max_results=5)
-    st = s.keyword_statuses[0]
-    assert (st.status, st.motivo) == ("error", "resposta_ilegivel")
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, "<!DOCTYPE html><html><body>oi</body></html>", "text/html"))
+    s.search(["x"], max_results=5)
+    assert (s.keyword_statuses[0].status, s.keyword_statuses[0].motivo) == ("error", "resposta_ilegivel")
 
 
 def test_lexml_xml_truncado_e_resposta_ilegivel(monkeypatch):
     s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO[:200], "application/xml"))
-    s.search(["licitacao"], max_results=5)
-    st = s.keyword_statuses[0]
-    assert (st.status, st.motivo) == ("error", "resposta_ilegivel")
+    s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "resposta_ilegivel"
 
 
-def test_lexml_sru_valido_continua_ok(monkeypatch):
-    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO, "application/xml"))
-    resultados = s.search(["licitacao"], max_results=5)
-    assert len(resultados) == 1
-    assert resultados[0].numero == "14133"
+def test_lexml_sru_valido_continua_ok_mesmo_com_bom_e_content_type_estranho(monkeypatch):
+    """M10: o sniff nao pode reprovar SRU valido por BOM ou content-type."""
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, "﻿" + SRU_VALIDO, "text/plain"))
+    resultados = s.search(["x"], max_results=5)
+    assert len(resultados) == 1 and resultados[0].numero == "14133"
     st = s.keyword_statuses[0]
-    assert (st.status, st.motivo, st.result_count) == ("ok", "", 1)
+    assert (st.status, st.motivo, st.result_count, st.parcial) == ("ok", "", 1, False)
 
 
 def test_lexml_404_em_toda_a_cadeia_e_endpoint_inexistente(monkeypatch):
     s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(404, "nao", "text/html"))
-    s.search(["licitacao"], max_results=5)
-    st = s.keyword_statuses[0]
-    assert (st.status, st.motivo) == ("error", "endpoint_inexistente")
-
-
-def test_lexml_url_morto_e_tentado_uma_vez_por_busca(monkeypatch):
-    """Cache de falha (§3.2): 3 palavras-chave x 3 URLs 404 = 3 requisicoes, nao 9."""
-    s, chamadas = _lexml_com(monkeypatch, lambda u, p: RespostaFake(404, "nao", "text/html"))
-    s.search(["a", "b", "c"], max_results=5)
-    assert len(chamadas) == 3, chamadas
-    assert len({*chamadas}) == 3
-    assert all(st.status == "error" for st in s.keyword_statuses)
-
-
-def test_lexml_timeout_e_conexao_mapeiam_motivo(monkeypatch):
-    def estoura(u, p):
-        raise requests.exceptions.Timeout("lento")
-    s, _ = _lexml_com(monkeypatch, estoura)
     s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "endpoint_inexistente"
+
+
+def test_lexml_timeout_conexao_e_5xx_mapeiam_motivo_e_nao_matam_o_url(monkeypatch):
+    """B1: timeout/conexao/5xx sobem com o motivo certo; a keyword seguinte tenta o primario de novo."""
+    from searchers import lexml_searcher
+    vez = {"n": 0}
+
+    def responder(u, p):
+        vez["n"] += 1
+        if vez["n"] == 1:
+            raise requests.exceptions.Timeout("lento")
+        return RespostaFake(200, SRU_VALIDO)
+
+    s, chamadas = _lexml_com(monkeypatch, responder)
+    s.search(["a", "b"], max_results=5)
     assert s.keyword_statuses[0].motivo == "timeout"
+    assert "GET" in s.keyword_statuses[0].detalhe and "15" in s.keyword_statuses[0].detalhe  # REQUEST_TIMEOUT
+    assert chamadas[0] == chamadas[-1] == lexml_searcher.PRIMARY_SRU_URL                  # nao foi para o fallback
 
     def cai(u, p):
         raise requests.exceptions.ConnectionError("sem rota")
     s2, _ = _lexml_com(monkeypatch, cai)
     s2.search(["x"], max_results=5)
     assert s2.keyword_statuses[0].motivo == "conexao"
+
+    s3, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(500, "boom", "text/html"))
+    s3.search(["x"], max_results=5)
+    assert s3.keyword_statuses[0].motivo == "http_5xx" and "500" in s3.keyword_statuses[0].detalhe
+
+
+def test_lexml_url_cacheado_que_passa_a_dar_404_nao_vira_erro_interno(monkeypatch):
+    """H1: 200 na keyword 'a' cacheia o primario; 404 na 'b' tem de ser endpoint_inexistente, nao TypeError."""
+    vez = {"n": 0}
+
+    def responder(u, p):
+        vez["n"] += 1
+        return RespostaFake(200, SRU_VALIDO) if vez["n"] == 1 else RespostaFake(404, "", "text/html")
+
+    s, _ = _lexml_com(monkeypatch, responder)
+    s.search(["a", "b"], max_results=5)
+    assert s.keyword_statuses[0].status == "ok"
+    assert s.keyword_statuses[1].motivo == "endpoint_inexistente"
+    assert "TypeError" not in s.keyword_statuses[1].detalhe
+
+
+def test_lexml_retry_que_da_certo_zera_motivo_e_detalhe(monkeypatch):
+    """M1: primeira tentativa 500, retry devolve SRU valido -> ok limpo."""
+    vez = {"n": 0}
+
+    def responder(u, p):
+        vez["n"] += 1
+        return RespostaFake(500, "x", "text/html") if vez["n"] == 1 else RespostaFake(200, SRU_VALIDO)
+
+    s, _ = _lexml_com(monkeypatch, responder)
+    s.search(["a"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo, st.detalhe, st.retried, st.result_count) == ("ok", "", "", True, 1)
+
+
+def test_lexml_falha_na_segunda_pagina_e_ok_parcial(monkeypatch):
+    """H5: pagina 1 diz 50 registros, pagina 2 devolve o desafio -> ok, parcial=True, detalhe diz a pagina."""
+    vez = {"n": 0}
+    pagina1 = SRU_VALIDO.replace("<srw:numberOfRecords>1</srw:numberOfRecords>", "<srw:numberOfRecords>50</srw:numberOfRecords>")
+
+    def responder(u, p):
+        vez["n"] += 1
+        return RespostaFake(200, pagina1) if vez["n"] == 1 else RespostaFake(200, DESAFIO_HTML, "text/html")
+
+    s, _ = _lexml_com(monkeypatch, responder)
+    resultados = s.search(["a"], max_results=50)
+    assert len(resultados) == 1
+    st = s.keyword_statuses[0]
+    assert (st.status, st.parcial) == ("ok", True)
+    assert "startRecord" in st.detalhe and "bloqueio_waf" in st.detalhe
+
+
+def test_lexml_keywords_nao_consultadas_por_cap_ganham_status(monkeypatch):
+    """M4: max_results=1 atinge o cap na 1a keyword; 'b' e 'c' nao podem sumir do relatorio."""
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO))
+    s.search(["a", "b", "c"], max_results=1)
+    assert [st.status for st in s.keyword_statuses] == ["ok", "error", "error"]
+    assert [st.motivo for st in s.keyword_statuses[1:]] == ["nao_consultada"] * 2
+    assert "max_results=1" in s.keyword_statuses[1].detalhe
+
+
+def test_lexml_cache_de_falha_e_limpo_a_cada_busca(monkeypatch):
+    """M11: mesma instancia, busca 1 com 404 em tudo, busca 2 com 200 -> ok."""
+    vez = {"busca": 1}
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(404, "", "text/html") if vez["busca"] == 1 else RespostaFake(200, SRU_VALIDO))
+    s.search(["a"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "endpoint_inexistente"
+    vez["busca"] = 2
+    s.search(["a"], max_results=5)
+    assert s.keyword_statuses[0].status == "ok"
+
+
+def test_lexml_detalhe_usa_url_efetiva_com_query(monkeypatch):
+    """M6: o detalhe precisa reproduzir com curl — URL com a query, nao so a base."""
+    s, _ = _lexml_com(monkeypatch, _cenario_real_22_09)
+    s.search(["a"], max_results=5)
+    assert "operation=searchRetrieve" in s.keyword_statuses[0].detalhe
+
+
+def test_lexml_parse_error_levanta_fonte_indisponivel():
+    """B3: o contrato antigo ([], 0) em XML malformado deixou de existir; test_comprehensive foi adaptado."""
+    from searchers.base import FonteIndisponivel
+    from searchers.lexml_searcher import LexMLSearcher
+    with pytest.raises(FonteIndisponivel) as e:
+        LexMLSearcher()._parse_sru_response("<not>valid<xml", "teste")
+    assert e.value.motivo == "resposta_ilegivel"
 ```
 
-- [ ] **Step 3: Rodar e ver falhar**
+(13 testes.)
 
-Run (em `levantamento-normativos/`): `python -m pytest tests/test_fontes_indisponiveis.py -q`
-Expected: os 7 testes falham (`AttributeError: 'KeywordStatus' object has no attribute 'motivo'` **não** — a Task 1 já resolveu isso; a falha esperada é `assert ('empty', '') == ('error', 'bloqueio_waf')` e afins).
+- [ ] **Step 3: Rodar e ver falhar** — `python -m pytest tests/test_fontes_indisponiveis.py -q` → 13 failed (assertions de status/motivo; nenhum `ImportError` — T1 já entregou os símbolos).
 
-- [ ] **Step 4: `FonteIndisponivel` em `searchers/base.py`** — ao fim do arquivo:
+- [ ] **Step 4: `lexml_searcher.py` — imports e `__init__`**
+
+Import (`:19`): `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`.
+
+`__init__` (`:76-77`) **já existe** — acrescentar 2 linhas mantendo o comentário existente:
 
 ```python
-class FonteIndisponivel(Exception):
-    """A fonte NAO pode ser consultada — distinto de "consultei e nao achei".
-
-    Nasce no searcher (bloqueio, 5xx, timeout, corpo ilegivel) e sobe ate o
-    KeywordStatus como status="error" + motivo + detalhe. Antes desta classe,
-    um HTML de desafio com HTTP 200 virava lista vazia e a UI dizia "0 erros"
-    (medido em 2026-09-22).
-
-    Args:
-        motivo: um de models.MOTIVOS (validado no KeywordStatus, nao aqui).
-        detalhe: o que um humano precisa para reproduzir com curl.
-    """
-
-    def __init__(self, motivo: str, detalhe: str = "") -> None:
-        super().__init__(f"{motivo}: {detalhe}" if detalhe else motivo)
-        self.motivo = motivo
-        self.detalhe = detalhe
+    def __init__(self):
+        self._sru_url: Optional[str] = None  # Resolved after first request
+        # URLs que ja falharam NESTA busca -> a causa. Limpo em search().
+        # Antes, cada palavra-chave tentava a cadeia inteira de novo (3 URLs x N
+        # palavras-chave: parte dos ~390s do test_searchers.py em 22/09).
+        self._urls_mortos: dict[str, FonteIndisponivel] = {}
 ```
 
-- [ ] **Step 5: `lexml_searcher.py` — importar e instrumentar**
-
-Import: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`.
-
-**5a.** `_try_fetch` (`:345-382`): trocar o corpo do `try` por:
+- [ ] **Step 5: `_try_fetch` — reescrever inteiro** (`:345-382`):
 
 ```python
-                response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-                if response.status_code == 404:
-                    logger.warning(f"LexML: 404 from {url}")
-                    return None
-                response.raise_for_status()
-                self._exigir_sru(response, url)
-                return response.text
-```
+    def _try_fetch(self, url: str, params: dict) -> Optional[str]:
+        """Attempt a single GET request to the given SRU URL.
 
-e acrescentar o método (logo antes de `_parse_sru_response`):
+        Retries once on connection error after a 3-second delay.
 
-```python
-    def _exigir_sru(self, response, url: str) -> None:
-        """HTTP 200 nao prova que veio SRU. Medido em 2026-09-22: o LexML
-        devolve 200 text/html com a pagina "Verificacao de seguranca" do
-        Senado. Sem esta checagem o ParseError virava lista vazia e a UI
-        dizia "sem resultado" — o pior erro possivel numa ferramenta de
-        pesquisa.
+        Returns:
+            Response body on success; None ONLY on HTTP 404 (URL inexistente —
+            o chamador passa ao proximo da cadeia).
 
         Raises:
-            FonteIndisponivel: bloqueio_waf se for pagina de desafio;
-                resposta_ilegivel para qualquer outro nao-XML.
+            FonteIndisponivel: para tudo que nao e sucesso nem 404 — timeout,
+                conexao (apos o retry), 5xx/4xx, corpo que nao e SRU. Antes,
+                esses casos devolviam None e viravam "URL morto" e depois
+                "sem resultado" (bloqueadores B1/B2 da rodada de 22/09).
+        """
+        import time
+
+        for attempt in range(2):  # Max 2 attempts (initial + 1 retry)
+            try:
+                response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+            except requests.exceptions.ConnectionError as e:
+                if attempt == 0:
+                    logger.warning(f"LexML connection error: {e}. Retrying in 3s...")
+                    time.sleep(3)
+                    continue
+                logger.error(f"LexML connection error after retry: {e}")
+                raise FonteIndisponivel("conexao", f"GET {url}: {str(e)[:160]}") from e
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"LexML timeout ({REQUEST_TIMEOUT}s) for {url}")
+                raise FonteIndisponivel("timeout", f"GET {url}: sem resposta em {REQUEST_TIMEOUT}s") from e
+            except requests.exceptions.RequestException as e:
+                logger.error(f"LexML request error: {e}")
+                raise FonteIndisponivel("erro_interno", f"GET {url}: {type(e).__name__}: {str(e)[:160]}") from e
+
+            efetiva = getattr(response, "url", None) or url
+            if response.status_code == 404:
+                logger.warning(f"LexML: 404 from {url}")
+                return None
+            if response.status_code == 429:
+                raise FonteIndisponivel("rate_limit", f"GET {efetiva} -> 429")
+            if response.status_code >= 500:
+                raise FonteIndisponivel("http_5xx", f"GET {efetiva} -> HTTP {response.status_code}; corpo: {(response.text or '')[:120]!r}")
+            if response.status_code >= 400:
+                raise FonteIndisponivel("http_4xx", f"GET {efetiva} -> HTTP {response.status_code}")
+            self._exigir_sru(response, efetiva)
+            return response.text
+        return None  # inalcancavel: o laco sempre devolve ou levanta
+
+    def _exigir_sru(self, response, url: str) -> None:
+        """HTTP 200 nao prova que veio SRU: em 22/09 o LexML devolvia 200
+        text/html com a pagina "Verificacao de seguranca" do Senado.
+
+        Sniff PERMISSIVO de proposito (M10): so HTML explicito e reprovado
+        aqui; qualquer outra coisa vai para o ET, que levanta ParseError ->
+        resposta_ilegivel em _parse_sru_response. Um SRU com BOM, sem
+        declaracao <?xml ou com prefixo de namespace diferente continua
+        passando — o parser usa namespace por URI.
         """
         content_type = (response.headers.get("Content-Type") or "").lower()
-        corpo = (response.text or "").lstrip()
-        parece_sru = corpo.startswith(("<?xml", "<srw:", "<searchRetrieveResponse"))
-        if "xml" in content_type and parece_sru:
+        corpo = (response.text or "").lstrip("﻿ \t\r\n")
+        inicio = corpo[:15].lower()
+        e_html = "text/html" in content_type or inicio.startswith(("<!doctype html", "<html"))
+        if not e_html:
             return
-        detalhe = (
-            f"GET {url} -> HTTP {response.status_code} {content_type or 'sem content-type'}; "
-            f"corpo: {corpo[:120]!r}"
-        )
+        detalhe = f"GET {url} -> HTTP {response.status_code} {content_type or 'sem content-type'}; corpo: {corpo[:120]!r}"
         texto = corpo.lower()
         if "verificação de segurança" in texto or "verificacao de seguranca" in texto or "challenge" in texto:
             titulo = re.search(r"<title>([^<]*)</title>", corpo)
             if titulo:
-                detalhe = f"{titulo.group(1).strip()} — {detalhe}"
+                detalhe = f"{detalhe} — título: {titulo.group(1).strip()}"
             raise FonteIndisponivel("bloqueio_waf", detalhe)
         raise FonteIndisponivel("resposta_ilegivel", detalhe)
 ```
 
-**5b.** `_parse_sru_response` (`:393-397`): substituir o `except`:
+- [ ] **Step 6: `_parse_sru_response`** (`:393-397`):
 
 ```python
         try:
-            root = ET.fromstring(xml_text)
+            root = ET.fromstring(xml_text.lstrip("﻿ \t\r\n"))
         except ET.ParseError as e:
-            # Antes devolvia ([], 0) — era a linha que transformava bloqueio
-            # em "sem resultado". Agora e falha declarada.
+            # Antes devolvia ([], 0) — a linha que transformava bloqueio em
+            # "sem resultado". Agora e falha declarada.
             raise FonteIndisponivel(
                 "resposta_ilegivel", f"XML SRU nao parseia: {e}; corpo: {xml_text[:120]!r}"
             ) from e
 ```
 
-E na docstring dele, trocar `Returns ([], 0) on parse error.` por `Raises FonteIndisponivel("resposta_ilegivel") on parse error.`
+Docstring: `Returns ([], 0) on parse error.` → `Raises FonteIndisponivel("resposta_ilegivel") on parse error.`
 
-**5c.** `_fetch_sru` (`:314-343`) — cache de falha. No `__init__` da classe (criar se não existir; `BaseSearcher` não define `__init__`):
-
-```python
-    def __init__(self) -> None:
-        self._sru_url: Optional[str] = None
-        # URLs que ja falharam NESTA busca (404 ou bloqueio). Antes, cada
-        # palavra-chave tentava a cadeia inteira de novo: 3 URLs x N
-        # palavras-chave, e era parte dos ~390s do test_searchers.py.
-        self._urls_mortos: set[str] = set()
-        self.keyword_statuses: list[KeywordStatus] = []
-```
-
-⚠ Conferir se já existe `__init__` definindo `self._sru_url` (grep `_sru_url = None`); se existir, só acrescentar as duas linhas.
-
-Corpo novo de `_fetch_sru`:
+- [ ] **Step 7: `_fetch_sru` — cache de causa** (`:314-343`), corpo novo:
 
 ```python
         if self._sru_url:
-            return self._try_fetch(self._sru_url, params)
+            result = self._try_fetch(self._sru_url, params)
+            if result is not None:
+                return result
+            # o URL que funcionava passou a dar 404 (H1): invalida e cai na cadeia
+            self._urls_mortos[self._sru_url] = FonteIndisponivel(
+                "endpoint_inexistente", f"GET {self._sru_url} -> 404 (URL que antes funcionava nesta busca)")
+            self._sru_url = None
 
-        candidatos = [u for u in (PRIMARY_SRU_URL, FALLBACK_SRU_URL, FALLBACK_SRU_URL_2)
-                      if u not in self._urls_mortos]
-        if not candidatos:
-            raise FonteIndisponivel(
-                "endpoint_inexistente",
-                f"todos os URLs SRU ja falharam nesta busca: {sorted(self._urls_mortos)}",
-            )
-        for url in candidatos:
+        for url in (PRIMARY_SRU_URL, FALLBACK_SRU_URL, FALLBACK_SRU_URL_2):
+            if url in self._urls_mortos:
+                continue
             try:
                 result = self._try_fetch(url, params)
-            except FonteIndisponivel:
-                self._urls_mortos.add(url)
-                raise
+            except FonteIndisponivel as e:
+                if e.motivo in ("bloqueio_waf", "resposta_ilegivel"):
+                    # falha do URL: guarda a causa e tenta o proximo da cadeia
+                    self._urls_mortos[url] = e
+                    logger.warning(f"LexML: {url} {e.motivo}; proximo da cadeia")
+                    continue
+                raise  # timeout/conexao/5xx/4xx: erro DESTA requisicao, nao do URL
             if result is not None:
                 self._sru_url = url
                 return result
-            self._urls_mortos.add(url)
-            logger.warning(f"LexML: {url} falhou; proximo da cadeia")
-        logger.error("LexML: all SRU endpoints failed")
-        raise FonteIndisponivel(
-            "endpoint_inexistente",
-            f"404/falha em todos os URLs SRU: {sorted(self._urls_mortos)}",
-        )
+            self._urls_mortos[url] = FonteIndisponivel("endpoint_inexistente", f"GET {url} -> 404")
+            logger.warning(f"LexML: {url} 404; proximo da cadeia")
+
+        raise self._causa_da_cadeia_morta()
+
+    _PRIORIDADE = ("bloqueio_waf", "resposta_ilegivel", "endpoint_inexistente")
+
+    def _causa_da_cadeia_morta(self) -> FonteIndisponivel:
+        """Nenhum URL restou: relevanta a causa MAIS ESPECIFICA (B2).
+
+        'endpoint_inexistente' generico so quando tudo foi 404. O detalhe
+        agrega URL por URL, para a tela e a planilha dizerem o que o curl diz.
+        """
+        causas = self._urls_mortos
+        motivo = next((m for m in self._PRIORIDADE if any(c.motivo == m for c in causas.values())), "endpoint_inexistente")
+        principal = next(c for c in causas.values() if c.motivo == motivo)
+        resumo = "; ".join(f"{u.rsplit('/', 2)[-2]}/{u.rsplit('/', 1)[-1]}: {c.motivo}" for u, c in causas.items())
+        return FonteIndisponivel(motivo, f"{principal.detalhe} | cadeia: {resumo} (cacheado nesta busca)")
 ```
 
-Docstring de `_fetch_sru`: acrescentar `URLs que falharam ficam em self._urls_mortos e nao sao tentados de novo nesta busca.` e trocar `Response body as string, or None on failure.` por `Response body as string. Raises FonteIndisponivel when no URL works.`
+Docstring de `_fetch_sru`: substituir `Response body as string, or None on failure.` por `Response body as string. Raises FonteIndisponivel when no URL works; failed URLs are cached in self._urls_mortos for this search.`
 
-**5d.** `_search_keyword` (`:279-286`): o bloco `if xml_text is None:` fica só com o `break` das páginas seguintes, porque `_fetch_sru` agora levanta na primeira:
+- [ ] **Step 8: `_search_keyword`** (`:271-304`) — paginação declarada:
 
 ```python
+        all_results: list[NormativoResult] = []
+        start_record = 1
+        first_page = True
+        self._erro_paginacao: Optional[FonteIndisponivel] = None
+
+        while len(all_results) < max_results:
+            params = {...}  # inalterado
             try:
                 xml_text = self._fetch_sru(params)
-            except FonteIndisponivel:
+            except FonteIndisponivel as e:
                 if first_page:
                     raise
-                logger.warning("LexML: pagina seguinte falhou; devolvendo o que veio")
+                # H5: pagina seguinte falhou — devolve o que veio, mas DECLARA
+                e.detalhe = f"startRecord={start_record}: {e.detalhe}"
+                self._erro_paginacao = e
+                logger.warning(f"LexML: paginacao interrompida: {e}")
                 break
+            first_page = False
+            records, total_count = self._parse_sru_response(xml_text, keyword)
+            ...  # restante inalterado
 ```
 
-(remover o `raise ConnectionError(...)` e o comentário acima dele; a docstring `Raises: ConnectionError` vira `Raises: FonteIndisponivel: se a primeira pagina falhar.`)
+Remover o bloco `if xml_text is None: ... raise ConnectionError(...)` (`:279-286`) e o comentário acima dele. Docstring `Raises: ConnectionError...` → `Raises: FonteIndisponivel: se a primeira pagina falhar. Falha em pagina seguinte fica em self._erro_paginacao.`
 
-**5e.** `_search_keyword_safe` (`:228-241`):
+- [ ] **Step 9: `_search_keyword_safe`** (`:228-241`):
 
 ```python
     def _search_keyword_safe(
         self, keyword: str, max_results: int = 50
-    ) -> tuple[list[NormativoResult], Optional[FonteIndisponivel]]:
-        """Search for a keyword, returning (results, erro).
+    ) -> tuple[list[NormativoResult], Optional[FonteIndisponivel], Optional[FonteIndisponivel]]:
+        """Search for a keyword, returning (results, erro_fatal, erro_paginacao).
 
         Returns:
-            (results, None) em sucesso; ([], FonteIndisponivel) quando a fonte
-            nao pode ser consultada. Excecoes de rede do requests sao mapeadas
-            para motivo timeout/conexao; qualquer outra vira erro_interno —
+            (results, None, None) em sucesso completo; (results, None, erro) quando
+            a paginacao parou (parcial); ([], erro, None) quando a fonte nao pode
+            ser consultada. Qualquer excecao imprevista vira erro_interno —
             nunca "sem resultado".
         """
+        self._erro_paginacao = None
         try:
-            return self._search_keyword(keyword, max_results=max_results), None
+            results = self._search_keyword(keyword, max_results=max_results)
+            return results, None, self._erro_paginacao
         except FonteIndisponivel as e:
             logger.warning(f"LexML: fonte indisponivel para '{keyword}': {e}")
-            return [], e
-        except requests.exceptions.Timeout as e:
-            return [], FonteIndisponivel("timeout", f"{REQUEST_TIMEOUT}s: {e}")
-        except requests.exceptions.ConnectionError as e:
-            return [], FonteIndisponivel("conexao", str(e)[:200])
+            return [], e, None
         except Exception as e:
             logger.error(f"LexML: erro interno em '{keyword}': {e}")
-            return [], FonteIndisponivel("erro_interno", f"{type(e).__name__}: {e}"[:200])
+            return [], FonteIndisponivel("erro_interno", f"{type(e).__name__}: {e}"[:200]), None
 ```
 
-**5f.** Laço de `search` (`:124-137`): `keyword_results, error_msg = ...` vira `keyword_results, erro = ...`; o `if error_msg:` vira:
+- [ ] **Step 10: `search()` — laço principal, cap e retry.** Substituir o trecho de `:106` (`results_by_id: dict...`) até `:212` (fim do retry) por:
 
 ```python
+        results_by_id: dict[str, NormativoResult] = {}
+        self.keyword_statuses: list[KeywordStatus] = []
+        self._urls_mortos.clear()   # M11: cache de falha e POR BUSCA
+        self._sru_url = None
+        failed_keywords: list[str] = []
+        total_keywords = len(keywords)
+
+        for idx, keyword in enumerate(keywords):
+            if len(results_by_id) >= max_results:
+                logger.info(f"LexML: reached max_results ({max_results}), stopping after {idx}/{total_keywords} keywords")
+                # M4: palavra-chave nunca consultada nao pode virar "sem resultado"
+                for restante in keywords[idx:]:
+                    self.keyword_statuses.append(KeywordStatus(
+                        keyword=restante, source="lexml", result_count=0, status="error",
+                        motivo="nao_consultada",
+                        detalhe=f"busca parou em max_results={max_results} antes desta palavra-chave",
+                    ))
+                break
+
+            if progress_callback:
+                progress_callback(idx, total_keywords, f"LexML: buscando '{keyword}'")
+            logger.info(f"LexML [{idx+1}/{total_keywords}]: buscando '{keyword}'")
+
+            remaining = max_results - len(results_by_id)
+            keyword_results, erro, erro_pag = self._search_keyword_safe(keyword, max_results=remaining)
+
             if erro is not None:
                 self.keyword_statuses.append(KeywordStatus(
-                    keyword=keyword, source="lexml", result_count=0,
-                    status="error", error_message=str(erro),
-                    motivo=erro.motivo, detalhe=erro.detalhe,
+                    keyword=keyword, source="lexml", result_count=0, status="error",
+                    error_message=str(erro), motivo=erro.motivo, detalhe=erro.detalhe,
                 ))
                 failed_keywords.append(keyword)
+            elif len(keyword_results) == 0:
+                self.keyword_statuses.append(KeywordStatus(
+                    keyword=keyword, source="lexml", result_count=0, status="empty",
+                    parcial=erro_pag is not None, detalhe=erro_pag.detalhe if erro_pag else "",
+                ))
+            else:
+                count_before = len(results_by_id)
+                for result in keyword_results:
+                    if result.id in results_by_id:
+                        existing = results_by_id[result.id]
+                        if keyword not in existing.found_by:
+                            existing.found_by += f", {keyword}"
+                    else:
+                        results_by_id[result.id] = result
+                new_count = len(results_by_id) - count_before
+                self.keyword_statuses.append(KeywordStatus(
+                    keyword=keyword, source="lexml", result_count=new_count, status="ok",
+                    parcial=erro_pag is not None, detalhe=erro_pag.detalhe if erro_pag else "",
+                ))
+
+            if idx < total_keywords - 1:
+                self._rate_limit()
+
+        # --- Retry failed keywords (max 3 attempts, bail if API is down) ---
+        MAX_RETRIES = 3
+        cadeia_morta = all(u in self._urls_mortos for u in (PRIMARY_SRU_URL, FALLBACK_SRU_URL, FALLBACK_SRU_URL_2))
+        if failed_keywords and not cadeia_morta:
+            retry_count = min(len(failed_keywords), MAX_RETRIES)
+            logger.info(f"LexML: retrying {retry_count} of {len(failed_keywords)} failed keywords (max {MAX_RETRIES})")
+            if progress_callback:
+                progress_callback(total_keywords, total_keywords,
+                                  f"LexML: retentando {retry_count} palavras-chave com erro...")
+
+            import time
+            time.sleep(3)
+
+            # Only retry a few — if the first retry also fails, the API is
+            # likely down and retrying more keywords would waste time.
+            api_still_down = False
+            for keyword in failed_keywords[:MAX_RETRIES]:
+                if len(results_by_id) >= max_results:
+                    break
+                if api_still_down:
+                    # Mark remaining as retried-but-failed without calling API.
+                    # B2: motivo/detalhe originais FICAM — so o retried muda.
+                    for st in self.keyword_statuses:
+                        if st.keyword == keyword and st.source == "lexml" and st.status == "error":
+                            st.retried = True
+                            break
+                    continue
+
+                remaining = max_results - len(results_by_id)
+                keyword_results, erro, erro_pag = self._search_keyword_safe(keyword, max_results=remaining)
+
+                for st in self.keyword_statuses:
+                    if st.keyword == keyword and st.source == "lexml" and st.status == "error":
+                        st.retried = True
+                        if erro is not None:
+                            st.error_message = f"Retry failed: {erro}"
+                            # B2: nunca rebaixar um motivo especifico para generico
+                            if st.motivo in ("", "endpoint_inexistente") or erro.motivo not in ("endpoint_inexistente",):
+                                st.motivo, st.detalhe = erro.motivo, erro.detalhe
+                            api_still_down = True  # Stop retrying
+                        elif len(keyword_results) == 0:
+                            st.status, st.error_message, st.motivo, st.detalhe = "empty", "", "", ""
+                            st.parcial = erro_pag is not None
+                        else:
+                            st.status, st.error_message, st.motivo, st.detalhe = "ok", "", "", ""
+                            st.parcial = erro_pag is not None
+                            for result in keyword_results:
+                                if result.id in results_by_id:
+                                    existing = results_by_id[result.id]
+                                    if keyword not in existing.found_by:
+                                        existing.found_by += f", {keyword}"
+                                else:
+                                    results_by_id[result.id] = result
+                            st.result_count = len(keyword_results)
+                        break
+
+                if not api_still_down:
+                    self._rate_limit()
+        elif failed_keywords:
+            # cadeia morta em cache: retentar nao faria requisicao nenhuma (B2)
+            logger.info("LexML: cadeia de URLs morta nesta busca; retry pulado")
+            for st in self.keyword_statuses:
+                if st.source == "lexml" and st.status == "error" and st.motivo != "nao_consultada":
+                    st.retried = True
 ```
 
-**5g.** Laço de retry (`:180-203`): `keyword_results, error_msg = ...` vira `keyword_results, erro = ...`; `if error_msg:` vira `if erro is not None:` e dentro dele acrescentar `st.motivo = erro.motivo` e `st.detalhe = erro.detalhe` antes de `api_still_down = True`; nos ramos `empty`/`ok`, acrescentar `st.motivo = ""` e `st.detalhe = ""`. ⚠ `time.sleep(3)` do retry: com `_urls_mortos`, as retentativas de uma cadeia morta levantam sem rede — o `sleep` continua (3s), aceitável.
+⚠ O que o trecho acima **preserva** do original: mensagens de log, `progress_callback`, `MAX_RETRIES=3`, o comentário "Only retry a few…", a semântica de `api_still_down`. O que muda está comentado com o código do achado.
 
-- [ ] **Step 6: Rodar e ver passar**
+- [ ] **Step 11: Adaptar `test_comprehensive.py:362-367`** (B3) — o contrato mudou; o teste passa a afirmar o contrato novo, **mantido, não apagado**:
 
-Run: `python -m pytest tests/test_fontes_indisponiveis.py -q` → `7 passed`.
-Run: `python test_searchers.py` → `Results: 13/13 passed` (os LIVE degradam como antes; ⚠ demora ~6 min hoje — pode ficar mais rápido com o cache de falha; anotar o tempo).
-Run: `python -m pytest test_phase4.py -q` → `49 passed`.
+```python
+def test_lexml_parse_sru_response_malformed_xml():
+    """Malformed XML must be DECLARED as resposta_ilegivel, never silently ([], 0).
 
-- [ ] **Step 7: Registrar a suíte no runner**
+    Contrato mudou na frente 2 (2026-09-22): devolver ([], 0) era a linha que
+    transformava o bloqueio do LexML em "sem resultado"."""
+    from searchers.base import FonteIndisponivel
+    searcher = LexMLSearcher()
+    try:
+        searcher._parse_sru_response("<not>valid<xml", "teste")
+    except FonteIndisponivel as e:
+        assert e.motivo == "resposta_ilegivel"
+    else:
+        raise AssertionError("esperava FonteIndisponivel")
+```
 
-`tools/run_all_tests.py`: `SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py"]` e `BASELINE["tests/test_fontes_indisponiveis.py"] = 7`. Atualizar o comentário acima de `SUITES_PYTEST` (que diz "nasce com UMA suite") para dizer que a segunda entrou na frente 2.
+- [ ] **Step 12: Rodar e ver passar**
 
-Run (na raiz): `python tools/run_all_tests.py` → TUDO VERDE, 5 linhas.
-Run: `python tools/golden_master.py comparar` → OK.
+`python -m pytest tests/test_fontes_indisponiveis.py -q` → `13 passed`.
+`python test_comprehensive.py | tail -3` → `Total: 98 | Passed: 98 | Failed: 0`.
+`python test_searchers.py | tail -2` → `13/13 passed` (anotar o tempo: era ~390s).
+`python -m pytest test_phase4.py -q` → `56 passed`.
 
-- [ ] **Step 8: Auditoria de documentação + commit**
+- [ ] **Step 13: Runner** — `SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py"]`, `BASELINE["tests/test_fontes_indisponiveis.py"] = 13`; atualizar o comentário sobre "nasce com UMA suite". Na raiz: `python tools/run_all_tests.py` → TUDO VERDE; `python tools/golden_master.py comparar` → OK.
 
-`git diff -U0 -- '*.py' | grep '^-' | grep -v '^---'` — toda docstring removida tem substituta (5b, 5c, 5d, 5e).
+- [ ] **Step 14: Auditoria (os 2 comandos) + commit**
 
 ```bash
-git add levantamento-normativos/searchers/base.py levantamento-normativos/searchers/lexml_searcher.py levantamento-normativos/tests/ tools/run_all_tests.py
-git commit -m "feat(frente2): LexML declara bloqueio e resposta ilegivel em vez de 'sem resultado'
+git add levantamento-normativos/searchers/lexml_searcher.py levantamento-normativos/test_comprehensive.py levantamento-normativos/tests/ tools/run_all_tests.py
+git commit -m "feat(frente2): LexML declara bloqueio, timeout, 5xx e paginacao parcial — nunca 'sem resultado'
 
-HTTP 200 text/html com a pagina de desafio do Senado vira
-status=error motivo=bloqueio_waf (fixture com o HTML real de 22/09).
-ParseError levanta FonteIndisponivel(resposta_ilegivel). 404 na cadeia
-inteira e endpoint_inexistente. URLs mortos ficam em cache por busca:
-3 palavras-chave x 3 URLs 404 = 3 requisicoes, nao 9.
-Suite nova tests/test_fontes_indisponiveis.py (7) registrada no runner."
+_try_fetch reescrito: so 404 devolve None; o resto levanta com o motivo
+certo (B1). Cache de causa por URL, limpo por busca; cadeia morta relevanta
+a causa mais especifica e o retry nao rebaixa motivo (B2): no cenario real
+de 22/09 as 3 palavras-chave saem bloqueio_waf com o titulo do desafio.
+Sniff permissivo (BOM/prefixo nao reprovam SRU). Falha em pagina seguinte
+vira parcial=True. Keyword pulada por max_results vira nao_consultada.
+test_comprehensive adaptado ao contrato novo de _parse_sru_response (98
+mantidos). Suite nova: 13."
 git push origin master
 ```
 
 ---
 
-### Task 3: TCU — 500/503 viram erro declarado, paginação parcial é declarada
+### Task 3: TCU — 5xx/4xx/503/HTML declarados, paginação parcial, classificação por endpoint
 
 **Files:**
-- Modify: `levantamento-normativos/searchers/tcu_searcher.py:62-137` (`search`), `:153-206` (`_fetch_all_pages_safe`, `_fetch_all_pages`), `:208-256` (`_request_with_retry`)
-- Test: `levantamento-normativos/tests/test_fontes_indisponiveis.py` (seção TCU)
-- Modify: `tools/run_all_tests.py` (`BASELINE`)
+- Modify: `levantamento-normativos/searchers/tcu_searcher.py` — imports; `search()` (`:62-147`); `_fetch_all_pages_safe`/`_fetch_all_pages` (`:153-206`); `_request_with_retry` (`:208-256`)
+- Modify: `levantamento-normativos/test_comprehensive.py:473-477`
+- Test: `tests/test_fontes_indisponiveis.py` (seção TCU)
+- Modify: `tools/run_all_tests.py`
 
-**Interfaces:**
-- Consumes: `FonteIndisponivel` (Task 2), `KeywordStatus(motivo=, detalhe=, parcial=)` (Task 1).
-- Produces:
-  - `TCUSearcher._request_with_retry(url, params) -> dict | list` — **levanta** `FonteIndisponivel` em vez de devolver `None`.
-  - `TCUSearcher._fetch_all_pages(url) -> tuple[list[dict], Optional[FonteIndisponivel], bool]` = `(itens, erro, parcial)`.
-  - `TCUSearcher._fetch_all_pages_safe(url) -> tuple[list[dict], Optional[FonteIndisponivel], bool]`.
+**Interfaces — Produces:**
+- `TCUSearcher._request_with_retry(url, params) -> dict | list` — levanta `FonteIndisponivel` (nunca `None`).
+- `TCUSearcher._fetch_all_pages(url) -> tuple[list[dict], Optional[FonteIndisponivel], bool]` = `(itens, erro, parcial)`; idem `_fetch_all_pages_safe`.
 
 - [ ] **Step 1: Testes que falham** — acrescentar a `tests/test_fontes_indisponiveis.py`:
 
 ```python
 # ---------------------------------------------------------------------------
-# TCU
+# TCU — a fixture e o item REAL capturado em 22/09 (sem `ementa`, `numero`, `ano`)
 # ---------------------------------------------------------------------------
 
-ACORDAO = {"key": "ACORDAO-1", "tipo": "ACÓRDÃO", "anoAcordao": "2026",
-           "titulo": "ACÓRDÃO 1/2026 - PLENÁRIO", "numeroAcordao": "1", "colegiado": "Plenário",
-           "ementa": "Auditoria de governanca de TI na administracao publica federal.",
-           "dataSessao": "01/01/2026", "urlAcordao": "https://pesquisa.apps.tcu.gov.br/x"}
+ACORDAOS_REAIS = json.loads((FIXTURES / "tcu_acordaos_real.json").read_text(encoding="utf-8"))
+ACORDAO = ACORDAOS_REAIS[0]   # sumario fala de "TURISMO"
 
 
 def _tcu_com(monkeypatch, por_url):
-    """por_url: dict {trecho_da_url: callable(params) -> RespostaFake}."""
+    """por_url: {trecho_da_url: callable(params) -> RespostaFake | levanta}."""
     from searchers import tcu_searcher
 
     chamadas: list[str] = []
@@ -680,21 +1083,29 @@ def _tcu_com(monkeypatch, por_url):
     return tcu_searcher.TCUSearcher(), chamadas
 
 
+def _500_atos(p):
+    return RespostaFake(500, '{"url":"Erro no serviço","erro":"HttpClientErrorException: 404 Not Found"}',
+                        "application/json;charset=UTF-8", url="https://tcu/api/atonormativo/recupera-atos-normativos?inicio=0")
+
+
 def test_tcu_500_num_endpoint_e_error_mesmo_com_o_outro_ok(monkeypatch):
     s, chamadas = _tcu_com(monkeypatch, {
-        "recupera-acordaos": lambda p: RespostaFake(200, json_data=[ACORDAO]),
-        "recupera-atos-normativos": lambda p: RespostaFake(500, "Internal Server Error", "text/html"),
+        "recupera-acordaos": lambda p: RespostaFake(200, json_data=ACORDAOS_REAIS),
+        "recupera-atos-normativos": _500_atos,
     })
-    resultados = s.search(["governanca"], max_results=5)
-    assert len(resultados) == 1                      # o acordao entrou
-    st = s.keyword_statuses[0]
-    assert (st.status, st.motivo, st.result_count) == ("error", "http_5xx", 1)
-    assert "recupera-atos-normativos" in st.detalhe
+    resultados = s.search(["turismo"], max_results=5)
+    assert len(resultados) == 1                      # o acordao real entrou (T4 e quem casa o sumario;
+    st = s.keyword_statuses[0]                       #  ate la, este assert e ajustado na T4 — ver nota)
+    assert (st.status, st.motivo) == ("error", "http_5xx")
+    assert "recupera-atos-normativos" in st.detalhe and "404 Not Found" in st.detalhe
     assert "Acórdãos: ok" in st.detalhe
-    assert chamadas.count(next(u for u in chamadas if "atos" in u)) == 3  # 3 retries
+    assert sum(1 for u in chamadas if "atos" in u) == 3  # 3 retries no 5xx
+```
 
+⚠ **Nota sobre `len(resultados) == 1`:** até a T4, `_map_acordao` não lê `sumario`, então o acórdão real **não casa** "turismo" — o assert correto **nesta task** é `len(resultados) == 0` e `st.result_count == 0`. Escrever assim na T3; a **T4 troca para 1** no mesmo commit em que corrige o mapeamento. (Registrado para o executor não "consertar" o searcher aqui.)
 
-def test_tcu_503_e_manutencao(monkeypatch):
+```python
+def test_tcu_503_e_manutencao_com_hora_e_hipotese(monkeypatch):
     s, _ = _tcu_com(monkeypatch, {
         "recupera-acordaos": lambda p: RespostaFake(503, "", "text/html"),
         "recupera-atos-normativos": lambda p: RespostaFake(503, "", "text/html"),
@@ -702,102 +1113,175 @@ def test_tcu_503_e_manutencao(monkeypatch):
     s.search(["x"], max_results=5)
     st = s.keyword_statuses[0]
     assert (st.status, st.motivo) == ("error", "manutencao_503")
-    assert "20h" in st.detalhe
+    assert "503" in st.detalhe and "às " in st.detalhe and "20h" in st.detalhe   # hora + hipotese marcada
+
+
+def test_tcu_404_e_endpoint_inexistente_sem_retry(monkeypatch):
+    s, chamadas = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(404, "", "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(404, "", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "endpoint_inexistente"
+    assert len(chamadas) == 2                          # sem retry em 4xx
+
+
+def test_tcu_429_e_rate_limit_e_403_e_http_4xx(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(429, "", "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(403, "", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert st.motivo == "rate_limit"                  # o primeiro endpoint que caiu manda o motivo
+    assert "http_4xx" in st.detalhe and "403" in st.detalhe
+
+
+def test_tcu_200_html_e_bloqueio_ou_ilegivel_sem_retry(monkeypatch):
+    s, chamadas = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(200, DESAFIO_HTML, "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(200, "<html>x</html>", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert st.motivo == "bloqueio_waf"
+    assert "resposta_ilegivel" in st.detalhe
+    assert len(chamadas) == 2
+
+
+def test_tcu_timeout_e_conexao_mapeiam_motivo(monkeypatch):
+    def estoura(p):
+        raise requests.exceptions.Timeout("lento")
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": estoura, "recupera-atos-normativos": estoura})
+    s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "timeout"
+
+    def cai(p):
+        raise requests.exceptions.ConnectionError("sem rota")
+    s2, _ = _tcu_com(monkeypatch, {"recupera-acordaos": cai, "recupera-atos-normativos": cai})
+    s2.search(["x"], max_results=5)
+    assert s2.keyword_statuses[0].motivo == "conexao"
 
 
 def test_tcu_falha_na_segunda_pagina_e_ok_parcial(monkeypatch):
+    """B5: itens REAIS variando numeroAcordao; ids distintos so depois da T4 — aqui provamos o parcial."""
     from searchers import tcu_searcher
-    pagina_cheia = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i)) for i in range(tcu_searcher.PAGE_SIZE)]
+    pagina_cheia = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i), titulo=f"ACÓRDÃO {i}/2026") for i in range(tcu_searcher.PAGE_SIZE)]
 
     def acordaos(p):
         if p["inicio"] == 0:
             return RespostaFake(200, json_data=pagina_cheia)
-        return RespostaFake(500, "boom", "text/html")
+        return RespostaFake(500, "boom", "text/html", url="https://tcu/api/acordao/recupera-acordaos?inicio=20")
 
-    s, _ = _tcu_com(monkeypatch, {
-        "recupera-acordaos": acordaos,
-        "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[]),
-    })
-    resultados = s.search(["governanca"], max_results=100)
-    assert len(resultados) == tcu_searcher.PAGE_SIZE
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": acordaos,
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=100)
     st = s.keyword_statuses[0]
-    assert (st.status, st.parcial) == ("ok", True)
-    assert "pagina 2" in st.detalhe or "inicio=20" in st.detalhe
+    assert st.parcial is True
+    assert "inicio=20" in st.detalhe and "http_5xx" in st.detalhe
 
 
 def test_tcu_dois_endpoints_ok_sem_match_continua_empty(monkeypatch):
-    s, _ = _tcu_com(monkeypatch, {
-        "recupera-acordaos": lambda p: RespostaFake(200, json_data=[ACORDAO]),
-        "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[]),
-    })
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=ACORDAOS_REAIS),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
     s.search(["assunto-que-nao-existe"], max_results=5)
     st = s.keyword_statuses[0]
     assert (st.status, st.motivo, st.parcial) == ("empty", "", False)
+
+
+def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatch):
+    """H2: dataSessao inteiro derrubava search() inteiro; agora e erro_interno por keyword, nao sumico."""
+    quebrado = dict(ACORDAO, dataSessao=20260916)
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[quebrado]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "erro_interno")
+    assert "AttributeError" in st.detalhe or "strip" in st.detalhe
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+(8 testes → suíte 13 + 8 = 21.) ⚠ O último teste só faz sentido **depois da T4** (hoje `sumario` não é lido, então "turismo" não casa e o mapeamento nem roda): **escrever na T3 com a keyword que casa o campo lido hoje** — nenhuma casa; então na T3 este teste é escrito **já com o assert final** e marcado `@pytest.mark.xfail(reason="mapeamento real so na T4", strict=True)`; a T4 remove o `xfail`. Assim a contagem da suíte já é 21 na T3 e continua 21 na T4 (o `xfail` conta como passed no `-q`? **Não** — pytest reporta `xfailed` separado e `PADRAO_PYTEST` do runner só lê `N passed`; então na T3 o runner vê **20** e o BASELINE da T3 é **20**; a T4 sobe para **21 + 3 novos = 24**). A tabela do topo reflete isso (T3 = 20, total 240).
 
-Run: `python -m pytest tests/test_fontes_indisponiveis.py -q -k tcu` → 4 failed (`('empty', '') == ('error', 'http_5xx')` etc.).
+- [ ] **Step 2: Ver falhar** — `python -m pytest tests/test_fontes_indisponiveis.py -q -k tcu` → falhas de status/motivo.
 
-- [ ] **Step 3: Implementar em `tcu_searcher.py`**
+- [ ] **Step 3: `tcu_searcher.py`**
 
-Import: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`.
+**3a.** Import: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`; conferir `import time` e `import re` no topo (acrescentar `re` se faltar) e `from datetime import datetime`.
 
-**3a.** `_request_with_retry` → levanta em vez de `None`:
+**3b.** `_request_with_retry` — reescrever:
 
 ```python
     def _request_with_retry(self, url: str, params: dict) -> dict | list:
-        """Send GET request with exponential backoff retry.
-
-        Handles the TCU maintenance window (503 between 20:00-21:00 BRT)
-        with a user-friendly message.
+        """Send GET request with exponential backoff retry on 5xx/network.
 
         Returns:
             Parsed JSON (dict or list).
 
         Raises:
-            FonteIndisponivel: manutencao_503 no 503; http_5xx apos MAX_RETRIES
-                em outro 5xx; timeout/conexao para falhas de rede. Antes
-                devolvia None, e o chamador tratava None como "fim das
-                paginas" — um 500 virava "sem resultado" (medido em 22/09).
+            FonteIndisponivel: com o motivo pela classe do erro (H6):
+                503 -> manutencao_503 (sem retry; hora + hipotese da janela 20h-21h);
+                404 -> endpoint_inexistente, 429 -> rate_limit, outro 4xx -> http_4xx (sem retry);
+                5xx apos MAX_RETRIES -> http_5xx; timeout/conexao apos MAX_RETRIES;
+                200 que nao e JSON -> bloqueio_waf (pagina de desafio) ou resposta_ilegivel.
+            Antes devolvia None e o chamador tratava None como "fim das paginas":
+            um 500 virava "sem resultado" (medido em 22/09).
         """
         ultimo: Optional[Exception] = None
         for attempt in range(MAX_RETRIES):
             try:
                 response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-                if response.status_code == 503:
-                    raise FonteIndisponivel(
-                        "manutencao_503",
-                        f"GET {url} -> 503. A API do TCU fica indisponivel diariamente "
-                        f"das 20h as 21h (horario de Brasilia). Tente mais tarde.",
-                    )
-                response.raise_for_status()
-                return response.json()
-            except FonteIndisponivel:
-                raise
-            except requests.exceptions.RequestException as e:
+            except requests.exceptions.Timeout as e:
                 ultimo = e
-                if attempt < MAX_RETRIES - 1:
-                    delay = 2 ** (attempt + 1)  # 2s, 4s, 8s
-                    logger.warning(
-                        f"TCU API error (attempt {attempt + 1}/{MAX_RETRIES}): {e}. "
-                        f"Retrying in {delay}s..."
-                    )
-                    time.sleep(delay)
+            except requests.exceptions.ConnectionError as e:
+                ultimo = e
+            except requests.exceptions.RequestException as e:
+                raise FonteIndisponivel("erro_interno", f"GET {url}: {type(e).__name__}: {str(e)[:160]}") from e
+            else:
+                efetiva = getattr(response, "url", None) or url
+                sc = response.status_code
+                if sc == 503:
+                    agora = datetime.now()
+                    janela = "dentro da janela de manutenção conhecida (20h-21h BRT)" if 20 <= agora.hour < 21 \
+                        else "fora da janela de manutenção conhecida (20h-21h BRT)"
+                    raise FonteIndisponivel("manutencao_503", f"GET {efetiva} -> 503 às {agora:%d/%m %H:%M}; {janela}. Hipótese, não fato.")
+                if sc == 404:
+                    raise FonteIndisponivel("endpoint_inexistente", f"GET {efetiva} -> 404")
+                if sc == 429:
+                    raise FonteIndisponivel("rate_limit", f"GET {efetiva} -> 429")
+                if 400 <= sc < 500:
+                    raise FonteIndisponivel("http_4xx", f"GET {efetiva} -> HTTP {sc}")
+                if sc >= 500:
+                    ultimo = requests.HTTPError(f"{sc}", response=response)
+                else:
+                    return self._exigir_json(response, efetiva)
+            if attempt < MAX_RETRIES - 1:
+                delay = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                logger.warning(f"TCU API error (attempt {attempt + 1}/{MAX_RETRIES}): {ultimo}. Retrying in {delay}s...")
+                time.sleep(delay)
         logger.error(f"TCU API failed after {MAX_RETRIES} attempts: {ultimo}")
         if isinstance(ultimo, requests.exceptions.Timeout):
             raise FonteIndisponivel("timeout", f"GET {url}: {REQUEST_TIMEOUT}s x {MAX_RETRIES}")
         if isinstance(ultimo, requests.exceptions.ConnectionError):
             raise FonteIndisponivel("conexao", f"GET {url}: {str(ultimo)[:160]}")
-        status = getattr(getattr(ultimo, "response", None), "status_code", "?")
-        raise FonteIndisponivel(
-            "http_5xx", f"GET {url} -> HTTP {status} em {MAX_RETRIES} tentativas: {str(ultimo)[:160]}"
-        )
+        resp = getattr(ultimo, "response", None)
+        corpo = (getattr(resp, "text", "") or "")[:160]
+        raise FonteIndisponivel("http_5xx", f"GET {getattr(resp, 'url', url)} -> HTTP {getattr(resp, 'status_code', '?')} em {MAX_RETRIES} tentativas; corpo: {corpo!r}")
+
+    def _exigir_json(self, response, url: str):
+        """200 que nao e JSON e falha declarada, nao 'sem resultado' (H6)."""
+        try:
+            return response.json()
+        except ValueError as e:
+            corpo = (response.text or "").lstrip("﻿ \t\r\n")
+            ct = (response.headers.get("Content-Type") or "").lower()
+            detalhe = f"GET {url} -> 200 {ct or 'sem content-type'} nao e JSON; corpo: {corpo[:120]!r}"
+            texto = corpo.lower()
+            if "verificação de segurança" in texto or "verificacao de seguranca" in texto or "challenge" in texto:
+                raise FonteIndisponivel("bloqueio_waf", detalhe) from e
+            raise FonteIndisponivel("resposta_ilegivel", detalhe) from e
 ```
 
-⚠ Conferir que `import time` existe no topo do módulo (o código atual usa `time.sleep(delay)`).
-
-**3b.** `_fetch_all_pages` → `(itens, erro, parcial)`:
+**3c.** `_fetch_all_pages` → `(itens, erro, parcial)`:
 
 ```python
     def _fetch_all_pages(self, url: str) -> tuple[list[dict], Optional[FonteIndisponivel], bool]:
@@ -813,7 +1297,6 @@ Import: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCal
         """
         all_items: list[dict] = []
         offset = 0
-
         for page in range(MAX_PAGES):
             params = {"inicio": offset, "quantidade": PAGE_SIZE}
             try:
@@ -821,80 +1304,87 @@ Import: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCal
             except FonteIndisponivel as e:
                 if page == 0:
                     return [], e, False
-                e.detalhe = f"pagina {page + 1} (inicio={offset}): {e.detalhe}"
+                e.detalhe = f"pagina {page + 1} (inicio={offset}): {e.motivo}: {e.detalhe}"
                 return all_items, e, True
-
             items = data if isinstance(data, list) else data.get("items", data.get("data", []))
             if not isinstance(items, list):
-                return all_items, FonteIndisponivel(
-                    "resposta_ilegivel", f"GET {url} inicio={offset}: formato inesperado {type(data).__name__}"
-                ), page > 0
-
+                erro = FonteIndisponivel("resposta_ilegivel", f"GET {url}?inicio={offset}: formato inesperado {type(data).__name__}")
+                return all_items, erro, page > 0
             all_items.extend(items)
             if len(items) < PAGE_SIZE:
                 break
             offset += PAGE_SIZE
             self._rate_limit()
-
         return all_items, None, False
-```
 
-**3c.** `_fetch_all_pages_safe`:
-
-```python
     def _fetch_all_pages_safe(self, url: str) -> tuple[list[dict], Optional[FonteIndisponivel], bool]:
         """Como _fetch_all_pages, mas nenhuma excecao escapa: bug nosso vira
         erro_interno declarado, nunca "sem resultado"."""
         try:
             return self._fetch_all_pages(url)
-        except Exception as e:  # FonteIndisponivel ja foi tratada dentro
+        except Exception as e:
             logger.error(f"TCU: erro interno em {url}: {e}")
             return [], FonteIndisponivel("erro_interno", f"{type(e).__name__}: {e}"[:200]), False
 ```
 
-**3d.** `search()` (`:70-137`): as duas chamadas viram
-`acordao_items, acordao_erro, acordao_parcial = self._fetch_all_pages_safe(...)` e
-`atos_items, atos_erro, atos_parcial = ...`. Substituir o bloco `for keyword in keywords:` inteiro por:
+**3d.** `search()` — substituir de `acordao_items, acordao_error = ...` até o fim do `for keyword in keywords:` por:
 
 ```python
-        def _resumo(nome: str, itens: list, erro: Optional[FonteIndisponivel], parcial: bool) -> str:
+        acordao_items, acordao_erro, acordao_parcial = self._fetch_all_pages_safe(f"{API_BASE_URL}{ACORDAOS_PATH}")
+        logger.info(f"TCU: {len(acordao_items)} acordaos fetched, filtering by keywords")
+
+        if progress_callback:
+            progress_callback(1, total_steps, "TCU: buscando atos normativos")
+        logger.info("TCU: fetching atos normativos")
+        atos_items, atos_erro, atos_parcial = self._fetch_all_pages_safe(f"{API_BASE_URL}{ATOS_PATH}")
+        logger.info(f"TCU: {len(atos_items)} atos normativos fetched, filtering by keywords")
+
+        def _resumo(nome, itens, erro, parcial):
             if erro is not None and not itens:
                 return f"{nome}: {erro.motivo} em {erro.detalhe}"
             if parcial:
                 return f"{nome}: parcial ({len(itens)} itens; {erro.detalhe})"
             return f"{nome}: ok ({len(itens)} itens)"
 
-        detalhe = "; ".join([
-            _resumo("Acórdãos", acordao_items, acordao_erro, acordao_parcial),
-            _resumo("Atos", atos_items, atos_erro, atos_parcial),
-        ])
-        # Um endpoint que caiu na PRIMEIRA pagina torna a busca "error" mesmo
-        # que o outro tenha respondido: o usuario precisa saber que metade da
-        # fonte nao foi vista. Resultados do endpoint vivo continuam entrando.
-        erro_primario = next(
-            (e for e, itens in ((acordao_erro, acordao_items), (atos_erro, atos_items))
-             if e is not None and not itens), None,
-        )
+        detalhe = "; ".join([_resumo("Acórdãos", acordao_items, acordao_erro, acordao_parcial),
+                             _resumo("Atos", atos_items, atos_erro, atos_parcial)])
+        # Um endpoint que caiu na PRIMEIRA pagina torna a busca "error" mesmo que
+        # o outro tenha respondido: o usuario precisa saber que metade da fonte
+        # nao foi vista. Resultados do endpoint vivo continuam entrando.
+        erro_primario = next((e for e, itens in ((acordao_erro, acordao_items), (atos_erro, atos_items))
+                              if e is not None and not itens), None)
         parcial = acordao_parcial or atos_parcial
 
-        for keyword in keywords:
+        for idx, keyword in enumerate(keywords):
+            if len(results_by_id) >= max_results:
+                for restante in keywords[idx:]:   # M4
+                    self.keyword_statuses.append(KeywordStatus(
+                        keyword=restante, source="tcu", result_count=0, status="error", motivo="nao_consultada",
+                        detalhe=f"busca parou em max_results={max_results} antes desta palavra-chave"))
+                break
             kw_count = 0
-            for item in acordao_items:
-                if len(results_by_id) >= max_results:
-                    break
-                if self._matches_keyword(item.get("ementa", ""), keyword):
-                    result = self._map_acordao(item, keyword)
-                    if result.id not in results_by_id:
-                        results_by_id[result.id] = result
-                        kw_count += 1
-            for item in atos_items:
-                if len(results_by_id) >= max_results:
-                    break
-                if self._matches_keyword(item.get("ementa", ""), keyword):
-                    result = self._map_ato_normativo(item, keyword)
-                    if result.id not in results_by_id:
-                        results_by_id[result.id] = result
-                        kw_count += 1
+            try:
+                for item in acordao_items:
+                    if len(results_by_id) >= max_results:
+                        break
+                    if self._matches_keyword(self._texto_do_acordao(item), keyword):
+                        result = self._map_acordao(item, keyword)
+                        if result.id not in results_by_id:
+                            results_by_id[result.id] = result
+                            kw_count += 1
+                for item in atos_items:
+                    if len(results_by_id) >= max_results:
+                        break
+                    if self._matches_keyword(item.get("ementa", ""), keyword):
+                        result = self._map_ato_normativo(item, keyword)
+                        if result.id not in results_by_id:
+                            results_by_id[result.id] = result
+                            kw_count += 1
+            except Exception as e:   # H2: mapeamento que quebra nao derruba a fonte
+                self.keyword_statuses.append(KeywordStatus(
+                    keyword=keyword, source="tcu", result_count=kw_count, status="error", motivo="erro_interno",
+                    detalhe=f"{type(e).__name__}: {e}"[:200], error_message=f"{type(e).__name__}: {e}"[:200]))
+                continue
 
             if erro_primario is not None:
                 status, motivo = "error", erro_primario.motivo
@@ -903,283 +1393,291 @@ Import: `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCal
             else:
                 status, motivo = "ok", ""
             self.keyword_statuses.append(KeywordStatus(
-                keyword=keyword, source="tcu", result_count=kw_count,
-                status=status, motivo=motivo,
+                keyword=keyword, source="tcu", result_count=kw_count, status=status, motivo=motivo,
                 detalhe=detalhe if (status == "error" or parcial) else "",
-                error_message=detalhe if status == "error" else "",
-                parcial=parcial,
-            ))
+                error_message=detalhe if status == "error" else "", parcial=parcial))
+
+    def _texto_do_acordao(self, item: dict) -> str:
+        """Texto onde a palavra-chave e procurada. Ate a T4: `ementa` (que a API
+        real nao devolve — ver tests/fixtures/tcu_acordaos_real.json)."""
+        return item.get("ementa", "")
 ```
 
-Docstring de `search()`: acrescentar `Um endpoint que falha na primeira pagina marca status="error" para toda palavra-chave, com result_count do endpoint que respondeu; paginacao interrompida marca parcial=True.`
+Docstring de `search()`: acrescentar `Um endpoint que falha na primeira pagina marca status="error" para toda palavra-chave, com result_count do endpoint que respondeu; paginacao interrompida marca parcial=True; palavra-chave pulada pelo cap marca nao_consultada.`
 
-- [ ] **Step 4: Rodar e ver passar**
+- [ ] **Step 4: Adaptar `test_comprehensive.py:473-477`** (B3): `s._fetch_all_pages = lambda url: []` → `s._fetch_all_pages = lambda url: ([], None, False)`, com a docstring do teste ganhando `Contrato de _fetch_all_pages mudou na frente 2 (2026-09-22): (itens, erro, parcial).`
 
-Run: `python -m pytest tests/test_fontes_indisponiveis.py -q` → `11 passed`.
-Run: `python test_searchers.py` → `13/13 passed`. ⚠ Se algum teste de `test_searchers.py` ou `test_comprehensive.py` **afirmar** que `_fetch_all_pages` devolve lista ou que `_request_with_retry` devolve `None`, ele quebra aqui: abrir o teste, entender o que ele protegia, e **adaptar a asserção ao contrato novo no mesmo commit** — nunca apagar o teste. Registrar no commit qual asserção mudou e por quê.
+- [ ] **Step 5: Ver passar** — suíte nova `20 passed, 1 xfailed`; `python test_comprehensive.py` → 98/98; `python test_searchers.py` → 13/13.
 
-- [ ] **Step 5: BASELINE + runner + golden**
+- [ ] **Step 6: BASELINE** `tests/test_fontes_indisponiveis.py = 20`; runner TUDO VERDE; golden OK.
 
-`BASELINE["tests/test_fontes_indisponiveis.py"] = 11`. Run (raiz): `python tools/run_all_tests.py` → TUDO VERDE; `python tools/golden_master.py comparar` → OK.
-
-- [ ] **Step 6: Auditoria de documentação + commit**
+- [ ] **Step 7: Auditoria + commit**
 
 ```bash
-git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/tests/test_fontes_indisponiveis.py tools/run_all_tests.py
-git commit -m "feat(frente2): TCU declara 5xx/503 e paginacao parcial em vez de engolir
+git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/test_comprehensive.py levantamento-normativos/tests/ tools/run_all_tests.py
+git commit -m "feat(frente2): TCU classifica 5xx/4xx/503/HTML e declara paginacao parcial
 
-_request_with_retry levanta FonteIndisponivel (http_5xx, manutencao_503,
-timeout, conexao) em vez de devolver None; _fetch_all_pages devolve
-(itens, erro, parcial) e nao trata None como fim das paginas. Um
-endpoint caido marca error para a palavra-chave mesmo com o outro ok,
-e o detalhe nomeia qual. Suite: 7 -> 11."
+_request_with_retry levanta FonteIndisponivel por classe de erro (4xx sem
+retry; 503 com hora e hipotese marcada; 200 nao-JSON e bloqueio ou
+ilegivel); _fetch_all_pages devolve (itens, erro, parcial). Um endpoint
+caido marca error mesmo com o outro ok; item que quebra o mapeamento vira
+erro_interno por keyword; keyword pulada pelo cap vira nao_consultada.
+Fixture: 2 acordaos REAIS de 22/09. test_comprehensive adaptado (98).
+Suite: 13 -> 20 (+1 xfail para a T4)."
 git push origin master
 ```
 
 ---
 
-### Task 4: Origem da nota de relevância (`gemini_client.py`)
+### Task 4: TCU — mapear o esquema REAL do acórdão (⚠ emenda à spec §3.7)
 
-**Files:**
-- Modify: `levantamento-normativos/llm/gemini_client.py:340-430` (`score_relevance`)
-- Modify: `levantamento-normativos/llm/__init__.py`
-- Test: `levantamento-normativos/test_llm_phase3.py` (seção 9, antes do `Summary`)
-- Modify: `tools/run_all_tests.py` (`BASELINE["test_llm_phase3.py"]`)
+✅ **Fato medido em 22/09** (`tests/fixtures/tcu_acordaos_real.json`, `curl` em `recupera-acordaos?quantidade=2`): as chaves são `anoAcordao, colegiado, dataSessao, key, numeroAcordao, numeroAta, relator, situacao, sumario, tipo, titulo, urlAcordao, urlArquivo, urlArquivoPdf`. **Não existem `ementa`, `numero`, `ano`** — as três chaves que `_map_acordao` lê (`tcu_searcher.py:265-266,279`) e a que o filtro usa (`:104`). Consequência na v1.0: todo acórdão mapeia para `nome="Acordao / - TCU - Plenário"`, `numero="/"`, mesmo `id`, e **nunca casa palavra-chave** — a fonte diz "ok (500 itens)" e entrega zero. A spec §3.7 dizia "nenhum searcher muda o que mapeia"; **essa regra cai aqui**, porque manter o mapeamento é manter uma fonte estruturalmente cega. Decisão do Rodrigo em 22/09: "todos os consertos da v1 entram".
 
-**Interfaces:**
-- Produces:
-  - `score_relevance_com_origem(topic: str, results: list[dict], keywords: Optional[list[str]] = None) -> list[tuple[float, str]]` — o `str` é um de `ORIGENS_RELEVANCIA`.
-  - `score_relevance(...) -> list[float]` inalterada em assinatura e valores (wrapper).
-  - Exportadas por `llm/__init__.py`.
+📝 **Mapeamento proposto** (literal, sem parafrasear): `nome ← titulo`; `numero ← f"{numeroAcordao}/{anoAcordao}"`; `data ← dataSessao`; `orgao_emissor ← f"TCU - {colegiado}"`; `ementa ← sumario` (é o texto do acórdão; o TCU chama de sumário); `link ← urlAcordao` (o link real da API; `_build_acordao_link` continua como fallback quando `urlAcordao` vier vazio); `situacao ← situacao` se presente. O filtro passa a procurar a palavra-chave em `sumario` **e** `titulo`. Chaves antigas continuam aceitas como fallback (`item.get("numeroAcordao") or item.get("numero")`), para não regredir se a API tiver dois formatos.
 
-- [ ] **Step 1: Testes que falham** — em `test_llm_phase3.py`, **antes** do bloco `# Summary`:
+**Files:** `tcu_searcher.py` (`_map_acordao`, `_texto_do_acordao`); `tests/test_fontes_indisponiveis.py`; `tools/run_all_tests.py`.
+
+- [ ] **Step 1: Testes** — remover o `xfail` de `test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado`; em `test_tcu_500_num_endpoint...` trocar `len(resultados) == 0`/`result_count == 0` por `== 1`; acrescentar:
 
 ```python
-# ===========================================================================
-# 9. Origem da nota (frente 2, spec 2026-09-22 §3.4)
-# ===========================================================================
-run_section("9. Origem da nota de relevancia")
+def test_tcu_acordao_real_mapeia_titulo_numero_ano_sumario_link():
+    from searchers.tcu_searcher import TCUSearcher
+    r = TCUSearcher()._map_acordao(ACORDAO, "turismo")
+    assert r.nome == ACORDAO["titulo"]
+    assert r.numero == f'{ACORDAO["numeroAcordao"]}/{ACORDAO["anoAcordao"]}'
+    assert r.data == ACORDAO["dataSessao"]
+    assert r.ementa == ACORDAO["sumario"]          # literal, sem parafrase
+    assert r.link == ACORDAO["urlAcordao"]
+    assert r.orgao_emissor == f'TCU - {ACORDAO["colegiado"]}'
 
-try:
-    from llm import score_relevance_com_origem
-    from llm import gemini_client as _gc
-    from models import ORIGENS_RELEVANCIA
 
-    _docs = [{"nome": "Lei 13.709", "ementa": "Dispoe sobre protecao de dados pessoais e privacidade."},
-             {"nome": "COBIT", "ementa": "Framework de governanca de TI."}]
+def test_tcu_acordaos_reais_tem_ids_distintos_e_casam_o_sumario(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=ACORDAOS_REAIS),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo"], max_results=10)
+    ids = {s._map_acordao(a, "x").id for a in ACORDAOS_REAIS}
+    assert len(ids) == len(ACORDAOS_REAIS)
+    assert len(resultados) >= 1 and all("TURISMO" in r.ementa.upper() or "TURISMO" in r.nome.upper() for r in resultados)
 
-    # sem chave (o topo do arquivo garante): heuristica
-    pares = score_relevance_com_origem("tema", _docs, ["dados pessoais", "privacidade"])
-    record("sem LLM devolve pares (nota, origem)", all(isinstance(p, tuple) and len(p) == 2 for p in pares))
-    record("sem LLM a origem e 'heuristica'", all(o == "heuristica" for _, o in pares), str(pares))
-    record("nota heuristica = fracao das keywords na ementa", abs(pares[0][0] - 1.0) < 1e-9 and pares[1][0] == 0.0, str(pares))
-    record("toda origem esta em ORIGENS_RELEVANCIA", all(o in ORIGENS_RELEVANCIA for _, o in pares))
 
-    # sem chave e sem keywords: nao ha o que calcular -> fallback_erro rotulado
-    pares2 = score_relevance_com_origem("tema", _docs, None)
-    record("sem LLM e sem keywords: 0.5 rotulado fallback_erro",
-           all(p == (0.5, "fallback_erro") for p in pares2), str(pares2))
-
-    # wrapper preserva o contrato antigo
-    record("score_relevance == notas de score_relevance_com_origem",
-           score_relevance("tema", _docs, ["dados pessoais", "privacidade"]) == [n for n, _ in pares])
-
-    # com LLM "disponivel" mas lote vazio: fallback_erro (dublando is_available e _generate)
-    _orig_avail, _orig_gen = _gc.is_available, _gc._generate
-    try:
-        _gc.is_available = lambda: True
-        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: ""
-        pares3 = score_relevance_com_origem("tema", _docs, ["x"])
-        record("lote vazio do modelo -> (0.5, fallback_erro)", all(p == (0.5, "fallback_erro") for p in pares3), str(pares3))
-
-        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: "[0.9, 0.1]"
-        pares4 = score_relevance_com_origem("tema", _docs, ["x"])
-        record("lote valido -> origem 'modelo'", pares4 == [(0.9, "modelo"), (0.1, "modelo")], str(pares4))
-
-        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: '[0.9, "abc"]'
-        pares5 = score_relevance_com_origem("tema", _docs, ["x"])
-        record("valor nao numerico -> so aquele item e fallback_erro",
-               pares5 == [(0.9, "modelo"), (0.5, "fallback_erro")], str(pares5))
-
-        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: "[0.9]"
-        pares6 = score_relevance_com_origem("tema", _docs, ["x"])
-        record("tamanho errado -> lote inteiro fallback_erro", all(p == (0.5, "fallback_erro") for p in pares6), str(pares6))
-    finally:
-        _gc.is_available, _gc._generate = _orig_avail, _orig_gen
-except Exception as e:
-    record("secao 9 (origem da nota)", False, traceback.format_exc())
+def test_tcu_pagina_cheia_com_numeros_distintos_da_page_size_resultados(monkeypatch):
+    from searchers import tcu_searcher
+    pagina = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i), titulo=f"ACÓRDÃO {i}/2026 - TURISMO") for i in range(tcu_searcher.PAGE_SIZE)]
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=pagina if p["inicio"] == 0 else []),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo"], max_results=100)
+    assert len(resultados) == tcu_searcher.PAGE_SIZE
+    assert len({r.id for r in resultados}) == tcu_searcher.PAGE_SIZE
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
-
-Run: `python test_llm_phase3.py | tail -5` → `Total: 54 | PASS: 53 | FAIL: 1` (a seção inteira cai no `except` com `ImportError`, um único `record` de falha).
+- [ ] **Step 2: Ver falhar** — `-k "acordao_real or pagina_cheia or quebra_o_mapeamento"` → 3 failed + o ex-xfail agora falha "normalmente".
 
 - [ ] **Step 3: Implementar**
 
-Em `gemini_client.py`, **renomear** a atual `score_relevance` para `score_relevance_com_origem`, mudar a assinatura de retorno para `list[tuple[float, str]]`, e ajustar cada ponto que emite nota:
-
 ```python
-    if not is_available():
-        if keywords:
-            logger.info("LLM indisponivel — heuristica por palavras-chave.")
-            return [(_keyword_relevance(keywords, r.get("ementa", "")), "heuristica") for r in results]
-        logger.info("LLM indisponivel e sem keywords — 0.5 rotulado como fallback_erro.")
-        return [(0.5, "fallback_erro")] * len(results)
+    def _texto_do_acordao(self, item: dict) -> str:
+        """Onde a palavra-chave e procurada: sumario + titulo (esquema real da
+        API, medido em 22/09) — com fallback para `ementa` se a API tiver dois
+        formatos. Antes lia so `ementa`, que a API nao devolve: zero match, sempre."""
+        return " ".join(x for x in (item.get("sumario"), item.get("titulo"), item.get("ementa")) if x)
+
+    def _map_acordao(self, item: dict, found_by: str) -> NormativoResult:
+        """Map a raw acordao JSON item (esquema real de 22/09) to a NormativoResult.
+
+        Campos literais da API, sem parafrase: titulo -> nome, sumario -> ementa,
+        numeroAcordao/anoAcordao -> numero, dataSessao -> data, urlAcordao -> link.
+        Chaves antigas (numero/ano/ementa) aceitas como fallback.
+
+        Returns:
+            NormativoResult with tipo="Acordao TCU".
+        """
+        numero = str(item.get("numeroAcordao") or item.get("numero") or "")
+        ano = str(item.get("anoAcordao") or item.get("ano") or "")
+        colegiado = item.get("colegiado", "")
+        date_raw = item.get("dataSessao") or item.get("dataAta") or ""
+        date_str = self._safe_date_format(str(date_raw)) if date_raw else None
+        return NormativoResult(
+            nome=item.get("titulo") or f"Acordao {numero}/{ano} - TCU - {colegiado}",
+            tipo="Acordao TCU",
+            numero=f"{numero}/{ano}",
+            data=date_str,
+            orgao_emissor=f"TCU - {colegiado}",
+            ementa=item.get("sumario") or item.get("ementa", ""),
+            link=item.get("urlAcordao") or self._build_acordao_link(numero, ano),
+            source="tcu",
+            found_by=found_by,
+            relevancia=0.5,
+            raw_data=item,
+        )
 ```
 
-no lote vazio: `all_scores.extend([(0.5, "fallback_erro")] * len(batch))`;
-no lote válido, dentro do `for val in parsed:`:
+⚠ `date_str` para `dataSessao` inteiro (teste H2): `str(20260916)` passa por `_safe_date_format` sem levantar — o teste de `erro_interno` precisa então de outro item quebrado: usar `dict(ACORDAO, titulo=None, numeroAcordao=None, sumario=123)` (o `" ".join` de `_texto_do_acordao` levanta `TypeError` com `123`). Ajustar o teste H2 para esse item e para `"TypeError" in st.detalhe`.
 
-```python
-                try:
-                    score = max(0.0, min(1.0, float(val)))
-                    batch_scores.append((score, "modelo"))
-                except (TypeError, ValueError):
-                    batch_scores.append((0.5, "fallback_erro"))
-```
+- [ ] **Step 4: Ver passar** — suíte `24 passed`. `test_comprehensive` 98/98; `test_searchers` 13/13 (⚠ se algum afirmar o `nome` antigo `Acordao N/A - TCU`, adaptar no mesmo commit e registrar). Golden OK (o corpus fixo não passa por `_map_acordao`).
 
-no lote de tamanho errado: `all_scores.extend([(0.5, "fallback_erro")] * len(batch))`.
-
-Docstring da função nova — reescrever a atual acrescentando:
-
-```
-    Returns:
-        Lista de (nota, origem), mesma ordem dos results. origem e um de
-        models.ORIGENS_RELEVANCIA: "modelo" quando o LLM deu a nota;
-        "heuristica" quando nao ha LLM e ha keywords; "fallback_erro" quando
-        o LLM falhou (lote vazio, tamanho errado, valor nao numerico) ou nao
-        ha nem LLM nem keywords. Antes, esses tres casos davam 0.5 sem marca.
-```
-
-E acrescentar o wrapper, logo abaixo:
-
-```python
-def score_relevance(
-    topic: str,
-    results: list[dict],
-    keywords: Optional[list[str]] = None,
-) -> list[float]:
-    """Compat: so as notas. Ver score_relevance_com_origem para a procedencia."""
-    return [nota for nota, _ in score_relevance_com_origem(topic, results, keywords)]
-```
-
-Em `llm/__init__.py`: importar e exportar `score_relevance_com_origem` (em `from .gemini_client import (...)` e em `__all__`). Na docstring do pacote, a linha `Provides keyword expansion, relevance scoring, and auto-categorization` ganha `(scores carry their origin: see score_relevance_com_origem)`. ⚠ **Não** tocar nas frases sobre Gemini/API key — são a emenda B7, frente 5.
-
-- [ ] **Step 4: Rodar e ver passar**
-
-Run: `python test_llm_phase3.py | tail -3` → `Total: 63 | PASS: 63 | FAIL: 0`.
-
-- [ ] **Step 5: BASELINE + runner + golden**
-
-`BASELINE["test_llm_phase3.py"] = 63`. Runner TUDO VERDE; golden OK (nada de planilha mudou).
-
-- [ ] **Step 6: Auditoria + commit**
+- [ ] **Step 5: BASELINE 24; commit**
 
 ```bash
-git add levantamento-normativos/llm/ levantamento-normativos/test_llm_phase3.py tools/run_all_tests.py
-git commit -m "feat(frente2): a nota de relevancia passa a dizer de onde veio
+git add levantamento-normativos/searchers/tcu_searcher.py levantamento-normativos/tests/ tools/run_all_tests.py docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md
+git commit -m "fix(frente2): TCU le o esquema REAL do acordao (titulo/sumario/numeroAcordao/anoAcordao/urlAcordao)
 
-score_relevance_com_origem devolve (nota, origem) com origem em
-ORIGENS_RELEVANCIA; score_relevance vira wrapper com o mesmo contrato
-(53 testes intactos). 0.5 de fallback deixa de ser indistinguivel de
-nota do modelo. test_llm_phase3: 53 -> 63."
+Medido em 22/09: a API nao devolve ementa/numero/ano; _map_acordao lia so
+essas chaves, entao todo acordao colapsava num id e nunca casava
+palavra-chave — a fonte dizia ok e entregava zero. Emenda a spec 3.7,
+registrada nela. Textos literais, sem parafrase. Suite: 20 -> 24."
 git push origin master
 ```
 
+E na spec §3.7, acrescentar: `> ⚠ Emendado em 22/09 (plano v2, T4): o mapeamento do acórdão do TCU MUDA — a API real não devolve as chaves que o código lia. Ver a fixture real.`
+
 ---
 
-### Task 5: `_merge` leva a origem da nota vencedora
+### Task 5: Google/DDG — vocabulário mínimo (⚠ emenda à spec §5)
 
-**Files:**
-- Modify: `levantamento-normativos/deduplicator.py:98-113` (docstring) e `:147` (`relevancia`)
-- Test: `levantamento-normativos/test_phase4.py` (classe `TestVocabularioHonestidade` ganha 3 testes, ou classe nova `TestMergeOrigem`)
-- Modify: `tools/run_all_tests.py`
+**Files:** `searchers/google_searcher.py` (`:145-167` ddgs; `:169-205` CSE; `:246-271` laço); `tests/test_fontes_indisponiveis.py`; `tools/run_all_tests.py`.
 
-- [ ] **Step 1: Testes que falham** — ao fim de `test_phase4.py`:
+**Interfaces — Produces:** `GoogleSearcher._search_urls(keyword) -> tuple[list[dict], Optional[FonteIndisponivel]]` (era `(list, str)`); `DDGSException("No results found.")` → lista vazia **sem** erro.
+
+- [ ] **Step 1: Testes** (4):
 
 ```python
-class TestMergeOrigem:
-    """_merge guarda a maior nota E a origem dela (spec §3.4)."""
+# ---------------------------------------------------------------------------
+# Google / DuckDuckGo (M5)
+# ---------------------------------------------------------------------------
 
-    def test_incoming_maior_leva_sua_origem(self):
-        a = _make_result(relevancia=0.4); a.relevancia_origem = "padrao_fonte"
-        b = _make_result(source="google", relevancia=0.9); b.relevancia_origem = "modelo"
-        _merge(a, b)
-        assert (a.relevancia, a.relevancia_origem) == (0.9, "modelo")
+def _ddg_com(monkeypatch, text_impl):
+    from searchers import google_searcher
+    monkeypatch.setattr(google_searcher, "_BACKEND", "ddgs")
 
-    def test_existing_maior_mantem_sua_origem(self):
-        a = _make_result(relevancia=0.9); a.relevancia_origem = "heuristica"
-        b = _make_result(source="google", relevancia=0.2); b.relevancia_origem = "modelo"
-        _merge(a, b)
-        assert (a.relevancia, a.relevancia_origem) == (0.9, "heuristica")
+    class DDGSFake:
+        def text(self, query, max_results=10):
+            return text_impl(query)
 
-    def test_empate_mantem_existing(self):
-        a = _make_result(relevancia=0.5); a.relevancia_origem = "modelo"
-        b = _make_result(source="google", relevancia=0.5); b.relevancia_origem = "fallback_erro"
-        _merge(a, b)
-        assert a.relevancia_origem == "modelo"
+    import ddgs
+    monkeypatch.setattr(ddgs, "DDGS", DDGSFake)
+    return google_searcher.GoogleSearcher()
+
+
+def test_ddg_no_results_e_empty_nao_error(monkeypatch):
+    from ddgs.exceptions import DDGSException
+    def sem(q): raise DDGSException("No results found.")
+    s = _ddg_com(monkeypatch, sem)
+    s.search(["x"], max_results=5)
+    assert (s.keyword_statuses[0].status, s.keyword_statuses[0].motivo) == ("empty", "")
+
+
+def test_ddg_timeout_e_ratelimit_mapeiam_motivo(monkeypatch):
+    from ddgs.exceptions import TimeoutException, RatelimitException
+    def lento(q): raise TimeoutException("t")
+    s = _ddg_com(monkeypatch, lento); s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "timeout"
+    def cota(q): raise RatelimitException("r")
+    s2 = _ddg_com(monkeypatch, cota); s2.search(["x"], max_results=5)
+    assert s2.keyword_statuses[0].motivo == "rate_limit"
+
+
+def test_ddg_erro_generico_e_erro_interno(monkeypatch):
+    def bug(q): raise KeyError("href")
+    s = _ddg_com(monkeypatch, bug); s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "erro_interno"
+
+
+def test_google_keywords_alem_de_5_ganham_nao_consultada(monkeypatch):
+    s = _ddg_com(monkeypatch, lambda q: [])
+    s.search([f"k{i}" for i in range(7)], max_results=50)
+    assert [st.motivo for st in s.keyword_statuses[5:]] == ["nao_consultada"] * 2
+    assert "MAX_GOOGLE_KEYWORDS=5" in s.keyword_statuses[5].detalhe
 ```
 
-- [ ] **Step 2: Ver falhar** — `python -m pytest test_phase4.py -q -k MergeOrigem` → 1 failed (`'padrao_fonte' == 'modelo'`).
+- [ ] **Step 2: Ver falhar.**
 
-- [ ] **Step 3: Implementar** — em `_merge`, trocar `existing.relevancia = max(existing.relevancia, incoming.relevancia)` por:
+- [ ] **Step 3: Implementar** — `from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback`.
+
+`_search_ddgs`:
 
 ```python
-    # Relevancia: keep higher score — e a ORIGEM da nota que venceu, senao a
-    # planilha diria "modelo" sobre um numero que veio da heuristica.
+        try:
+            raw_results = list(DDGS().text(query, max_results=RESULTS_PER_QUERY))
+        except Exception as e:
+            from ddgs.exceptions import DDGSException, RatelimitException, TimeoutException
+            if isinstance(e, RatelimitException):
+                return [], FonteIndisponivel("rate_limit", f"DuckDuckGo: {e}")
+            if isinstance(e, TimeoutException):
+                return [], FonteIndisponivel("timeout", f"DuckDuckGo: {e}")
+            if isinstance(e, DDGSException) and "no results" in str(e).lower():
+                return [], None   # M5: "No results found." e resultado legitimo, nao falha
+            return [], FonteIndisponivel("erro_interno", f"DuckDuckGo: {type(e).__name__}: {e}")
+        return [{"url": r.get("href", ""), "title": r.get("title", ""), "snippet": r.get("body", "")} for r in raw_results], None
+```
+
+`_search_cse_api`: os `return [], "..."` viram `FonteIndisponivel`: 429 → `rate_limit`; 403 → `http_4xx`; `Timeout` → `timeout`; `RequestException` → `conexao` se `ConnectionError` senão `http_5xx`/`http_4xx` pelo `status_code` de `e.response` (404 → `endpoint_inexistente`); `Exception` → `erro_interno`. `_search_scraping`: `except Exception` → `erro_interno`. `_search_urls`: o "Nenhum backend" → `FonteIndisponivel("erro_interno", ...)`. Tipo de retorno das quatro: `tuple[list[dict], Optional[FonteIndisponivel]]`; docstrings ajustadas.
+
+Laço de `search()`: `search_results, error_msg = ...` → `search_results, erro = ...`; `if error_msg:` → `if erro is not None:` gravando `motivo=erro.motivo, detalhe=erro.detalhe, error_message=str(erro)`. Após o corte `active_keywords = keywords[:MAX_GOOGLE_KEYWORDS]`, gravar `nao_consultada` para `keywords[MAX_GOOGLE_KEYWORDS:]` com detalhe `f"limite MAX_GOOGLE_KEYWORDS={MAX_GOOGLE_KEYWORDS} — palavra-chave não enviada à web aberta"`. O bloco de "possible blocking (scraping)" ganha `motivo="bloqueio_waf"`. ⚠ Conferir em `test_searchers.py`/`test_comprehensive.py` se algum teste afirma `_search_urls(...)[1] == ""` ou `error_message` literal do Google — adaptar no mesmo commit.
+
+- [ ] **Step 4: Ver passar** — suíte `28`; `test_searchers` 13/13; `test_comprehensive` 98/98. BASELINE 28. Runner, golden. Commit `feat(frente2): Google/DDG entra no vocabulario — 'No results' e empty, nao error`. Push.
+
+---
+
+### Task 6: Origem da nota de relevância (`gemini_client.py`)
+
+**Files:** `llm/gemini_client.py` (`:1-14` docstring de módulo; `:340-430`); `llm/__init__.py`; `test_llm_phase3.py`; `tools/run_all_tests.py`.
+
+**Interfaces — Produces:** `score_relevance_com_origem(topic, results, keywords=None) -> list[tuple[float, str]]`; `score_relevance` inalterada (wrapper); ambas exportadas.
+
+- [ ] **Step 1: Testes** — em `test_llm_phase3.py`, antes do `# Summary`, a seção 9 **exatamente como na v1 do plano** (10 `record`s: pares/heurística/fração/origens/sem-keywords/wrapper/lote vazio/lote válido/não numérico/tamanho errado). *(Texto integral na v1, commit `b1a6d3c`, Task 4 Step 1 — copiar dali; não muda.)*
+
+- [ ] **Step 2: Ver falhar** — `Total: 54 | PASS: 53 | FAIL: 1`.
+
+- [ ] **Step 3: Implementar** — renomear `score_relevance` → `score_relevance_com_origem` devolvendo `(nota, origem)` em cada ponto (heurística → `"heuristica"`; sem LLM e sem keywords → `(0.5, "fallback_erro")`; lote vazio / tamanho errado → `(0.5, "fallback_erro")` por item; valor não numérico → `(0.5, "fallback_erro")` só naquele item; numérico clampado → `"modelo"`); acrescentar o wrapper `score_relevance(...) -> list[float]`. Docstring da função nova com a tabela de origens. **M9:** docstring de módulo `:11` — `- score_relevance returns keyword-based heuristic scores or [0.5, ...]` vira `- score_relevance_com_origem returns (nota, origem): heuristica sem LLM (ou (0.5, "fallback_erro") sem keywords); score_relevance e o wrapper que descarta a origem`. `llm/__init__.py`: importar/exportar `score_relevance_com_origem`; docstring do pacote ganha a menção. ⚠ Não tocar as frases sobre Gemini/API key (B7, frente 5).
+
+- [ ] **Step 4: Ver passar** — `Total: 63 | PASS: 63`. BASELINE 63. Runner, golden. Commit `feat(frente2): a nota de relevancia passa a dizer de onde veio`. Push.
+
+---
+
+### Task 7: `_merge` leva a origem da nota vencedora (invariante declarado)
+
+**Files:** `deduplicator.py:98-113,147`; `test_phase4.py`; `tools/run_all_tests.py`.
+
+- [ ] **Step 1: Testes** — os 3 de `TestMergeOrigem` da v1 (incoming maior leva origem; existing maior mantém; empate mantém existing).
+- [ ] **Step 2: Ver falhar** (1 failed).
+- [ ] **Step 3: Implementar**:
+
+```python
+    # Relevancia: keep higher score — e a ORIGEM da nota que venceu.
+    # Invariante DECLARADO (M8 da rodada de 22/09): no app o dedup roda ANTES
+    # da pontuacao, entao aqui todo item ainda e "padrao_fonte" e o efeito
+    # pratico e nulo hoje. Existe para o dia em que a pontuacao vier antes
+    # (ex.: nota por fonte), sem que a planilha diga "modelo" sobre uma nota
+    # da heuristica.
     if incoming.relevancia > existing.relevancia:
         existing.relevancia = incoming.relevancia
         existing.relevancia_origem = incoming.relevancia_origem
 ```
 
-Na docstring, a linha `- relevancia: keep the higher score` vira `- relevancia: keep the higher score, and relevancia_origem of whichever won (tie keeps existing)`.
+Docstring: `- relevancia: keep the higher score, and relevancia_origem of whichever won (tie keeps existing)`.
 
-- [ ] **Step 4: Ver passar** — `python -m pytest test_phase4.py -q` → `52 passed`.
-
-- [ ] **Step 5: BASELINE + golden** — `BASELINE["test_phase4.py"] = 52`. `python tools/golden_master.py comparar` → **OK obrigatório**: `dedup_esperado.json` não pode mudar (id/nome/link intactos). Runner TUDO VERDE.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add levantamento-normativos/deduplicator.py levantamento-normativos/test_phase4.py tools/run_all_tests.py
-git commit -m "feat(frente2): _merge leva a origem da nota que venceu
-
-Docstring de _merge atualizada campo a campo. dedup_esperado.json
-inalterado (golden-master OK). test_phase4: 49 -> 52."
-git push origin master
-```
+- [ ] **Step 4: Ver passar** — `59 passed`. **Golden: `dedup_esperado.json` inalterado — obrigatório.** BASELINE 59. Commit `feat(frente2): _merge leva a origem da nota que venceu (invariante)`. Push.
 
 ---
 
-### Task 6: Planilha — coluna "Origem da nota" e aba "Diagnostico da busca"
+### Task 8: Planilha — coluna "Origem da nota", aba "Diagnostico da busca", golden nas duas abas
 
-**Files:**
-- Modify: `levantamento-normativos/excel_export.py:75-87` (`COLUMNS`), `:186-270` (`_write_data_row`), `:274-357` (`generate_excel`), + função nova `_write_diagnostico_sheet`
-- Modify: `levantamento-normativos/test_phase4.py:409` (coluna do link não muda), `:421-447` (10 → 11), `:537-544` (coluna 10 continua `Relevancia`), + testes novos
-- Modify: `tests/golden/planilha_sha256.txt`, `tests/golden/ambiente.txt` (recongelados)
-- Modify: `tools/run_all_tests.py`
+**Files:** `excel_export.py` (`COLUMNS:75-87`; `_write_data_row:186-270`; `generate_excel:274-357`; função nova); `test_phase4.py` (`:421-447`; classes novas); `tools/golden_master.py`; `tests/golden/diagnostico_fixo.json` (novo), `planilha_sha256.txt`, `ambiente.txt`; `tools/run_all_tests.py`.
 
-**Interfaces:**
-- Consumes: `NormativoResult.relevancia_origem`, `KeywordStatus(motivo, detalhe, parcial)`.
-- Produces:
-  - `COLUMNS` com 11 entradas; a 11ª = `("Origem da nota", 16, "relevancia_origem")`.
-  - `ORIGEM_LABEL: dict[str, str]` e `STATUS_LABEL: dict[str, str]` em `excel_export.py`.
-  - `generate_excel(results, topic, diagnostico: Optional[list[KeywordStatus]] = None) -> BytesIO`.
-  - Aba `"Diagnostico da busca"` sempre presente, `wb.active` continua `"Normativos"`.
+**Interfaces — Produces:** `COLUMNS` com 11 entradas (11ª = `("Origem da nota", 16, "relevancia_origem")`); `ORIGEM_LABEL`, `STATUS_LABEL`, `VAZIO = "—"`; `generate_excel(results, topic, diagnostico=None, quando=None) -> BytesIO`; aba `"Diagnostico da busca"` sempre presente; `wb.active` = `"Normativos"`.
 
-- [ ] **Step 1: Testes que falham** — em `test_phase4.py`:
+- [ ] **Step 1: Testes** — em `test_phase4.py`:
 
-(a) `TestExcelColumnCount`: `10` → `11` em `test_has_10_columns` (renomear para `test_has_11_columns`), `range(1, 11)` → `range(1, 12)` e `== 10` → `== 11` em `test_header_row_has_11_columns`; em `test_expected_header_names`, `expected` ganha `"Origem da nota"` no fim e `range(1, 11)` → `range(1, 12)`. A docstring da classe: `"""Verify all 11 expected columns are present."""`.
+(a) `TestExcelColumnCount`: `test_has_10_columns` → `test_has_11_columns` com `== 11`; `range(1, 11)` → `range(1, 12)` e `== 10` → `== 11` nos outros dois; `expected` ganha `"Origem da nota"`; docstring da classe `"""Verify all 11 expected columns are present."""`. ⚠ (M12) hoje só `test_has_10_columns` falha; os outros passam por omissão — atualizar os três mesmo assim.
 
-(b) Classe nova ao fim:
+(b) Classes novas:
 
 ```python
 from models import KeywordStatus as _KS
+from excel_export import ORIGEM_LABEL, STATUS_LABEL, VAZIO
 
 
 class TestExcelHonestidade:
-    """Coluna 'Origem da nota' e aba 'Diagnostico da busca' (spec §3.5)."""
-
     def test_origem_em_portugues_na_coluna_11(self):
         r = _make_result(relevancia=0.85); r.relevancia_origem = "heuristica"
         ws = _load_workbook_from_buffer(generate_excel([r], "t")).active
@@ -1194,10 +1692,14 @@ class TestExcelHonestidade:
         wb = _load_workbook_from_buffer(generate_excel([_make_result()], "t"))
         assert wb.sheetnames == ["Normativos", "Diagnostico da busca"]
         assert wb.active.title == "Normativos"
-        ws = wb["Diagnostico da busca"]
-        assert ws.cell(row=3, column=1).value == "Nenhum diagnóstico registrado nesta exportação"
+        assert wb["Diagnostico da busca"].cell(row=3, column=1).value == "Nenhum diagnóstico registrado nesta exportação"
 
-    def test_aba_diagnostico_uma_linha_por_status(self):
+    def test_aba_diagnostico_lista_vazia_igual_a_none(self):
+        a = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=None))["Diagnostico da busca"]
+        b = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=[]))["Diagnostico da busca"]
+        assert a.cell(row=3, column=1).value == b.cell(row=3, column=1).value
+
+    def test_aba_diagnostico_uma_linha_por_status_com_traco_no_vazio(self):
         diag = [
             _KS(keyword="lgpd", source="lexml", status="error", motivo="bloqueio_waf",
                 detalhe="GET x -> 200 text/html", error_message="bloqueio"),
@@ -1205,339 +1707,171 @@ class TestExcelHonestidade:
                 detalhe="pagina 2 (inicio=20): http_5xx"),
             _KS(keyword="lgpd", source="google", status="empty"),
         ]
-        wb = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=diag))
+        wb = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=diag, quando="22/09/2026 10:00"))
         ws = wb["Diagnostico da busca"]
-        cab = [ws.cell(row=2, column=c).value for c in range(1, 9)]
-        assert cab == ["Fonte", "Palavra-chave", "Status", "Motivo", "Detalhe",
-                       "Resultados", "Parcial", "Retentado"]
+        assert "22/09/2026 10:00" in ws.cell(row=1, column=1).value
+        assert [ws.cell(row=2, column=c).value for c in range(1, 9)] == [
+            "Fonte", "Palavra-chave", "Status", "Motivo", "Detalhe", "Resultados", "Parcial", "Retentado"]
         linhas = [[ws.cell(row=r, column=c).value for c in range(1, 9)] for r in range(3, 6)]
         assert linhas[0] == ["lexml", "lgpd", "Indisponível", "bloqueio_waf", "GET x -> 200 text/html", 0, "Não", "Não"]
-        assert linhas[1][2:7] == ["OK", "", "pagina 2 (inicio=20): http_5xx", 4, "Sim"]
-        assert linhas[2][2] == "Sem resultado"
+        assert linhas[1] == ["tcu", "lgpd", "OK", VAZIO, "pagina 2 (inicio=20): http_5xx", 4, "Sim", "Não"]
+        assert linhas[2] == ["google", "lgpd", "Sem resultado", VAZIO, VAZIO, 0, "Não", "Não"]
         assert ws.cell(row=6, column=1).value is None
+
+    def test_sem_quando_o_titulo_diz_nao_informado(self):
+        ws = _load_workbook_from_buffer(generate_excel([], "t"))["Diagnostico da busca"]
+        assert "não informado" in ws.cell(row=1, column=1).value
+
+
+class TestRotulosSincronizados:
+    def test_origem_label_cobre_o_vocabulario(self):
+        assert set(ORIGEM_LABEL) == ORIGENS_RELEVANCIA
+
+    def test_status_label_cobre_os_tres_status(self):
+        assert set(STATUS_LABEL) == {"ok", "empty", "error"}
 ```
 
-- [ ] **Step 2: Ver falhar** — `python -m pytest test_phase4.py -q` → 7 failed (3 da contagem + 4 novos).
+(8 novos; com o rename, `test_phase4` 59 → 67.)
 
-- [ ] **Step 3: Implementar em `excel_export.py`**
+- [ ] **Step 2: Ver falhar** — `1 + 8 failed` (M12).
 
-**3a.** Import: `from models import KeywordStatus, NormativoResult` e `from typing import Optional`.
+- [ ] **Step 3: `excel_export.py`** — como na v1 (`COLUMNS` +1; `ORIGEM_LABEL`, `STATUS_LABEL`, `DIAGNOSTICO_SHEET`, `DIAGNOSTICO_COLUMNS`; ramo `relevancia_origem` em `_write_data_row`; `_write_diagnostico_sheet`; `generate_excel(..., diagnostico=None, quando=None)`; `wb.active = 0`), com estas diferenças:
+  - `VAZIO = "—"` (B6): em `_write_diagnostico_sheet`, `s.motivo or VAZIO` e `(s.detalhe or s.error_message) or VAZIO`;
+  - título: `f"Diagnóstico da busca: {topic} — {quando or 'data/hora não informada'}"`;
+  - `redigir` **não** é chamada aqui — o `KeywordStatus` já redigiu no construtor (T1);
+  - docstring de `generate_excel`: duas abas; `Args` com `diagnostico` e `quando` (`str` já formatado pelo chamador: a função é determinística para o golden).
 
-**3b.** `COLUMNS` ganha, após `("Relevancia", 12, "relevancia")`: `("Origem da nota", 16, "relevancia_origem"),`. Comentário acima: `# ⚠ test_phase4.py fixa len(COLUMNS); mudar aqui = mudar la no mesmo commit`.
-
-**3c.** Constantes, logo após `COLUMNS`:
+- [ ] **Step 4: `tools/golden_master.py`** (M7):
 
 ```python
-# Rotulos em portugues para a planilha (o vocabulario tecnico vive em models.py)
-ORIGEM_LABEL = {
-    "modelo": "Modelo (IA)",
-    "heuristica": "Heurística (palavras-chave)",
-    "fallback_erro": "Fallback (erro do modelo)",
-    "padrao_fonte": "Padrão da fonte",
-}
-STATUS_LABEL = {"ok": "OK", "empty": "Sem resultado", "error": "Indisponível"}
-DIAGNOSTICO_SHEET = "Diagnostico da busca"
-DIAGNOSTICO_COLUMNS = [
-    ("Fonte", 12), ("Palavra-chave", 28), ("Status", 14), ("Motivo", 20),
-    ("Detalhe", 70), ("Resultados", 11), ("Parcial", 9), ("Retentado", 10),
+def _carregar_diagnostico() -> list:
+    from models import KeywordStatus
+    dados = json.loads((GOLDEN / "diagnostico_fixo.json").read_text(encoding="utf-8"))
+    return [KeywordStatus(**d) for d in dados]
+
+
+def _sha_planilha(itens: list) -> str:
+    """... (docstring existente) ...
+
+    Hasheia TODAS as abas (M7 da rodada de 22/09): a aba 'Diagnostico da busca'
+    e o registro de que a fonte nao respondeu; sem ela no hash, uma regressao
+    ali passaria com 'golden-master OK'. `quando` e fixo para o hash ser estavel.
+    A funcao publica e generate_excel(results, topic, diagnostico=None, quando=None).
+    """
+    from excel_export import generate_excel
+    from openpyxl import load_workbook
+
+    wb = load_workbook(generate_excel(itens, topic="golden-master",
+                                      diagnostico=_carregar_diagnostico(), quando="22/09/2026 00:00"))
+    linhas = []
+    for ws in wb.worksheets:
+        linhas.append(("__aba__", ws.title))
+        linhas.extend(tuple(c.value for c in linha) for linha in ws.iter_rows())
+    return hashlib.sha256(repr(linhas).encode("utf-8")).hexdigest()
+```
+
+`tests/golden/diagnostico_fixo.json`:
+
+```json
+[
+  {"keyword": "protecao de dados", "source": "lexml", "result_count": 0, "status": "error",
+   "error_message": "bloqueio_waf", "motivo": "bloqueio_waf",
+   "detalhe": "GET https://www.lexml.gov.br/busca/SRU?operation=searchRetrieve -> HTTP 200 text/html; título: Verificação de segurança — Senado Federal"},
+  {"keyword": "protecao de dados", "source": "tcu", "result_count": 4, "status": "ok", "parcial": true,
+   "detalhe": "pagina 2 (inicio=20): http_5xx: GET https://dados-abertos.apps.tcu.gov.br/api/acordao/recupera-acordaos?inicio=20 -> HTTP 500"},
+  {"keyword": "LGPD", "source": "google", "result_count": 0, "status": "empty"}
 ]
 ```
 
-**3d.** `_write_data_row`: antes do `elif field_name == "nome":`:
+- [ ] **Step 5: Ver passar** — `python -m pytest test_phase4.py -q` → `67 passed`.
 
-```python
-        elif field_name == "relevancia_origem":
-            cell.value = ORIGEM_LABEL.get(value, value)
-            cell.font = DATA_FONT
-            cell.alignment = RELEVANCIA_ALIGNMENT
-```
+- [ ] **Step 6: Recongelar no mesmo commit** — na raiz: `python tools/golden_master.py comparar` → **esperado `DIVERGIU: planilha divergiu`, e NENHUMA linha `dedup divergiu`** (se houver, parar: regressão). `python tools/golden_master.py congelar`; `comparar` **2×** → OK e sha idêntico. `git diff --stat tests/golden/` → só `planilha_sha256.txt` (+ `ambiente.txt` se mudou) + `diagnostico_fixo.json` novo; `dedup_esperado.json` **ausente**.
 
-Docstring de `_write_data_row`: acrescentar `- Origem da nota em portugues (ORIGEM_LABEL)` à lista.
-
-**3e.** Função nova, antes de `generate_excel`:
-
-```python
-def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordStatus]]) -> None:
-    """Aba 'Diagnostico da busca': uma linha por (fonte, palavra-chave).
-
-    Existe SEMPRE, mesmo sem dados, para que quem abre a planilha saiba que o
-    registro e previsto. E o que diz, seis meses depois, que o LexML nao
-    respondeu naquele dia — a planilha e o artefato que sobrevive a sessao.
-    """
-    ws = wb.create_sheet(DIAGNOSTICO_SHEET)
-    n = len(DIAGNOSTICO_COLUMNS)
-    ws.merge_cells(f"A1:{get_column_letter(n)}1")
-    t = ws.cell(row=1, column=1)
-    t.value = f"Diagnóstico da busca: {topic}"
-    t.font, t.alignment, t.fill = TITLE_FONT, TITLE_ALIGNMENT, TITLE_FILL
-    ws.row_dimensions[1].height = 40
-    for col, (nome, largura) in enumerate(DIAGNOSTICO_COLUMNS, start=1):
-        c = ws.cell(row=2, column=col)
-        c.value, c.font, c.fill, c.alignment, c.border = nome, HEADER_FONT, HEADER_FILL, HEADER_ALIGNMENT, THIN_BORDER
-        ws.column_dimensions[get_column_letter(col)].width = largura
-    if not diagnostico:
-        c = ws.cell(row=3, column=1)
-        c.value = "Nenhum diagnóstico registrado nesta exportação"
-        c.font = DATA_FONT
-        return
-    sim_nao = lambda b: "Sim" if b else "Não"
-    for row, s in enumerate(diagnostico, start=3):
-        valores = [s.source, s.keyword, STATUS_LABEL.get(s.status, s.status), s.motivo,
-                   s.detalhe or s.error_message, s.result_count, sim_nao(s.parcial), sim_nao(s.retried)]
-        for col, v in enumerate(valores, start=1):
-            c = ws.cell(row=row, column=col)
-            c.value, c.font, c.border = v, DATA_FONT, THIN_BORDER
-            c.alignment = EMENTA_ALIGNMENT if col == 5 else DATA_ALIGNMENT
-    ws.freeze_panes = "A3"
-    ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(diagnostico) + 2}"
-```
-
-**3f.** `generate_excel(results, topic, diagnostico: Optional[list[KeywordStatus]] = None)`: docstring — `The workbook contains a single sheet` vira `The workbook contains two sheets: 'Normativos' (active) and 'Diagnostico da busca'`; `Args` ganha `diagnostico: KeywordStatus list from the search; None or empty writes a placeholder row.` Antes de `buffer = BytesIO()`: `_write_diagnostico_sheet(wb, topic, diagnostico)`. Depois dele: `wb.active = 0` (garante `Normativos` ativa).
-
-- [ ] **Step 4: Ver passar** — `python -m pytest test_phase4.py -q` → `56 passed`.
-
-- [ ] **Step 5: Recongelar o golden-master — no mesmo commit**
-
-Run (raiz): `python tools/golden_master.py comparar` → **esperado: `DIVERGIU: planilha divergiu`** (coluna nova) e **nenhuma** linha `dedup divergiu`. Se `dedup divergiu` aparecer, **parar**: é regressão, não a mudança planejada.
-Run: `python tools/golden_master.py congelar` → grava sha novo + `ambiente.txt`.
-Run: `python tools/golden_master.py comparar` → OK. Rodar `comparar` **duas vezes** e conferir que o sha é estável (regra do LESSONS de 16/09).
-Run: `git diff --stat tests/golden/` → só `planilha_sha256.txt` (e `ambiente.txt` se a versão mudou); `dedup_esperado.json` **ausente** do diff.
-
-- [ ] **Step 6: BASELINE + runner** — `BASELINE["test_phase4.py"] = 56`. Runner TUDO VERDE.
-
-- [ ] **Step 7: Auditoria + commit**
+- [ ] **Step 7: BASELINE 67; runner; auditoria (golden_master docstring atualizada); commit**
 
 ```bash
-git add levantamento-normativos/excel_export.py levantamento-normativos/test_phase4.py tests/golden/ tools/run_all_tests.py
-git commit -m "feat(frente2): planilha ganha 'Origem da nota' e a aba 'Diagnostico da busca'
+git add levantamento-normativos/excel_export.py levantamento-normativos/test_phase4.py tests/golden/ tools/golden_master.py tools/run_all_tests.py
+git commit -m "feat(frente2): planilha ganha 'Origem da nota' e a aba 'Diagnostico da busca'; golden cobre as duas abas
 
-COLUMNS 10 -> 11 (test_phase4 atualizado no mesmo commit). Aba de
-diagnostico sempre presente: fonte x palavra-chave x status x motivo x
-detalhe x resultados x parcial x retentado. 'Normativos' continua ativa.
-
-GOLDEN-MASTER RECONGELADO DE PROPOSITO (spec 2026-09-22 §3.5): a coluna
-nova muda os valores das celulas. dedup_esperado.json inalterado —
-conferido pelo ramo do dedup antes de recongelar. Sha estavel em 2 runs.
-test_phase4: 52 -> 56."
+COLUMNS 10 -> 11. Aba de diagnostico sempre presente, com data/hora da
+busca e traco explicito no campo vazio (openpyxl le '' como None).
+GOLDEN-MASTER RECONGELADO DE PROPOSITO (spec §3.5 + M7): coluna nova e
+hash de todas as abas com diagnostico_fixo.json. dedup_esperado.json
+inalterado — conferido pelo ramo do dedup antes de recongelar.
+test_phase4: 59 -> 67."
 git push origin master
 ```
 
 ---
 
-### Task 7: Tela — pontuar sempre, relatório honesto, aviso, card, preview, exportar diagnóstico
+### Task 9: Tela — pontuar sempre, relatório honesto, avisos, card, preview, fonte que levanta
 
-**Files:**
-- Modify: `levantamento-normativos/app.py:24-26` (imports), `:570-596` (pontuação), `:840-905` (`_render_search_diagnostics`), `:907-946` (`render_step4`), `:1049-1065` (card), `:1221-1232` (preview), `:1195` (`generate_excel`)
-- Create: `tools/dirigir_app.py` (gate visual V11)
+**Files:** `app.py` (`:24-26`; `:545-564` except; `:570-596` pontuação; `:840-905` relatório; `:907-946` step4; `:1049-1065` card; `:1195` export; `:1221-1232` preview); `tools/dirigir_app.py`; `.gitignore`.
 
-**Interfaces:**
-- Consumes: `score_relevance_com_origem`, `generate_excel(..., diagnostico=)`, `KeywordStatus.motivo/detalhe/parcial`, `NormativoResult.relevancia_origem`.
-- Produces: nada consumido por outra task. Gate: V11.
+- [ ] **Step 1: Imports** — `from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, statuses_para_falha_total`; no topo, `ORIGEM_CURTA = {"modelo": "modelo", "heuristica": "heurística", "fallback_erro": "fallback", "padrao_fonte": "padrão da fonte"}` seguido de `assert set(ORIGEM_CURTA) == ORIGENS_RELEVANCIA` (M13).
 
-⚠ Streamlit não tem teste unitário neste repo; o gate desta task é o roteiro dirigido pelo navegador (Step 6) **mais** o runner e o golden. Cada edição abaixo é pequena e nomeada — fazer uma de cada vez e recarregar o app entre elas.
-
-- [ ] **Step 1: Pontuação sempre** — `app.py:570-596`. Trocar o bloco por:
+- [ ] **Step 2: Fonte que levanta não some (H2)** — no `except Exception as e:` de `:556`, antes do `status_text.write`:
 
 ```python
-        # Relevancia SEMPRE roda (frente 2): com LLM e o modelo; sem LLM e a
-        # heuristica por palavras-chave. Antes, sem chave, a nota ficava na
-        # constante do searcher e a heuristica era codigo inalcancavel.
-        if all_results:
-            topic = st.session_state.get("topic", "")
-            result_dicts = [{"nome": r.nome, "ementa": r.ementa} for r in all_results]
-            status_text.write(
-                "Avaliando relevancia com IA..." if llm_available()
-                else "Avaliando relevancia por palavras-chave (sem LLM configurado)..."
-            )
-            pares = gemini_client.score_relevance_com_origem(topic, result_dicts, keywords)
-            for i, (score, origem) in enumerate(pares):
-                if i < len(all_results):
-                    all_results[i].relevancia = score
-                    all_results[i].relevancia_origem = origem
-
-            # Categorizacao continua condicionada ao LLM: nao ha heuristica
-            # para ela, e "Nao categorizado" ja e honesto.
-            if llm_available():
-                status_text.write("Categorizando normativos...")
-                categories = gemini_client.categorize_results(topic, result_dicts)
-                for i, cat in enumerate(categories):
-                    if i < len(all_results):
-                        all_results[i].categoria = cat
+                slug = {"LexML Brasil": "lexml", "TCU Dados Abertos": "tcu"}.get(source_name, "google")
+                all_keyword_statuses.extend(statuses_para_falha_total(slug, keywords, e))
 ```
 
-Conferir em `app.py:24-26` que `gemini_client` é importado como módulo (`from llm import gemini_client` ou equivalente) — se `score_relevance` era importada por nome, importar `score_relevance_com_origem` do mesmo lugar e chamar sem o prefixo.
+- [ ] **Step 3: Pontuação sempre** — como na v1 (Task 7 Step 1), **mais** a validação no ponto de atribuição (M8): `assert origem in ORIGENS_RELEVANCIA, origem` antes de `all_results[i].relevancia_origem = origem`.
 
-- [ ] **Step 2: Relatório honesto** — em `_render_search_diagnostics`:
+- [ ] **Step 4: Relatório** — como na v1 (Task 7 Step 2), com `detalhe` renderizado por `st.code(s.detalhe or s.error_message, language=None)` em vez de `<small>` (M13); `parcial` com badge.
+
+- [ ] **Step 5: Avisos (H3)** — em `render_step4`, antes do `if not results:`:
 
 ```python
-    label = (f"Relatório da busca — {n_ok} OK · {n_err} indisponíveis · "
-             f"{n_empty} sem resultado ({total} buscas)")
-    parciais = [s for s in kw_statuses if s.parcial]
-
-    with st.expander(label, expanded=bool(error_statuses or parciais)):
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total de buscas", total)
-        with col2:
-            st.metric("OK", n_ok)
-        with col3:
-            st.metric("Sem resultado", n_empty)
-        with col4:
-            st.metric("Indisponíveis", n_err)
-
-        if error_statuses:
-            st.markdown("**:red[Fontes indisponíveis (a fonte não pôde ser consultada):]**")
-            for s in error_statuses:
-                retry_badge = " (retentado)" if s.retried else ""
-                extra = f" — {s.result_count} resultado(s) do endpoint que respondeu" if s.result_count else ""
-                st.markdown(
-                    f"- :red[**{html_module.escape(s.keyword)}**] em *{html_module.escape(s.source)}*"
-                    f"{retry_badge}: `{html_module.escape(s.motivo or 'erro')}`{extra}  \n"
-                    f"  <small>{html_module.escape(s.detalhe or s.error_message)}</small>",
-                    unsafe_allow_html=True,
-                )
-            st.caption(
-                "A fonte não pôde ser consultada. Isso NÃO significa que não existem "
-                "normativos — significa que esta busca não os viu. Motivo e detalhe acima; "
-                "a aba 'Diagnostico da busca' da planilha registra o mesmo."
-            )
-
-        if parciais:
-            st.markdown("**:orange[Buscas parciais (a fonte parou de responder no meio da paginação):]**")
-            for s in parciais:
-                st.markdown(f"- :orange[**{html_module.escape(s.keyword)}**] em *{html_module.escape(s.source)}*: "
-                            f"{s.result_count} resultado(s) — <small>{html_module.escape(s.detalhe)}</small>",
-                            unsafe_allow_html=True)
+    catalogadas = [s for s in kw_statuses if s.source in ("lexml", "tcu")]
+    entregues = sum(s.result_count for s in catalogadas)
+    indisponiveis = {s.source for s in catalogadas if s.status == "error" and s.motivo != "nao_consultada"}
+    if catalogadas and entregues == 0 and indisponiveis:
+        st.warning("Nenhuma fonte catalogada (LexML, TCU) entregou resultado nesta busca: "
+                   f"{', '.join(sorted(indisponiveis))} indisponível(is). O que aparece abaixo vem só da web aberta. "
+                   "Veja o relatório da busca.")
+    elif indisponiveis:
+        st.warning(f"Fonte(s) catalogada(s) parcialmente indisponível(is): {', '.join(sorted(indisponiveis))}. "
+                   f"{entregues} resultado(s) vieram do que respondeu; o restante pode estar faltando. Veja o relatório.")
+    if results and all(r.relevancia_origem == "heuristica" for r in results):
+        st.caption("Sem LLM configurado, a relevância é a fração das palavras-chave presentes na ementa: "
+                   "0% significa 'nenhuma palavra-chave na ementa', não 'irrelevante'.")   # M14
 ```
 
-Os blocos de `empty_statuses` e `ok_statuses` ficam como estão, com `(parcial)` acrescentado ao lado do `result_count` quando `s.parcial`.
+E a mensagem `st.error` do ramo `if not results:` como na v1.
 
-- [ ] **Step 3: Aviso "nenhuma catalogada respondeu"** — em `render_step4`, logo após calcular `ok_statuses` e **antes** do `if not results:`:
+- [ ] **Step 6: Card, preview, exportação** — card: `f"<b>Relevancia:</b> {relevancia_pct}% <i>({ORIGEM_CURTA[item.relevancia_origem]})</i> &middot; "`; preview: coluna `"Origem"`; exportação: `generate_excel(selected, topic, diagnostico=st.session_state.get("keyword_statuses", []), quando=datetime.now().strftime("%d/%m/%Y %H:%M"))` (import `datetime`).
 
-```python
-    catalogadas = {s.source for s in kw_statuses if s.source in ("lexml", "tcu")}
-    catalogadas_ok = {s.source for s in kw_statuses if s.source in ("lexml", "tcu") and s.status != "error"}
-    if catalogadas and not catalogadas_ok:
-        st.warning(
-            "Nenhuma fonte catalogada (LexML, TCU) respondeu nesta busca. "
-            "Os resultados abaixo vêm só da web aberta. Veja o relatório da busca."
-        )
-```
-
-E na mensagem `st.error` do ramo `if not results:` trocar `falharam por erro de API. A fonte pode estar indisponivel` por `não puderam consultar a fonte (indisponível). Isso não significa que o normativo não existe`.
-
-- [ ] **Step 4: Card e preview**
-
-Card (`:1065`): `f"<b>Relevancia:</b> {relevancia_pct}% &middot; "` vira
-`f"<b>Relevancia:</b> {relevancia_pct}% <i>({html_module.escape(ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem))})</i> &middot; "`,
-com, no topo do `app.py` (após os imports): `ORIGEM_CURTA = {"modelo": "modelo", "heuristica": "heurística", "fallback_erro": "fallback", "padrao_fonte": "padrão da fonte"}`.
-
-Preview (`:1221-1232`): depois de `"Relevancia": ...,` acrescentar `"Origem": ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem),`.
-
-- [ ] **Step 5: Exportar o diagnóstico** — `:1195`: `buffer = generate_excel(selected, topic)` vira
-`buffer = generate_excel(selected, topic, diagnostico=st.session_state.get("keyword_statuses", []))`.
-
-- [ ] **Step 6: Gate visual V11** — criar `tools/dirigir_app.py`:
+- [ ] **Step 7: Gate visual V11** — `tools/dirigir_app.py` como na v1, com: `SAIDA = RAIZ / "tests" / "evidencia" / "v11_passo4.png"` (criar a pasta; `.gitignore` ganha `tests/evidencia/`); e os checks:
 
 ```python
-# -*- coding: utf-8 -*-
-"""Gate visual da frente 2: dirige o app pelo navegador e imprime o que a UI diz.
-
-Pre-requisito: o app no ar em http://localhost:8501
-    (em levantamento-normativos/: python -m streamlit run app.py --server.headless true)
-Uso (na raiz):  PYTHONIOENCODING=utf-8 python tools/dirigir_app.py
-Usa o Chrome instalado (channel="chrome"): os navegadores do Playwright nao
-estao baixados nesta maquina (ENVIRONMENT.md, 2026-09-22).
-"""
-from pathlib import Path
-from playwright.sync_api import sync_playwright
-
-SAIDA = Path(__file__).resolve().parent.parent / "tests" / "golden" / "v11_passo4.png"
-
-with sync_playwright() as p:
-    b = p.chromium.launch(channel="chrome")
-    pg = b.new_page(viewport={"width": 1440, "height": 1600})
-    pg.goto("http://localhost:8501", wait_until="networkidle", timeout=60000)
-    pg.wait_for_timeout(3000)
-    pg.get_by_text("Inserir palavras-chave manualmente").click()
-    pg.wait_for_timeout(2000)
-    ta = pg.locator("textarea").first
-    ta.click(); ta.fill("LGPD\nprotecao de dados pessoais")
-    pg.keyboard.press("Control+Enter"); pg.wait_for_timeout(2500)
-    pg.get_by_role("button", name="Proximo >>").click(); pg.wait_for_timeout(3000)
-    pg.get_by_role("button", name="Iniciar Busca").click()
-    for _ in range(60):
-        pg.wait_for_timeout(5000)
-        if "Passo 4 - " in pg.inner_text("body"):
-            break
-    pg.wait_for_timeout(3000)
-    pg.screenshot(path=str(SAIDA), full_page=True)
-    texto = pg.inner_text("body")
-    print(texto[:4000])
-    print("\n=== GATE V11 ===")
+    n_cards = texto.count("Ver detalhes")
     print("indisponíveis no relatório:", "indisponíveis" in texto)
-    print("aviso 'Nenhuma fonte catalogada':", "Nenhuma fonte catalogada" in texto)
+    print("bloqueio_waf visível:", "bloqueio_waf" in texto)
+    print("aviso coerente com o cenário:", ("entregou resultado" in texto) != ("parcialmente indisponível" in texto))
     print("origem no card:", any(o in texto for o in ("(heurística)", "(modelo)", "(fallback)")))
-    print("'0 erros' NAO aparece:", "0 erros" not in texto)
-    b.close()
+    print("'0 erros' NÃO aparece:", "0 erros" not in texto)
+    print("cards == resultados (nada sumiu):", n_cards, "— conferir com o cabeçalho 'Passo 4 - Revisar Resultados (N normativos)'")
 ```
 
-Run: subir o app; `PYTHONIOENCODING=utf-8 python tools/dirigir_app.py`.
-Expected: as quatro linhas do `GATE V11` em `True`; **abrir o PNG e olhar** (`tests/golden/v11_passo4.png` — ⚠ acrescentar `tests/golden/*.png` ao `.gitignore`: é evidência de sessão, não referência).
+Rodar com o app no ar; **abrir o PNG**; os 5 booleanos `True`; a contagem de cards bate com o `N` do cabeçalho.
 
-- [ ] **Step 7: Runner + golden + auditoria**
-
-Runner TUDO VERDE (nenhum teste novo nesta task; BASELINE não muda). `golden_master.py comparar` → OK. `git diff -U0 -- '*.py' | grep '^-' | grep -v '^---'`: os comentários removidos em `:570` ("LLM enrichment (relevance scoring + categorization)") foram substituídos pelos novos.
-
-- [ ] **Step 8: Commit**
-
-```bash
-git add levantamento-normativos/app.py tools/dirigir_app.py .gitignore
-git commit -m "feat(frente2): a tela diz 'indisponivel', avisa quando nenhuma catalogada respondeu e mostra a origem da nota
-
-Pontuacao roda sempre (heuristica sem LLM). Relatorio: 'N OK · N
-indisponiveis · N sem resultado', com motivo e detalhe por fonte e badge
-de busca parcial. Card e preview mostram a origem. Exportacao passa o
-diagnostico para a aba da planilha. Gate V11 em tools/dirigir_app.py:
-com LexML e TCU quebrados como estao hoje, e impossivel ver '0 erros'."
-git push origin master
-```
+- [ ] **Step 8: Runner, golden, auditoria; commit** `feat(frente2): a tela diz 'indisponivel', avisa com precisao e mostra a origem da nota`. Push.
 
 ---
 
-### Task 8: Fechar a frente — duráveis, lições, auditoria final
+### Task 10: Fechar a frente
 
-**Files:**
-- Modify: `_TODO.md` (frente 2 feita; F9 perde os dois achados, que viraram código), `log.md` (entrada), `SESSION-ONBOARD-buscador.md` (§2, §6), `LESSONS.md` (se algo custou tempo), `BLOCKED-ON-RODRIGO.md` (B-04 ganha "a UI agora distingue")
-
-- [ ] **Step 1: Critérios de pronto da spec §7, um a um, com comando e saída colados no commit**
-
-1. V1–V11: `git log --oneline dc99d73..HEAD` mostra os 7 commits das tasks.
-2. `python tools/run_all_tests.py` → TUDO VERDE; nenhum `[AVISO] cresceu`.
-3. `python tools/golden_master.py comparar` → OK; `git diff d054d5b -- tests/golden/dedup_esperado.json` → vazio.
-4. V11 rodado nesta task de novo (o app pode ter mudado): 4 `True`.
-5. Auditoria de documentação: `git diff -U0 dc99d73..HEAD -- '*.py' | grep '^-' | grep -v '^---'` lido inteiro; cada linha removida tem substituta ou é código.
-
-- [ ] **Step 2: Duráveis**
-
-`_TODO.md`: seção nova `## v1.x — frente 2 ✅ (2026-MM-DD)` com os 7 commits; em **F9**, remover os dois parágrafos de "achado" (viraram código nas Tasks 4 e 7) e deixar só o pedido da aba. `log.md`: entrada `## [data] frente 2 | fonte indisponível ≠ sem resultado`. `SESSION-ONBOARD` §2/§6: próxima = **frente 5** (LM local), com o ponteiro para a pesquisa do wiki-chat no `log.md` de 22/09. `BLOCKED-ON-RODRIGO.md` B-04: acrescentar `✅ (frente 2) a UI e a planilha agora distinguem indisponível de sem resultado; a medição da lacuna continua pendente`.
-
-- [ ] **Step 3: Commit e push**
-
-```bash
-git add -A
-git commit -m "docs: fecha a frente 2 — criterios de pronto verificados"
-git push origin master
-```
-
-Depois: `/checkpoint` (o Rodrigo pediu checkpoint ao fim de cada frente antes de seguir).
+- [ ] Critérios de pronto da spec §7 (com os comandos e saídas no commit): 10 commits das tasks; runner TUDO VERDE sem `[AVISO] cresceu`; `golden_master.py comparar` OK e `git diff d054d5b -- tests/golden/dedup_esperado.json` vazio; V11 rodado de novo; auditoria dos 2 comandos sobre `dc99d73..HEAD`.
+- [ ] Duráveis: `_TODO.md` (frente 2 ✅; F9 perde os achados que viraram código; P3 ganha "sanitizar ementa/nome contra fórmula na aba Normativos"); `log.md`; `SESSION-ONBOARD` §2/§6 (próxima: frente 5); `BLOCKED-ON-RODRIGO.md` B-04 (`✅ a UI e a planilha distinguem; TCU acórdãos voltaram a casar`); `LESSONS.md`: (1) fixture escrita à mão sobre esquema não capturado = falsa testemunha (B5); (2) falta captura real de SRU do LexML — capturar quando a fonte responder (M10).
+- [ ] Commit `docs: fecha a frente 2`; push; `/checkpoint`.
 
 ---
 
-## Self-review (feito ao escrever)
+## Self-review (v2)
 
-**Cobertura da spec:** §3.1 → T1 · §3.2 → T2 · §3.3 → T3 · §3.4 → T4+T5+T7(Step 1) · §3.5 → T6 · §3.6 → T7 · §3.7 → gates de golden em toda task · §4 V1–V11 → T1..T7 (V10 = T6 Step 5, V11 = T7 Step 6) · §5 → Estrutura de arquivos · §7 → T8.
-**Lacuna encontrada e fechada:** a spec não dizia o que o LexML faz quando a **primeira** página levanta `FonteIndisponivel` dentro de `_search_keyword` (T2 Step 5d) nem o mapeamento de `Timeout`/`ConnectionError` no TCU (T3 Step 3a) — ambos especificados aqui.
-**Placeholders:** nenhum `TBD`/`TODO`/"similar à Task N"; todo step de código tem código.
-**Consistência de nomes:** `FonteIndisponivel(motivo, detalhe)` · `_search_keyword_safe -> (list, FonteIndisponivel|None)` · `_fetch_all_pages -> (itens, erro, parcial)` · `score_relevance_com_origem -> list[tuple[float, str]]` · `generate_excel(results, topic, diagnostico=None)` · `ORIGEM_LABEL`/`STATUS_LABEL` (excel) vs `ORIGEM_CURTA` (app) — nomes distintos de propósito, escopos distintos.
-**BASELINE ao fim:** `test_searchers 13 · test_llm_phase3 63 · test_comprehensive 98 · test_phase4 56 · tests/test_fontes_indisponiveis.py 11` = **241**.
+**Cobertura da spec + emendas:** §3.1 → T1 · §3.2 → T2 · §3.3 → T3 · §3.4 → T6+T7+T9 · §3.5 → T8 · §3.6 → T9 · §3.7 → gates de golden (com a exceção declarada em T4) · §4 V1–V11 → T1..T9 · §5 → estrutura (+ google, tcu mapping) · §7 → T10. Emendas à spec: §3.1 (motivos; redigir), §3.7 (T4), §5 (T5), §3.5 (`quando`, `—`, golden nas 2 abas).
+**Contagens:** T1 56 · T2 +13 · T3 20 (+1 xfail) · T4 24 · T5 28 · T6 63 · T7 59 · T8 67 · total final **13 + 63 + 98 + 67 + 28 = 269**. A tabela "BASELINE previsto" do topo bate com esta contagem.
+**Placeholders:** nenhum; a T6 Step 1 remete ao texto literal da v1 (commit `b1a6d3c`) em vez de repetir 60 linhas — é referência a texto versionado, não "similar à Task N".
+**Nomes:** `FonteIndisponivel(motivo, detalhe)` · `_search_keyword_safe -> (list, erro_fatal, erro_paginacao)` · `_fetch_all_pages -> (itens, erro, parcial)` · `_search_urls -> (list, erro)` · `score_relevance_com_origem -> list[tuple[float, str]]` · `generate_excel(results, topic, diagnostico=None, quando=None)` · `redigir(texto, limite=300)` · `statuses_para_falha_total(source, keywords, exc)`.
