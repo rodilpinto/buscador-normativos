@@ -1,6 +1,44 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Ambientes virtuais
 .venv/
+venv/
+env/
+
+# Segredos — nunca commitar chave real
+.streamlit/secrets.toml
+.env
+
+# Dados e banco locais
 dados/
 *.db
-.env
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Artefatos de sessao de teste
+.playwright-mcp/
+test_*.png
+
+# Cache de teste e lixo do Windows (emenda A18)
+.pytest_cache/
+desktop.ini
+
+# Planilha baixada do app dentro do repo (entrada de A que o heredoc do plano
+# tinha dropado; ver a nota de 2026-09-22 na Task 3). So a RAIZ: o golden-master
+# vive em tests/golden/ e precisa ser versionado.
+/*.xlsx
