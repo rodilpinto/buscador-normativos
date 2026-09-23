@@ -42,3 +42,6 @@ desktop.ini
 # tinha dropado; ver a nota de 2026-09-22 na Task 3). So a RAIZ: o golden-master
 # vive em tests/golden/ e precisa ser versionado.
 /*.xlsx
+
+# Evidencia do gate visual V11 (tools/dirigir_app.py): PNG de sessao, NAO versionado
+tests/evidencia/

@@ -14,16 +14,24 @@ import html as html_module
 import logging
 import re as _re
 from collections import Counter
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
 
-from models import KeywordStatus, NormativoResult
+# A tela agrupa por MOTIVO; so a planilha rotula status (rotulo_status) — R3.
+from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, statuses_para_falha_total
 from searchers import LexMLSearcher, TCUSearcher, GoogleSearcher
 from llm import gemini_client
 from llm.gemini_client import is_available as llm_available
 from deduplicator import deduplicate
 from excel_export import generate_excel
+
+# Rotulo curto da origem da nota de relevancia, para o card e o preview.
+# Tem de cobrir ORIGENS_RELEVANCIA inteiro: a sincronia e testada em
+# test_phase4.py::TestRotulosSincronizados (nao como assert aqui: some com -O).
+ORIGEM_CURTA = {"modelo": "modelo", "heuristica": "heurística", "fallback_erro": "fallback", "padrao_fonte": "padrão da fonte"}
 
 # ---------------------------------------------------------------------------
 # Logging configuration (must run before any logger is used)
@@ -558,6 +566,13 @@ def _execute_search(
                 logger.error(
                     "Search error for source '%s': %s", source_name, e
                 )
+                # H2: os statuses ja coletados antes da excecao ficam; o resto vira erro_interno por keyword
+                ja = getattr(searcher, "keyword_statuses", []) or []
+                all_keyword_statuses.extend(ja)
+                cobertas = {s.keyword for s in ja}
+                faltam = [k for k in keywords if k not in cobertas]
+                if faltam or not keywords:   # R3: com tudo coberto, nao inventar uma linha "(todas)"
+                    all_keyword_statuses.extend(statuses_para_falha_total(searcher.SOURCE_ID, faltam, e))
                 status_text.write(
                     f"**{source_name}** - Erro ao buscar. "
                     f"Continuando com demais fontes..."
@@ -567,33 +582,34 @@ def _execute_search(
         status_text.write("Removendo duplicatas...")
         all_results = deduplicate(all_results)
 
-        # LLM enrichment (relevance scoring + categorization)
-        if llm_available() and all_results:
-            status_text.write("Avaliando relevancia com IA...")
+        # Relevancia SEMPRE roda (frente 2): com LLM e o modelo; sem LLM e a
+        # heuristica por palavras-chave. Antes, sem chave, a nota ficava na
+        # constante do searcher e a heuristica era codigo inalcancavel.
+        if all_results:
             topic = st.session_state.get("topic", "")
-
             # Convert NormativoResult objects to dicts for the LLM functions
-            result_dicts = [
-                {"nome": r.nome, "ementa": r.ementa}
-                for r in all_results
-            ]
-
-            # Score relevance
-            scores = gemini_client.score_relevance(
-                topic, result_dicts, keywords
+            result_dicts = [{"nome": r.nome, "ementa": r.ementa} for r in all_results]
+            status_text.write(
+                "Avaliando relevancia com IA..." if llm_available()
+                else "Avaliando relevancia por palavras-chave (sem LLM configurado)..."
             )
-            for i, score in enumerate(scores):
+            pares = gemini_client.score_relevance_com_origem(topic, result_dicts, keywords)
+            for i, (score, origem) in enumerate(pares):
                 if i < len(all_results):
+                    if origem not in ORIGENS_RELEVANCIA:   # M8/R3: validacao real, nao assert (some com -O)
+                        logger.error("origem de relevancia desconhecida %r; gravando padrao_fonte", origem)
+                        origem = "padrao_fonte"
                     all_results[i].relevancia = score
+                    all_results[i].relevancia_origem = origem
 
-            # Categorize
-            status_text.write("Categorizando normativos...")
-            categories = gemini_client.categorize_results(
-                topic, result_dicts
-            )
-            for i, cat in enumerate(categories):
-                if i < len(all_results):
-                    all_results[i].categoria = cat
+            # Categorizacao continua condicionada ao LLM: nao ha heuristica
+            # para ela, e "Nao categorizado" ja e honesto.
+            if llm_available():
+                status_text.write("Categorizando normativos...")
+                categories = gemini_client.categorize_results(topic, result_dicts)
+                for i, cat in enumerate(categories):
+                    if i < len(all_results):
+                        all_results[i].categoria = cat
 
         progress_bar.progress(1.0)
         status.update(
@@ -837,71 +853,119 @@ def _count_selected(count: int) -> int:
     )
 
 
-def _render_search_diagnostics(
-    kw_statuses: list[KeywordStatus],
-    error_statuses: list[KeywordStatus],
-    empty_statuses: list[KeywordStatus],
-    ok_statuses: list[KeywordStatus],
-) -> None:
-    """Render the search diagnostics expander with per-keyword status."""
+# Escapes para st.markdown SEM unsafe_allow_html (frente 2, T9 — item carregado da T2/T3).
+# Ali o HTML NAO e interpretado (o Streamlit mostra tags como texto), mas o Markdown SIM:
+# html.escape so trocava um problema por outro. Em code span a entidade sai literal
+# ("&#x27;", "&lt;!DOCTYPE" na tela — visto no e2e da T2/T3); em texto normal ela era
+# decodificada, mas "*", "_", "[", ":red[" do texto externo continuavam formatando.
+# Regra: html.escape SO onde o HTML e interpretado (o card, com unsafe_allow_html=True);
+# no Markdown, escape de Markdown; detalhe longo em st.code (nada interpretado).
+_MD_PONTUACAO = frozenset("\\`*_{}[]()#+-.!|<>&:~$=^\"'/%@?;,")
+
+
+def _md_texto(texto: str) -> str:
+    """Texto externo que aparece LITERAL dentro de st.markdown (sem HTML).
+
+    Toda pontuacao ASCII ganha barra invertida (escape valido do CommonMark
+    para qualquer pontuacao ASCII): nada vira negrito, link, diretiva de cor
+    do Streamlit (":red[") nem entidade ("&amp;" continua "&amp;" na tela).
+    Quebra de linha vira espaco para nao sair do item de lista.
+
+    Exemplo: ``_md_texto("d'água *x*")`` -> ``"d\\'água \\*x\\*"`` (mostra ``d'água *x*``).
+    """
+    texto = " ".join(str(texto or "").splitlines())
+    return "".join("\\" + c if c in _MD_PONTUACAO else c for c in texto)
+
+
+def _md_codigo(texto: str) -> str:
+    """Code span do Markdown com o texto LITERAL (sem html.escape: o code span ja e literal).
+
+    A cerca tem uma crase a mais que a maior sequencia de crases do texto, e
+    ganha espaco nas pontas quando o texto comeca/termina em crase (regras do
+    CommonMark) — uma crase no texto nao fecha o span antes da hora.
+    """
+    texto = " ".join(str(texto or "").splitlines())
+    maior = max((len(m) for m in _re.findall(r"`+", texto)), default=0)
+    cerca = "`" * (maior + 1)
+    pad = " " if texto.startswith("`") or texto.endswith("`") or (texto.startswith(" ") and texto.endswith(" ")) else ""
+    return f"{cerca}{pad}{texto}{pad}{cerca}"
+
+
+def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
+    """Relatorio da busca: indisponiveis, parciais, nao consultadas, sem resultado, OK.
+
+    Classifica por MOTIVO, nao so por status (R2-B6): nao_consultada tem
+    status="error" no vocabulario, mas nao e "fonte indisponivel" — e uma
+    palavra-chave que nao foi enviada. Os rotulos seguem o vocabulario de
+    models.rotulo_status (Indisponivel, Nao consultada...), mas a tela nao o
+    importa: agrupa por motivo; so a planilha rotula por status (R3).
+    Texto externo passa por _md_texto/_md_codigo (nao html.escape: este
+    st.markdown nao interpreta HTML) e o detalhe vai em st.code com
+    wrap_lines=True (nao estoura a largura).
+    """
     if not kw_statuses:
         return
 
-    n_err = len(error_statuses)
-    n_empty = len(empty_statuses)
-    n_ok = len(ok_statuses)
+    indisponiveis = [s for s in kw_statuses if s.status == "error" and s.motivo != "nao_consultada"]
+    nao_consultadas = [s for s in kw_statuses if s.motivo == "nao_consultada"]
+    empty_statuses = [s for s in kw_statuses if s.status == "empty"]
+    ok_statuses = [s for s in kw_statuses if s.status == "ok"]
+    parciais = [s for s in kw_statuses if s.parcial and s.status != "error"]   # R3: disjunto de indisponiveis
     total = len(kw_statuses)
 
-    label = f"Relatorio da busca ({n_ok} OK, {n_err} erros, {n_empty} sem resultados) — {total} total"
+    label = (f"Relatório da busca — {len(ok_statuses)} OK · {len(indisponiveis)} indisponíveis · "
+             f"{len(empty_statuses)} sem resultado · {len(nao_consultadas)} não consultadas ({total} buscas)")
 
-    with st.expander(label, expanded=bool(error_statuses)):
+    with st.expander(label, expanded=bool(indisponiveis or parciais)):
         # Summary metrics
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total de buscas", total)
-        with col2:
-            st.metric("Sucesso", n_ok)
-        with col3:
-            st.metric("Sem resultados", n_empty)
-        with col4:
-            st.metric("Erros", n_err)
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Total de buscas", total)
+        c2.metric("OK", len(ok_statuses))
+        c3.metric("Sem resultado", len(empty_statuses))
+        c4.metric("Indisponíveis", len(indisponiveis))
+        c5.metric("Não consultadas", len(nao_consultadas))
 
-        if error_statuses:
-            st.markdown("**:red[Palavras-chave com erro (API indisponivel ou bloqueio):]**")
-            for s in error_statuses:
+        if indisponiveis:
+            st.markdown("**:red[Fontes indisponíveis (a fonte não pôde ser consultada):]**")
+            for s in indisponiveis:
                 retry_badge = " (retentado)" if s.retried else ""
-                st.markdown(
-                    f"- :red[**{html_module.escape(s.keyword)}**] "
-                    f"em *{html_module.escape(s.source)}*{retry_badge}: "
-                    f"`{html_module.escape(s.error_message)}`"
-                )
-            st.caption(
-                "Essas palavras-chave nao retornaram resultados devido a "
-                "erros de rede ou API. Isso NAO significa que nao existem "
-                "normativos — apenas que a busca falhou. Considere refazer "
-                "a busca mais tarde."
-            )
+                extra = f" — {s.result_count} resultado(s) do endpoint que respondeu" if s.result_count else ""
+                badge_parcial = " (parcial)" if s.parcial else ""
+                st.markdown(f"- :red[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*"
+                            f"{retry_badge}{badge_parcial}: {_md_codigo(s.motivo or 'erro')}{extra}")
+                st.code(s.detalhe or s.error_message or "(sem detalhe)", language=None,   # M13: nao passa pelo Markdown
+                        wrap_lines=True)
+            st.caption("A fonte não pôde ser consultada. Isso NÃO significa que não existem normativos — "
+                       "significa que esta busca não os viu. Motivo e detalhe acima; a aba "
+                       "'Diagnostico da busca' da planilha registra o mesmo.")
+
+        if parciais:
+            st.markdown("**:orange[Buscas parciais (a coleta não terminou):]**")
+            for s in parciais:
+                st.markdown(f"- :orange[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*: "
+                            f"{s.result_count} resultado(s)")
+                st.code(s.detalhe or "(sem detalhe)", language=None, wrap_lines=True)
+
+        if nao_consultadas:
+            st.markdown("**:gray[Palavras-chave não consultadas (limite da busca atingido antes delas):]**")
+            for s in nao_consultadas:
+                st.markdown(f"- {_md_texto(s.keyword)} em *{_md_texto(s.source)}* — "
+                            f"{_md_texto(s.detalhe)}")
 
         if empty_statuses:
             st.markdown("**:orange[Palavras-chave sem resultados (nenhum normativo encontrado):]**")
             for s in empty_statuses:
-                st.markdown(
-                    f"- :orange[**{html_module.escape(s.keyword)}**] "
-                    f"em *{html_module.escape(s.source)}*"
-                )
-            st.caption(
-                "Essas palavras-chave foram buscadas com sucesso, mas "
-                "nenhum normativo correspondente foi encontrado na fonte."
-            )
+                st.markdown(f"- :orange[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*")
+                if s.detalhe:   # R3-H5: "500 acordaos sem sumario" nao e "nao ha acordao"
+                    st.code(s.detalhe, language=None, wrap_lines=True)
+            st.caption("Essas palavras-chave foram buscadas com sucesso, mas nenhum normativo "
+                       "correspondente foi encontrado na fonte. Quando há detalhe, ele diz o que a fonte entregou.")
 
         if ok_statuses:
             st.markdown("**:green[Palavras-chave com resultados:]**")
             for s in ok_statuses:
-                st.markdown(
-                    f"- :green[**{html_module.escape(s.keyword)}**] "
-                    f"em *{html_module.escape(s.source)}*: "
-                    f"{s.result_count} resultado(s)"
-                )
+                st.markdown(f"- :green[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*: "
+                            f"{s.result_count} resultado(s){' (parcial)' if s.parcial else ''}")
 
 
 def render_step4() -> None:
@@ -911,19 +975,51 @@ def render_step4() -> None:
 
     # --- Keyword diagnostics (shown regardless of result count) ---
     kw_statuses: list[KeywordStatus] = st.session_state.get("keyword_statuses", [])
-    error_statuses = [s for s in kw_statuses if s.status == "error"]
-    empty_statuses = [s for s in kw_statuses if s.status == "empty"]
-    ok_statuses = [s for s in kw_statuses if s.status == "ok"]
+
+    # --- Avisos por fonte (H3, R2, R3-H4): calculados uma vez, exibidos depois
+    # do st.header de cada ramo (antes do header ficavam acima do titulo — R3).
+    catalogadas = [s for s in kw_statuses if s.source in ("lexml", "tcu")]
+    indisponiveis = [s for s in kw_statuses if s.status == "error" and s.motivo != "nao_consultada"]
+    por_fonte = {}
+    for s in catalogadas:
+        f = por_fonte.setdefault(s.source, {"entregues": 0, "erros": 0, "total": 0, "motivos": set(), "parcial": False})
+        f["total"] += 1
+        f["entregues"] += s.result_count
+        if s.status == "error" and s.motivo != "nao_consultada":
+            f["erros"] += 1
+            f["motivos"].add(s.motivo)
+        f["parcial"] = f.get("parcial", False) or s.parcial
+    # R3-H4: "morta" exige que NENHUM status da fonte seja parcial — TCU com acordaos 200
+    # (0 match) e atos 500 respondeu pela metade, nao "esta indisponivel"
+    mortas = [f for f, v in por_fonte.items() if v["total"] and v["erros"] == v["total"]
+              and v["entregues"] == 0 and not v["parcial"]]
+    parciais_fonte = [f for f, v in por_fonte.items() if v["erros"] and f not in mortas]
+    nomes = ", ".join(sorted(por_fonte)) or "nenhuma selecionada"
+    tem_web_aberta = any(s.source == "google" for s in kw_statuses)
+
+    def _avisos_por_fonte() -> None:
+        if mortas and not parciais_fonte:
+            resto = " O que aparece abaixo vem só da web aberta." if tem_web_aberta else " Nenhuma outra fonte foi consultada."
+            st.warning(f"Nenhuma fonte catalogada ({nomes}) entregou resultado nesta busca: "
+                       + "; ".join(f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas)
+                       + "." + resto + " Veja o relatório da busca.")
+        elif mortas or parciais_fonte:
+            partes = [f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas]
+            partes += [f"{f} respondeu parcialmente ({por_fonte[f]['entregues']} resultado(s); "
+                       f"{', '.join(sorted(por_fonte[f]['motivos']))})" for f in parciais_fonte]
+            st.warning("Cobertura incompleta nas fontes catalogadas: " + "; ".join(partes)
+                       + ". O restante pode estar faltando. Veja o relatório da busca.")
+        if results and all(r.relevancia_origem == "heuristica" for r in results):
+            st.caption("Sem LLM configurado, a relevância é a fração das palavras-chave presentes na ementa: "
+                       "0% significa 'nenhuma palavra-chave na ementa', não 'irrelevante'.")   # M14
 
     if not results:
         st.header("Passo 4 - Revisar Resultados")
+        _avisos_por_fonte()
 
-        if error_statuses:
-            st.error(
-                f"Nenhum normativo encontrado. "
-                f"{len(error_statuses)} busca(s) falharam por erro de API. "
-                f"A fonte pode estar indisponivel — tente novamente mais tarde."
-            )
+        if indisponiveis:
+            st.error(f"Nenhum normativo encontrado. {len(indisponiveis)} busca(s) não puderam consultar a fonte "
+                     f"(indisponível). Isso não significa que o normativo não existe — veja o relatório.")
         else:
             st.info(
                 "Nenhum normativo encontrado para as palavras-chave informadas. "
@@ -931,7 +1027,7 @@ def render_step4() -> None:
             )
 
         # Show diagnostics even when no results
-        _render_search_diagnostics(kw_statuses, error_statuses, empty_statuses, ok_statuses)
+        _render_search_diagnostics(kw_statuses)
 
         if st.button("<< Voltar para Busca"):
             st.session_state["search_done"] = False
@@ -942,8 +1038,9 @@ def render_step4() -> None:
     _init_checkboxes(results)
 
     st.header(f"Passo 4 - Revisar Resultados ({len(results)} normativos)")
+    _avisos_por_fonte()
 
-    _render_search_diagnostics(kw_statuses, error_statuses, empty_statuses, ok_statuses)
+    _render_search_diagnostics(kw_statuses)
 
     # --- Filter bar ---
     col_tipo, col_fonte, col_rel, col_sort = st.columns([1, 1, 1, 1])
@@ -1062,7 +1159,9 @@ def render_step4() -> None:
                     f"{html_module.escape(item.tipo)}</span> &middot; "
                     f"<b>Orgao:</b> {html_module.escape(item.orgao_emissor or 'N/I')} &middot; "
                     f"<b>Data:</b> {html_module.escape(item.data or 'N/I')} &middot; "
-                    f"<b>Relevancia:</b> {relevancia_pct}% &middot; "
+                    # Origem da nota ao lado da nota (.get: lookup duro vira traceback na pagina — R3;
+                    # escape: aqui o HTML e interpretado)
+                    f"<b>Relevancia:</b> {relevancia_pct}% <i>({html_module.escape(ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem))})</i> &middot; "
                     f"<b>Fonte:</b> {html_module.escape(item.source)}"
                     f"</small>\n\n"
                     f"<span style='color:#444'>"
@@ -1081,7 +1180,8 @@ def render_step4() -> None:
                         st.markdown("**Link:** N/I")
                     st.markdown(f"**Categoria:** {html_module.escape(item.categoria or 'N/I')}")
                     st.markdown(f"**Situacao:** {html_module.escape(item.situacao or 'N/I')}")
-                    st.markdown(f"**Encontrado por:** `{html_module.escape(item.found_by or '')}`")
+                    # Code span ja e literal: html.escape aqui mostrava "&#x27;" na tela (T9)
+                    st.markdown(f"**Encontrado por:** {_md_codigo(item.found_by or '')}")
                     if item.numero:
                         st.markdown(f"**Numero:** {html_module.escape(item.numero)}")
 
@@ -1193,7 +1293,12 @@ def render_step5() -> None:
         ):
             with st.spinner("Gerando arquivo Excel..."):
                 try:
-                    buffer = generate_excel(selected, topic)
+                    # Aba "Diagnostico da busca" + hora em BRT (como o 503 do TCU — R3)
+                    buffer = generate_excel(
+                        selected, topic,
+                        diagnostico=st.session_state.get("keyword_statuses", []),
+                        quando=datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M"),
+                    )
                     st.session_state["excel_buffer"] = buffer
                     st.success("Excel gerado com sucesso!")
                 except Exception as e:
@@ -1226,6 +1331,7 @@ def render_step5() -> None:
                 "Orgao": item.orgao_emissor or "",
                 "Data": item.data or "",
                 "Relevancia": f"{int(item.relevancia * 100)}%",
+                "Origem": ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem),
                 "Categoria": item.categoria or "",
                 "Fonte": item.source,
             }

@@ -774,6 +774,62 @@ class TestRotulosSincronizados:
         from excel_export import STATUS_LABEL
         assert STATUS_LABEL is rotulo_status   # unico lugar (R2-B6)
 
+    def test_origem_curta_do_app_cobre_o_vocabulario(self):
+        # Fica aqui, nao como assert no app: assert some com python -O (R3).
+        from app import ORIGEM_CURTA
+        assert set(ORIGEM_CURTA) == ORIGENS_RELEVANCIA
+
+
+# ---------------------------------------------------------------------------
+# T9 (item carregado da T2/T3): escape da tela. st.markdown sem
+# unsafe_allow_html NAO interpreta HTML, mas interpreta Markdown; html.escape
+# dentro de code span mostrava "&#x27;" / "&lt;!DOCTYPE" literal na tela.
+# Proxy sem navegador: renderizar com CommonMark (markdown-it-py, que ja vem
+# com o streamlit via rich) e conferir que o texto VISIVEL e o original. O
+# pipeline do Streamlit (remark) segue o mesmo CommonMark nos escapes; a
+# prova na tela fica no e2e (gate V11 / testador).
+# ---------------------------------------------------------------------------
+
+_AMOSTRAS_TELA = [
+    "d'água",
+    'HTTP 200 text/html; corpo: <!DOCTYPE html><html lang="pt-br">',
+    "**negrito** _italico_ [link](http://e.x) :red[cor] ![img](http://t.x/p.png)",
+    "a & b &amp; c &#x27; d",
+    "Lei 8.666/93 - art. 5º | GET https://lexml.gov.br/busca/SRU?query=a%20b&x=1",
+    "1. lista? # titulo $x$ ~risco~ `crase` ``duas``",
+]
+
+
+def _texto_visivel(html_renderizado: str) -> str:
+    import html as _html
+    import re as _re_t
+    return _html.unescape(_re_t.sub(r"<[^>]+>", "", html_renderizado)).strip()
+
+
+class TestEscapeDaTela:
+    def test_md_texto_mostra_o_texto_literal_sem_formatar(self):
+        MarkdownIt = pytest.importorskip("markdown_it").MarkdownIt
+        from app import _md_texto
+        md = MarkdownIt("commonmark", {"html": False})
+        for texto in _AMOSTRAS_TELA:
+            html_out = md.render(_md_texto(texto))
+            assert _texto_visivel(html_out) == texto, texto      # nenhuma entidade na tela
+            for tag in ("<strong", "<em", "<a ", "<img", "<code", "<h1", "<ol", "<del"):
+                assert tag not in html_out, (tag, texto)         # nada formatou/injetou
+
+    def test_md_codigo_mostra_o_texto_literal_no_code_span(self):
+        import html as _html
+        MarkdownIt = pytest.importorskip("markdown_it").MarkdownIt
+        from app import _md_codigo
+        md = MarkdownIt("commonmark", {"html": False})
+        for texto in _AMOSTRAS_TELA:
+            html_out = md.render(_md_codigo(texto))
+            assert html_out.count("<code>") == 1, texto          # uma crase no texto nao fecha o span
+            assert _texto_visivel(html_out) == texto, texto
+            if any(c in texto for c in "'\"<&"):                 # o padrao antigo mostrava a entidade
+                antigo = _texto_visivel(md.render(f"`{_html.escape(texto)}`"))
+                assert antigo != texto, texto
+
 
 # ===========================================================================
 #  Run via pytest or direct execution
