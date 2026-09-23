@@ -246,12 +246,25 @@ def _keyword_relevance(keywords: list[str], ementa: str) -> float:
 
     Returns:
         Float in [0.0, 1.0] representing the fraction of keywords found.
+
+    Comparacao sem acento e sem caixa, com a MESMA normalizacao que o filtro de
+    palavra-chave dos searchers usa (BaseSearcher._normalize_text, via
+    TCUSearcher._matches_keyword) — importada, nao copiada, para a nota e o
+    filtro nunca divergirem. Antes era so .lower(): o acordao com "...
+    IRREGULARIDADES EM LICITAÇÃO..." passava no filtro de "licitacao" e levava
+    0% de relevancia (revisao final da frente 2, ux 2, 23/09).
     """
     if not keywords or not ementa:
         return 0.0
 
-    ementa_lower = ementa.lower()
-    matches = sum(1 for kw in keywords if kw.lower() in ementa_lower)
+    # Import tardio: carregar o pacote searchers (ddgs, bs4, streamlit) so
+    # quando a heuristica roda, nao a cada `import llm`. searchers nao importa
+    # llm: sem ciclo.
+    from searchers.base import BaseSearcher
+    normalizar = BaseSearcher._normalize_text
+
+    ementa_norm = normalizar(ementa)
+    matches = sum(1 for kw in keywords if normalizar(kw) in ementa_norm)
     return min(matches / max(len(keywords), 1), 1.0)
 
 
