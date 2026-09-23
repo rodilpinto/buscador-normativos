@@ -15,6 +15,10 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 ## 🔴 D-C17 — O dedup fuzzy funde acórdãos DISTINTOS do TCU: consertar nesta frente ou depois?
 
+> ⚠ **Atualizado em 23/09 (frente 2 encerrada com ela aberta):** "nesta frente" e "antes da T10" abaixo já não se
+> aplicam — qualquer escolha vira **task própria**. Prazo recomendado: responder **antes do brainstorm da frente 5**
+> (a revisão de spec pediu que não passe do início dela). O texto original fica abaixo como registro.
+
 - **Onde aparece:** 23/09, re-teste da T4 da frente 2 (`spec/frente2-honestidade-fontes/execucao/revisoes/T4.md`).
 - **Fato medido:** depois da T4 os acórdãos passam a ter o `sumario` literal como ementa, e o passo **fuzzy** do dedup
   (`deduplicator.py:251-270` — hoje `:256-286`, conferido na T10 em 23/09 —, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos

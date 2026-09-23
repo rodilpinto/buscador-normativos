@@ -167,7 +167,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 - [ ] **Sobras da frente 2 registradas nas rodadas adversariais (não entram nela):** sanitizar `ementa`/`nome` contra
       fórmula na aba `Normativos`; dublar `test_lexml_cql_injection_sanitization` (faz rede real); na tela, agrupar
       o detalhe do TCU por fonte (é idêntico por keyword); runner "sem LLM" de verdade — `st.secrets` vence a
-      variável vazia (frente 5); reduzir os ~390s dos testes LIVE (📝 `BUSCADOR_SKIP_LIVE=1`, não decidido).
+      variável vazia (frente 5); reduzir os ~390s dos testes LIVE (📝 `BUSCADOR_SKIP_LIVE=1`, não decidido; medido 23/09: ~200s no `test_searchers`).
       **Reconciliado na T10 (23/09)** — são os 4 itens de P3 do plano da frente 2 (Task 10) mais o dos testes LIVE:
       - [x] fórmula na aba `Normativos` — ✅ **feito na própria frente 2** (a revisão final de segurança o classificou
             como crítico): FIX-SAÍDA **S-SEC** `624bed5`, toda célula de texto das duas abas gravada como string literal

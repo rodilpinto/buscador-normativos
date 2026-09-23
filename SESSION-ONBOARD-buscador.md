@@ -74,7 +74,8 @@ cd ~/Documents/projeto-nuati-normativos-levantamento && git checkout levantament
 **Pontos de retorno neste repo (22/09, empurrados):** `v1.0` → `eb91277` (= `levantamento-v1-streamlit`) ·
 **`v1.0.1`** → `e2cd56a`: estado **funcional** (IA na nuvem confirmada pelo Rodrigo), com LexML/TCU ainda quebrados.
 `git checkout v1.0.1`. O app da nuvem segue a **branch `deploy`** (criada em 22/09 = `v1.0.1`), não tag: voltar o app =
-`git push -f origin <tag>:deploy` (**só com ok do Rodrigo**).
+`git push -f origin <tag>:deploy` (**só com ok do Rodrigo**). ⚠ A mensagem da tag `v1.0.1` diz "branch master" — escrita antes
+de a nuvem passar para `deploy`; tag não se edita, a correção está na D-C14.
 
 ## 5. Disciplina de trabalho
 

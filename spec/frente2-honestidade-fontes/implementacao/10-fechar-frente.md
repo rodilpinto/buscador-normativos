@@ -17,7 +17,7 @@
 | 7.3 | `golden_master.py comparar` OK; `dedup_esperado.json` idêntico ao de `d054d5b` | ✅ | §4 |
 | 7.4 | com LexML e TCU quebrados como estão hoje, é impossível ver "0 erros" | ✅ | §5: V11 7/7, com o LexML em `bloqueio_waf` e os atos do TCU em 500 ao vivo |
 | 7.5 | auditoria de documentação feita e citada no commit final | ✅ com ressalva | §6: a faixa `dc99d73..HEAD` do plano sai **vazia por construção**; a auditoria real foi feita sobre `1c063ea..HEAD` |
-| 7.6 | `_TODO.md`, `log.md` e `SESSION-ONBOARD` atualizados; push feito (D-C7) | ✅ duráveis · ⏳ push | §7. O push é do orquestrador (regra do brief: "não fazer push") |
+| 7.6 | `_TODO.md`, `log.md` e `SESSION-ONBOARD` atualizados; push feito (D-C7) | ✅ duráveis · ✅ push (orquestrador, 23/09, ff de `master` para `9b4d9dd`) | §7. O push é do orquestrador (regra do brief: "não fazer push") |
 
 ## 2. V1–V11 → o commit que introduziu cada um
 
@@ -227,7 +227,7 @@ Todos editados no lugar, sem apagar conteúdo que ainda vale. 📝 marca o que �
 - `SESSION-ONBOARD-buscador.md`:
   - §2: frente 2 fechada;
   - §6: próxima é a frente 5; ⛔ `deploy` mantido ("o fim da frente 2 não é autorização"); 🔴 D-C17 visível, com as opções;
-  - o arquivo baixou de 174 para 164 linhas.
+  - o arquivo baixou de 174 para 164 linhas (e para ~127 no review da T10, `9b4d9dd`).
 - `BLOCKED-ON-RODRIGO.md` B-04: o texto do plano e o que foi medido:
   - janela do TCU de ~500 acórdãos, ≈ 2 semanas (08/09 a 22/09, de novo no V11 de hoje);
   - 327/500 = 65% sem sumário;
@@ -246,10 +246,12 @@ Todos editados no lugar, sem apagar conteúdo que ainda vale. 📝 marca o que �
   - as 3 lições do plano: (1) e (2) já estavam desde 22/09 e ganharam só um ponteiro (SSOT); a (3), captura do SRU,
     ficou pendente.
 
-  As lições de máquina **não** foram repetidas: o bloco "Ponteiros" já lista as 5 do `~/.claude/ENVIRONMENT.md`.
+  As lições de máquina **não** foram repetidas: o bloco "Ponteiros" já lista as 5 do `~/.claude/ENVIRONMENT.md` (6 depois do review da T10).
 - `00-overview.md`: nota de fechamento, com o total observado 336 contra os 283 do plano. `execucao/TODOS.md`: T10 ✅ **só
   a parte do coder**. A limpeza dos worktrees virou uma linha própria, desmarcada, e o `/checkpoint` fase 5 continua
-  desmarcado.
+  desmarcado. ✅ **Ambos feitos depois pelo orquestrador (23/09, `00106ea` e `1399177`).** ⚠ A evidência citada neste e nos
+  outros `implementacao/*.md` com caminho `bn-*/tests/evidencia/…` foi movida para `tests/evidencia/<worktree>/` do repo
+  principal — **só nesta máquina** (ignorada pelo git).
 
 ## 8. Achados desta task (nenhum bloqueia a §7)
 

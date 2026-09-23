@@ -23,7 +23,7 @@ related: [CONTEXTO.md, TODOS.md]
 ## 1 · Coder A — implementar (`coder`)
 
 Seguir os steps da task **literalmente e em ordem**, TDD como escrito (teste que falha → ver falhar → implementar →
-ver passar). Blocos de código colados como estão; âncora = texto citado. Gates: runner TUDO VERDE (~9 min, rodar
+ver passar). Blocos de código colados como estão; âncora = texto citado. Gates: runner TUDO VERDE (~9 min em 22/09, ~5 min em 23/09; rodar
 em background e esperar), golden `comparar` OK (T8 recongela), os **2 comandos de auditoria** lidos inteiros.
 Commit com a mensagem da task + `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 Reporta: SHA, saída de falha e de sucesso, resumo do runner, golden, auditoria, desvios. Guardar contexto: volta

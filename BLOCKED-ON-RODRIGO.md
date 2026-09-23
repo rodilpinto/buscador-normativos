@@ -11,7 +11,7 @@ related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 > acessos, decisões de gate). **Nunca é resetado**; item resolvido vira trilha DONE no fim.
 > Entradas são índices finos — o pacote completo mora no doc da área.
 >
-> **Estados:** 🔴 aberto · 🟡 em andamento · ✅ resolvido (vai para a trilha DONE, **sem**
+> **Estados:** 🔴 aberto · 🟡 em andamento · 🟢 opcional/baixa urgência · ✅ resolvido (vai para a trilha DONE, **sem**
 > renumerar os demais).
 > **IDs:** `B-0N`, sequenciais, **nunca reaproveitados**. Entrada nova vai no fim das abertas,
 > antes da trilha DONE. Todo item tem ID — inclusive os que ainda não viraram pedido formulado.
@@ -153,8 +153,8 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 ## 🟢 B-07 · Apagar as branches remotas da execução da frente 2 (opcional)
 
 - **Aberto em:** 2026-09-23 · **Bloqueia:** nada (limpeza).
-- `origin/frente2/trilha-a` e `origin/frente2/trilha-b` foram backups das trilhas; o conteúdo está em `master` (fast-forward
-  `08d9d8c` e `9e259ca`). Se quiser limpar: `git push origin --delete frente2/trilha-a frente2/trilha-b` e depois
+- `origin/frente2/trilha-a` e `origin/frente2/trilha-b` foram backups das trilhas; o conteúdo está em `master` (as pontas
+  remotas `3751b2a`/`6178f9d` são mais antigas que os merges `08d9d8c`/`9e259ca`, e todas são ancestrais de `master`). Se quiser limpar: `git push origin --delete frente2/trilha-a frente2/trilha-b` e depois
   `git branch -D frente2/trilha-a frente2/trilha-b`. Deixar também não custa nada.
 
 ---

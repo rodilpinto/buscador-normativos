@@ -27,7 +27,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
 ## Fase 3 — Procedência da nota (trilha B)
 - [x] **T6** origem da nota — impl ✅ `7d8f1ce` (54/53/1 → 63/63 · runner 232 verde · golden OK) · teste ✅ APROVADO (`revisoes/T6.md`) · review ✅ corrigir bool/NaN/Inf (+1 teste → 64); `ementa None` → frente 5 · fix ✅ `6594cd8` (64; runner 233) · doc ✅ `272f83a` · push ✅ · review · fix · doc
 - [x] **T7** `_merge` — impl ✅ `7d5e69b` (61 · runner 236 · golden OK, `tests/golden/` intocado) · teste ✅ APROVADO (12.288 combinações; `revisoes/T7.md`) · review ✅ nada a corrigir · fix n/a · doc ✅ `c68bd79` · review · fix · doc
-- [ ] (fase 3 fecha no merge da trilha B, depois da T8 — ver Fase 4)
+- [x] (fase 3 fecha no merge da trilha B, depois da T8 — ver Fase 4) ✅ `9e259ca`
 
 ## Fase 4 — Saída honesta
 - [x] **T8** planilha (trilha B; recongela golden) — impl ✅ `6178f9d` (71 · runner 246 · golden recongelado: só planilha divergiu, dedup intacto) · teste ✅ APROVADO (recongelamento re-derivado: sem a coluna nova reproduz o sha pré-T8; `revisoes/T8.md`) · review ✅ 3 menores de comentário · fix ✅ `04b2947` · doc ✅ `6eaf590` · review · fix · doc

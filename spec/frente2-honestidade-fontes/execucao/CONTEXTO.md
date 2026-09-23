@@ -62,7 +62,7 @@ que não existe: a pasta é `spec/frente2-honestidade-fontes/`.
 
 ## Gates que nunca mudam (plano, Global Constraints)
 
-Runner `python tools/run_all_tests.py` TUDO VERDE (≈9 min) · `python tools/golden_master.py comparar` OK (T8
+Runner `python tools/run_all_tests.py` TUDO VERDE (≈9 min em 22/09; ≈5 min medido em 23/09) · `python tools/golden_master.py comparar` OK (T8
 recongela) · `dedup_esperado.json` nunca muda · auditoria de docs (os 2 comandos) · sem LLM de verdade ·
 nada de `levantamento-normativos/.streamlit/secrets.toml` · ⛔ **não avançar a branch `deploy`**.
 Push: branches de trilha em `origin/frente2/trilha-*`; `master` a cada merge/fase.
@@ -78,7 +78,7 @@ Status por task: **`TODOS.md` (SSOT desta execução)**. Aprendizados: `INSIGHTS
 
 - ✅ **T5 (Google)** — feito em `5dad3c7`/`e70d9f6`: logs com exceção crua (`logger.*(f"...{e}")`) vazam a chave do CSE, que vai na query — exigir
   `redigir(str(e))` (herdado do review da T2, obs. 4).
-- **T9 (tela):** escape HTML **duplo** no relatório — `html.escape` dentro de crases/`st.markdown` mostra `&#x27;`,
+- ✅ **T9 (tela)** — feito em `49d19e1`/`0370a21`: escape HTML **duplo** no relatório — `html.escape` dentro de crases/`st.markdown` mostra `&#x27;`,
   `&quot;`, `&lt;!DOCTYPE` na tela (`app.py:876`, visto no e2e da T2 e da T3); o código do plano para a T9 usa o mesmo
   padrão (`html_module.escape` dentro de `st.markdown`). O coder e o reviewer da T9 têm de conferir no e2e que nenhuma
   entidade aparece escapada, e que o detalhe longo não estoura a largura (T2 obs. 4).
