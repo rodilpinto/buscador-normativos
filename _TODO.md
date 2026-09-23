@@ -175,6 +175,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
         `e_indisponivel(s)` em `models.py`; e os menores de `revisoes/final-manutencao.md`.
       - (revisão final, testes alto) golden que passe pelos searchers: payload real congelado de TCU/LexML → parse real →
         hash de `KeywordStatus`/`NormativoResult` (hoje o golden são 14 `NormativoResult` à mão).
+      - (FIX-SAÍDA) `topic` com caractere de controle ainda derruba o título das duas abas (improvável: vem do usuário).
       - (FIX-FONTES) mover `BaseSearcher._normalize_text` para um módulo de texto leve (`llm` importa de `searchers` hoje).
       - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
         validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
