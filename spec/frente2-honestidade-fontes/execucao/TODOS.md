@@ -47,7 +47,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
       sobre o diff `1c063ea..d4cab80`.
 - [x] achados triados — `revisoes/final-triagem.md` (📝 critério meu: entra o que é segurança ou afirmação falsa)
 - [ ] **FIX-FONTES** (`../bn-fix-fontes`, porta 8541; F-N2 F-M2 F-N4 F-N5 F-UX3 F-UX2 F-SSRF F-MT1 F-MT3 F-MT503 F-T1) — impl ✅ `66b7145` + `9fb4aeb` (llm 65, fontes 60; runner 312; golden OK) · teste ✅ APROVADO (SSRF sem bypass em 16 formas; `revisoes/fix-fontes.md`) · review ✅ 3 importantes + 1 menor · fix ▶ · review · fix · doc · merge
-- [ ] **FIX-SAÍDA** (`../bn-fix-saida`, porta 8551; S-SEC S-N1 S-UX1+N3 S-N8 S-N9 S-MT2) — impl ✅ `624bed5` (phase4 90; runner 310; golden sha inalterado; V11 5/6 — 0 cards ao vivo hoje) · teste ✅ APROVADO (0 `<f>` nas 2 abas; V11 7/7 com cards; `revisoes/fix-saida.md`) · review ▶ · review · fix · doc · merge
+- [ ] **FIX-SAÍDA** (`../bn-fix-saida`, porta 8551; S-SEC S-N1 S-UX1+N3 S-N8 S-N9 S-MT2) — impl ✅ `624bed5` (phase4 90; runner 310; golden sha inalterado; V11 5/6 — 0 cards ao vivo hoje) · teste ✅ APROVADO (0 `<f>` nas 2 abas; V11 7/7 com cards; `revisoes/fix-saida.md`) · review ✅ + caractere de controle nesta trilha · fix ▶ · review · fix · doc · merge
 
 ## Fase 5 — Fechamento
 - [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — **antes** da T10

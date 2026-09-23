@@ -20,4 +20,14 @@ Desvios 📝: `models.e_indisponivel(s)`; amarelo no Passo 3 para indisponível/
   do V11 **chamou o Gemini de verdade**: as chaves de LLM estão definidas no ambiente da máquina → `ENVIRONMENT.md`; a cópia
   rodou com as chaves limpas (0 chamadas). Caveat D-C17 registrado.
 
-## Reviewer — (pendente)
+## Reviewer — ✅ APROVADO, sem bloqueador nem importante (23/09)
+Mutação: 11 de 14 testes novos falham no código antigo (os 3 que passam são guardas). S-SEC robusto: `_forcar_texto` é o
+último toque em cada célula; openpyxl 3.1.5 grava `t="inlineStr"` e só escreve `<f>` para `data_type 'f'`; pela ECMA-376
+célula inlineStr é texto (não testado em Excel real). Métricas disjuntas; desvios aceitos.
+- Menor: docstring de `e_indisponivel` diz "usada por rotulo_status", mas `rotulo_status` repete a regra → usar a função.
+- **Caractere de controle — corrigir agora nesta trilha** (decisão do orquestrador: aceito): `ementa='xy'` derruba a
+  exportação inteira. Não é paráfrase: XML 1.0 não representa esses caracteres. Helper `_texto_xlsx(v) -> (str, n)`:
+  ``/`` → `
+` (a quebra manual do Word), os demais removidos por `ILLEGAL_CHARACTERS_RE`; contar; uma linha na
+  aba de diagnóstico quando N > 0 ("N célula(s) tinham caracteres de controle não representáveis em .xlsx…; o texto na fonte
+  está no Link"). Sem controle → sem linha → golden inalterado.
