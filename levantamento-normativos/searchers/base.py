@@ -85,6 +85,21 @@ class BaseSearcher(ABC):
         time.sleep(delay)
 
     @staticmethod
+    def _acumular_found_by(result, keyword: str) -> None:
+        """Acrescenta `keyword` ao found_by do resultado se ela ainda nao esta la.
+
+        Compara com as keywords INTEIRAS ja gravadas (found_by e "k1, k2, ..."),
+        nao por substring: `keyword not in found_by` deixava "licita" de fora
+        depois de "licitacao" (review da FIX-FONTES, 23/09). Unico lugar da
+        regra — LexML (passada e retry), TCU e Google usam este helper.
+        Limite conhecido: keyword que contenha virgula e comparada em pedacos
+        (pode repetir-se no found_by; nunca some).
+        """
+        ja = [parte.strip() for parte in (result.found_by or "").split(",")]
+        if keyword.strip() not in ja:
+            result.found_by = f"{result.found_by}, {keyword}" if result.found_by else keyword
+
+    @staticmethod
     def _normalize_text(text: str) -> str:
         """Normalize text for comparison.
 

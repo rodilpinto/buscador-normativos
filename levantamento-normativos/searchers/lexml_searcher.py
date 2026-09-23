@@ -195,8 +195,7 @@ class LexMLSearcher(BaseSearcher):
                 for result in keyword_results:
                     if result.id in results_by_id:
                         existing = results_by_id[result.id]
-                        if keyword not in existing.found_by:
-                            existing.found_by += f", {keyword}"
+                        self._acumular_found_by(existing, keyword)   # keyword inteira, nao substring
                     else:
                         results_by_id[result.id] = result
                 new_count = len(results_by_id) - count_before
@@ -257,8 +256,7 @@ class LexMLSearcher(BaseSearcher):
                             for result in keyword_results:
                                 if result.id in results_by_id:
                                     existing = results_by_id[result.id]
-                                    if keyword not in existing.found_by:
-                                        existing.found_by += f", {keyword}"
+                                    self._acumular_found_by(existing, keyword)
                                 else:
                                     results_by_id[result.id] = result
                             st.result_count = len(keyword_results)

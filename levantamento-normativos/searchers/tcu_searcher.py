@@ -159,12 +159,15 @@ class TCUSearcher(BaseSearcher):
                     existente = results_by_id.get(result.id)
                     if existente is not None:
                         kw_repetidos += 1
-                        if keyword not in existente.found_by:   # mesma regra do LexML
-                            existente.found_by += f", {keyword}"
+                        self._acumular_found_by(existente, keyword)   # mesma regra do LexML (keyword inteira)
                         continue
                     if len(results_by_id) >= max_results:
                         # Antes: `break` silencioso e "ok N". Repetido nao ocupa
                         # vaga (acima), so um casamento NOVO sem lugar corta.
+                        # Limite conhecido (review da FIX-FONTES, menor 5): depois
+                        # deste break os itens seguintes nao sao olhados, entao um
+                        # casamento REPETIDO que viesse depois nao acumula esta
+                        # keyword no found_by — o status ja sai parcial e diz o corte.
                         cortado = True
                         break
                     results_by_id[result.id] = result
@@ -204,7 +207,8 @@ class TCUSearcher(BaseSearcher):
         return list(results_by_id.values())
 
     def _janela_de_cobertura(self, itens: list) -> str:
-        """"; os N acórdãos mais recentes, de dd/mm/aaaa a dd/mm/aaaa" — ou "".
+        """"; os N acórdãos mais recentes, de dd/mm/aaaa a dd/mm/aaaa" (com 1 item:
+        "; o único acórdão trazido, de dd/mm/aaaa").
 
         Revisao final (ux 3, 23/09): a API nao filtra por palavra-chave, so
         pagina; com MAX_PAGES os 500 acordaos trazidos cobriam ~1 semana (todos
@@ -221,6 +225,10 @@ class TCUSearcher(BaseSearcher):
                 datas.append(datetime.strptime(self._safe_date_format(str(bruto)), "%d/%m/%Y"))
             except Exception:   # defensivo como _sem_sumario: roda fora do try por keyword
                 continue
+        # Review da FIX-FONTES (menor 4): nada de "os 1 acórdãos mais recentes"
+        if len(itens) == 1:
+            return (f"; o único acórdão trazido, de {datas[0]:%d/%m/%Y}" if datas
+                    else "; o único acórdão trazido não tem dataSessao legível")
         if not datas:
             return f"; nenhum dos {len(itens)} acórdãos tem dataSessao legível"
         sem_data = len(itens) - len(datas)

@@ -1003,3 +1003,81 @@ def test_fetch_metadata_corta_corpo_grande(monkeypatch):
     assert s._fetch_page_metadata("https://www.gov.br/grande") == ("Guia", "desc")
     assert pagina.lidos <= google_searcher.MAX_PAGE_BYTES + 65536
     assert pagina.fechada is True
+
+
+# ===========================================================================
+# Review da FIX-FONTES (23/09, execucao/revisoes/fix-fontes.md): 3 importantes + 1 menor.
+# Cada teste visto FALHAR antes do conserto.
+# ===========================================================================
+
+# --- Importante 1: _is_safe_url checa TODOS os enderecos e so aceita IP global ---
+
+def _dns_fixo(monkeypatch, enderecos: list[str]):
+    import socket
+    from searchers import google_searcher
+
+    def fake_getaddrinfo(host, *a, **k):
+        return [((socket.AF_INET6 if ":" in ip else socket.AF_INET), socket.SOCK_STREAM, 6, "", (ip, 0))
+                for ip in enderecos]
+
+    monkeypatch.setattr(google_searcher.socket, "getaddrinfo", fake_getaddrinfo)
+    return google_searcher.GoogleSearcher._is_safe_url
+
+
+def test_is_safe_url_bloqueia_se_qualquer_endereco_resolvido_for_interno(monkeypatch):
+    """Antes so o 1o endereco do getaddrinfo era olhado: [publico, 127.0.0.1] passava."""
+    assert _dns_fixo(monkeypatch, ["8.8.8.8", "127.0.0.1"])("https://exemplo.gov.br/x") is False
+    assert _dns_fixo(monkeypatch, ["8.8.8.8"])("https://exemplo.gov.br/x") is True   # publico continua aceito
+
+
+def test_is_safe_url_bloqueia_faixas_nao_globais_e_multicast(monkeypatch):
+    """100.64/10 (CGNAT) nao e private/loopback/link-local e passava; 224.0.0.1 e is_global
+    no Python 3.13 — por isso o is_multicast explicito."""
+    for ip in ("100.64.0.1", "224.0.0.1", "::ffff:127.0.0.1", "0.0.0.0", "fc00::1"):
+        assert _dns_fixo(monkeypatch, [ip])("https://exemplo.gov.br/x") is False, ip
+
+
+# --- Importante 2: found_by compara keyword INTEIRA, nao substring ---
+
+def test_tcu_found_by_acumula_keyword_que_e_substring_de_outra(monkeypatch):
+    item = dict(ACORDAO, sumario="IRREGULARIDADES EM LICITACAO.")
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[item]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["licitacao", "licita"], max_results=10)
+    assert resultados[0].found_by == "licitacao, licita"   # antes: "licita" in "licitacao" -> nunca entrava
+
+
+def test_lexml_found_by_acumula_keyword_que_e_substring_de_outra(monkeypatch):
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO))
+    resultados = s.search(["licitacao", "licita"], max_results=10)
+    assert resultados[0].found_by == "licitacao, licita"
+
+
+# --- Importante 3: keyword do Google so com duplicatas e ok, e nao alimenta o "bloqueio" ---
+
+def test_google_keyword_so_com_duplicatas_e_ok_e_nao_dispara_bloqueio(monkeypatch):
+    from searchers import google_searcher
+    monkeypatch.setattr(google_searcher, "_BACKEND", "scraping")
+    mesma = [{"url": "https://www.gov.br/guia", "title": "Guia", "snippet": "texto"}]
+
+    def resultados(self, keyword):
+        return ([] if keyword == "d" else list(mesma)), None
+
+    monkeypatch.setattr(google_searcher.GoogleSearcher, "_search_urls", resultados)
+    s = google_searcher.GoogleSearcher()
+    achados = s.search(["a", "b", "c", "d"], max_results=10)
+    sts = s.keyword_statuses
+    assert [(st.status, st.motivo, st.result_count) for st in sts] == [
+        ("ok", "", 1), ("ok", "", 0), ("ok", "", 0), ("empty", "", 0)]   # antes: b, c empty e d bloqueio_waf
+    assert "1 já trazido por palavra-chave anterior" in sts[1].detalhe
+    assert len(achados) == 1 and achados[0].found_by == "a, b, c"
+
+
+# --- Menor 4: janela do TCU no singular ---
+
+def test_tcu_janela_de_cobertura_no_singular(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[ACORDAO]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=10)
+    d = s.keyword_statuses[0].detalhe
+    assert "o único acórdão trazido, de 16/09/2026" in d and "os 1 acórdãos" not in d

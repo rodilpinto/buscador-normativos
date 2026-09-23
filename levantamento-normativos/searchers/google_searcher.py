@@ -259,6 +259,7 @@ class GoogleSearcher(BaseSearcher):
         results: list[NormativoResult] = []
         self.keyword_statuses: list[KeywordStatus] = []
         failed_keywords: list[str] = []
+        zeros_seguidos = 0   # respostas seguidas com 0 resultados (heuristica de bloqueio do scraping)
 
         for idx, keyword in enumerate(active_keywords):
             if len(results) >= max_results:
@@ -285,22 +286,20 @@ class GoogleSearcher(BaseSearcher):
                     status="error", error_message=str(erro), motivo=erro.motivo, detalhe=erro.detalhe,
                 ))
                 failed_keywords.append(keyword)
+                zeros_seguidos = 0   # erro nao e "respondeu 0": interrompe a sequencia
                 continue
 
             logger.info(f"Google: {len(search_results)} results returned for '{keyword}'")
 
             # Detect possible blocking (scraping mode only)
+            # Revisao final (manut. 3) + review da FIX-FONTES (23/09): a sequencia
+            # conta so RESPOSTAS com len(search_results) == 0 imediatamente
+            # anteriores. Antes somava todo status com result_count 0 — erro,
+            # keyword longe na lista e keyword cujos resultados eram so
+            # duplicatas (a fonte respondeu!) — e o detalhe afirmava "seguidas".
+            consecutive_zeros = zeros_seguidos
+            zeros_seguidos = zeros_seguidos + 1 if len(search_results) == 0 else 0
             if _BACKEND == "scraping" and len(search_results) == 0:
-                # Revisao final (manut. 3, 23/09): conta so as RESPOSTAS com 0
-                # resultado imediatamente anteriores, sem interrupcao. Antes somava
-                # todo status com result_count 0 — inclusive erro e keyword longe
-                # na lista — e o detalhe afirmava "seguidas" sem que fossem.
-                consecutive_zeros = 0
-                for s in reversed(self.keyword_statuses):
-                    zero_respondido = s.result_count == 0 and (s.status == "empty" or s.motivo == "bloqueio_waf")
-                    if not zero_respondido:
-                        break
-                    consecutive_zeros += 1
                 if consecutive_zeros >= 2:
                     logger.warning(
                         f"Google scraping: {consecutive_zeros + 1} consecutive zeros. "
@@ -320,11 +319,13 @@ class GoogleSearcher(BaseSearcher):
                     ))
                     continue
 
-            kw_count, cortado = self._coletar(search_results, keyword, seen_urls, results, max_results)
+            kw_count, cortado, repetidos = self._coletar(search_results, keyword, seen_urls, results, max_results)
+            # Review da FIX-FONTES (23/09), como o TCU (F-N4): keyword cujos resultados
+            # ja tinham vindo por outra e "ok" (result_count = novos), nao "empty"
             self.keyword_statuses.append(KeywordStatus(
                 keyword=keyword, source=self.SOURCE_ID, result_count=kw_count,
-                status="ok" if kw_count > 0 else "empty",
-                parcial=cortado, detalhe=self._detalhe_corte(max_results) if cortado else "",
+                status="ok" if kw_count + repetidos > 0 else "empty",
+                parcial=cortado, detalhe=self._detalhe_coleta(max_results, cortado, repetidos),
             ))
 
             if idx < total_steps - 1:
@@ -359,11 +360,12 @@ class GoogleSearcher(BaseSearcher):
                             api_still_down = True
                         else:
                             recuperado = f"recuperado no retry após {kws.motivo}"   # ANTES de zerar o motivo
-                            kw_count, cortado = self._coletar(search_results, keyword, seen_urls, results, max_results)
-                            kws.status = "ok" if kw_count > 0 else "empty"
+                            kw_count, cortado, repetidos = self._coletar(search_results, keyword, seen_urls, results, max_results)
+                            kws.status = "ok" if kw_count + repetidos > 0 else "empty"
                             kws.error_message, kws.motivo = "", ""
                             kws.parcial = cortado
-                            kws.detalhe = f"{recuperado}; {self._detalhe_corte(max_results)}" if cortado else recuperado
+                            extra = self._detalhe_coleta(max_results, cortado, repetidos)
+                            kws.detalhe = f"{recuperado}; {extra}" if extra else recuperado
                             kws.result_count = kw_count
                         break
 
@@ -393,34 +395,47 @@ class GoogleSearcher(BaseSearcher):
     # ------------------------------------------------------------------
 
     def _coletar(self, search_results: list[dict], keyword: str, seen_urls: set[str],
-                 results: list[NormativoResult], max_results: int) -> tuple[int, bool]:
+                 results: list[NormativoResult], max_results: int) -> tuple[int, bool, int]:
         """Acrescenta a `results` os resultados de UMA keyword (dedup por URL
-        normalizada em `seen_urls`); devolve (quantos entraram, cortado).
+        normalizada em `seen_urls`); devolve (quantos entraram, cortado, repetidos).
 
         cortado=True quando max_results encheu com URL NOVA ainda sobrando —
         a keyword em curso foi cortada e o status sai parcial (revisao final da
         frente 2, F-N5; antes era `break` silencioso e "ok N"). URL repetida
-        sobrando nao conta: nao entraria de qualquer jeito.
+        nao ocupa vaga e nao corta: nao entraria de qualquer jeito.
+
+        repetidos = URLs que ja tinham vindo por keyword ANTERIOR (review da
+        FIX-FONTES, 23/09, como o TCU): a keyword entra no found_by delas e o
+        status sai "ok", nao "empty" — a fonte respondeu e casou. URL repetida
+        dentro da MESMA resposta nao conta. Limite (igual ao TCU): depois do
+        corte as URLs seguintes nao sao olhadas.
 
         Um so laco para a passada principal e para o retry: antes eram duas
         copias do mesmo corpo, e a do retry ja tinha perdido os comentarios.
         """
         kw_count = 0
-        for i, sr in enumerate(search_results):
-            if len(results) >= max_results:
-                cortado = any(
-                    r.get("url") and self._normalize_url(r["url"]) not in seen_urls
-                    for r in search_results[i:]
-                )
-                return kw_count, cortado
-
+        repetidos = 0
+        desta_resposta: set[str] = set()
+        por_url: Optional[dict[str, NormativoResult]] = None   # montado so se houver repetido
+        for sr in search_results:
             url = sr.get("url", "")
             if not url:
                 continue
 
             normalized_url = self._normalize_url(url)
-            if normalized_url in seen_urls:
+            if normalized_url in desta_resposta:
                 continue
+            desta_resposta.add(normalized_url)
+            if normalized_url in seen_urls:
+                if por_url is None:
+                    por_url = {self._normalize_url(r.link): r for r in results}
+                anterior = por_url.get(normalized_url)
+                if anterior is not None:
+                    self._acumular_found_by(anterior, keyword)
+                repetidos += 1
+                continue
+            if len(results) >= max_results:
+                return kw_count, True, repetidos
             seen_urls.add(normalized_url)
 
             # Use title/snippet from search results when available
@@ -449,15 +464,33 @@ class GoogleSearcher(BaseSearcher):
                 raw_data={"url": url, "title": title, "description": description},
             ))
             kw_count += 1
-        return kw_count, False
+            if por_url is not None:
+                por_url[normalized_url] = results[-1]
+        return kw_count, False, repetidos
 
     @staticmethod
-    def _detalhe_corte(max_results: int) -> str:
-        return f"cortado em max_results={max_results}: havia mais resultados para esta palavra-chave"
+    def _detalhe_coleta(max_results: int, cortado: bool, repetidos: int) -> str:
+        """Detalhe de uma keyword que respondeu: repetidos (como o TCU) e corte (F-N5)."""
+        partes = []
+        if repetidos:
+            partes.append(f"{repetidos} já trazido por palavra-chave anterior" if repetidos == 1
+                          else f"{repetidos} já trazidos por palavra-chave anterior")
+        if cortado:
+            partes.append(f"cortado em max_results={max_results}: havia mais resultados para esta palavra-chave")
+        return "; ".join(partes)
 
     @staticmethod
     def _is_safe_url(url: str) -> bool:
-        """Validate that a URL is safe to fetch (SSRF protection)."""
+        """Validate that a URL is safe to fetch (SSRF protection).
+
+        Review da FIX-FONTES (23/09): TODOS os enderecos do getaddrinfo sao
+        checados (antes so o 1o: [publico, 127.0.0.1] passava), e so endereco
+        GLOBAL e unicast e aceito — `not is_global or is_multicast` bloqueia.
+        A lista antiga (private/loopback/link-local) deixava passar 100.64.0.0/10
+        (CGNAT) e multicast; 224.0.0.1 e is_global=True no Python 3.13, por isso
+        o is_multicast explicito. IPv4 mapeado em IPv6 e julgado pelo IPv4.
+        Endereco que nao parseia (ex.: IPv6 com %zona) e bloqueado.
+        """
         try:
             parsed = urlparse(url)
         except Exception:
@@ -468,11 +501,17 @@ class GoogleSearcher(BaseSearcher):
         if hostname.lower() in _BLOCKED_HOSTS:
             return False
         try:
-            resolved_ip = socket.getaddrinfo(hostname, None)[0][4][0]
-            addr = ipaddress.ip_address(resolved_ip)
-            if addr.is_private or addr.is_loopback or addr.is_link_local:
-                logger.warning("Blocked SSRF attempt to private IP: %s -> %s", redigir(url), resolved_ip)
+            infos = socket.getaddrinfo(hostname, None)
+            if not infos:
                 return False
+            for info in infos:
+                resolved_ip = info[4][0]
+                addr = ipaddress.ip_address(resolved_ip)
+                mapeado = getattr(addr, "ipv4_mapped", None)
+                for alvo in (addr, mapeado) if mapeado is not None else (addr,):
+                    if not alvo.is_global or alvo.is_multicast:
+                        logger.warning("Blocked SSRF attempt to non-global IP: %s -> %s", redigir(url), resolved_ip)
+                        return False
         except (socket.gaierror, ValueError, OSError):
             return False
         return True
