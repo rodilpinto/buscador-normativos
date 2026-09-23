@@ -68,7 +68,7 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   modelo (NaN → 1,0, a nota máxima) — o defeito só virou visível porque a T6 passou a ROTULAR a origem. +1 teste além do
   plano (`test_llm_phase3` 64). Padrão: **dar nome à procedência revela lixo que antes era só um número.**
 
-## T3 · TCU falhas (trilha A, em andamento)
+## T3 · TCU falhas (trilha A, fechada 23/09)
 
 - Impl: ver-falhar 9 failed + 1 xfailed (como previsto, com o +1 da T2 a suíte coleta 27); depois 26 + 1 xfail.
 - **Ao vivo o TCU agora é honesto:** `error http_5xx parcial=True`, detalhe "Acórdãos: ok (520 itens, **327 sem sumário**
@@ -93,3 +93,9 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   explicação diferente.
 - Coder restaurou 2 frases do docstring de `_sha_planilha` que o bloco do plano derrubava (o porquê de hashear
   células, e que `load_workbook` é a mesma técnica dos testes) — regra docs-move-with-code em ação.
+
+- (T3 fechada) Testador + review acharam **3 desonestidades no código literal do plano**: 200 com corpo de erro do TCU
+  lido como "sem resultado"; `null` na pág. 2 jogava fora a pág. 1 como bug nosso; contagem inflada porque a API devolve
+  40 itens por página de 20. Corrigidos com 3 testes além do plano → a suíte nova fica **+4** sobre o plano a partir daqui.
+  Padrão das três rodadas adversariais confirmado de novo: **o que só aparece rodando contra a fonte real e contra
+  entrada malformada não aparece lendo o plano.**
