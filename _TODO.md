@@ -88,7 +88,8 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       endpoint **OpenAI-compatível** (`https://generativelanguage.googleapis.com/v1beta/openai/`, informado pelo
       Rodrigo junto com a chave `nuati.secin`) — um backend OpenAI-compatível só, trocando `base_url`+chave, poderia
       servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner. (d) a chave é lida **uma vez, no import** de
-      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
+      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (g) achado na T5 (23/09): com o logger `urllib3` em DEBUG, a linha da requisição do CSE sai com `key=AIza…` (o app fixa
+      WARNING em `app.py:38`; vaza só se alguém ligar DEBUG) — filtro de log com `redigir`. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
       `TypeError` em `score_relevance_com_origem` (`gemini_client.py:384`) e `categorize_results` (`:476`) — `(r.get('ementa') or '')`.
       (e) `_generate` engole o erro da API
       (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
@@ -151,7 +152,8 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       - (T2, Step 11b do plano) `test_lexml_cql_injection_sanitization` em `test_comprehensive.py` faz **rede real** — dublar.
       - (T2 M2) LexML: WAF/HTML num URL já cacheado (`_sru_url`) não entra em `_urls_mortos` nem tenta fallback.
       - (T2 obs. 2) keyword que sanitiza para vazio nunca é enviada mas sai `empty` — tratar em `search()`.
-      - (T2 obs. 3) keywords além de `MAX_RETRIES` ou cortadas no retry ficam sem nota no detalhe.
+      - (T2 obs. 3 + T5) keywords além de `MAX_RETRIES` ou cortadas no retry ficam sem nota no detalhe — LexML e Google.
+      - (T5) ddgs devolveu lista vazia depois de HTTP 202 do DDG (COBIT, ISO 27001 → "sem resultado"): possível mascaramento no ddgs — investigar.
       - (T3) TCU: `ChunkedEncodingError`/`ContentDecodingError` viram `erro_interno` sem retry (é erro da fonte).
       - (T3) TCU: status `nao_consultada`/`erro_interno` por keyword sem `parcial` nem o resumo dos endpoints.
       - (T3) TCU: `max_results<=0` ainda baixa todas as páginas (≈128s por busca; metade do tempo do `test_searchers`).
