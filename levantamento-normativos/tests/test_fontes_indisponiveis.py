@@ -664,22 +664,28 @@ def test_cse_200_nao_json_e_resposta_ilegivel(monkeypatch):
 def test_cse_falha_nao_vaza_a_chave_no_log(monkeypatch, caplog):
     """Item carregado da review da T2 (ALEM do plano): a chave do CSE vai na query
     string e a mensagem crua do requests traz a URL inteira — nenhum log de
-    google_searcher pode imprimi-la (nem o detalhe/error_message do status)."""
+    google_searcher pode imprimi-la (nem o detalhe/error_message do status).
+
+    Review da T5: o segredo e CURTO e vem no COMECO da mensagem, para sobreviver ao
+    corte de 120 chars do ramo `conexao` — senao o teste passava ate com redigir()
+    trocado por identidade (mutante do reviewer). Provado: com o mutante, falha."""
     import logging
     from searchers import google_searcher
-    segredo = "AIzaSECRETO123"
+    segredo = "AIzaK1"
     monkeypatch.setattr(google_searcher, "_BACKEND", "cse")
     monkeypatch.setattr(google_searcher, "_google_api_key", segredo)
 
     def cai(url, params=None, timeout=None, **kw):
         raise requests.exceptions.ConnectionError(
-            "HTTPSConnectionPool(host='www.googleapis.com', port=443): Max retries exceeded with url: "
-            f"/customsearch/v1?{urlencode(params or {})} (Caused by NewConnectionError('sem rota'))")
+            f"/customsearch/v1?{urlencode(params or {})} Max retries exceeded "
+            "(Caused by NewConnectionError('sem rota'))")
 
     monkeypatch.setattr("searchers.google_searcher.requests.get", cai)
     caplog.set_level(logging.DEBUG)
     s = google_searcher.GoogleSearcher()
     s.search(["x", "y"], max_results=5)
-    assert s.keyword_statuses[0].motivo == "conexao"
+    st = s.keyword_statuses[0]
+    assert st.motivo == "conexao"
+    assert "key=***" in st.detalhe                                   # a chave estava la e foi redigida
     assert segredo not in caplog.text
-    assert all(segredo not in st.detalhe + st.error_message for st in s.keyword_statuses)
+    assert all(segredo not in k.detalhe + k.error_message for k in s.keyword_statuses)

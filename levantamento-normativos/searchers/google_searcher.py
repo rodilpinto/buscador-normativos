@@ -294,9 +294,13 @@ class GoogleSearcher(BaseSearcher):
                         f"Google scraping: {consecutive_zeros + 1} consecutive zeros. "
                         f"Possible IP blocking."
                     )
+                    # Review da T5 (menor): o motivo vem com o FATO que o sustenta — e uma
+                    # inferencia (zeros seguidos), nao uma pagina de desafio vista
                     self.keyword_statuses.append(KeywordStatus(
                         keyword=keyword, source=self.SOURCE_ID, result_count=0,
                         status="error", motivo="bloqueio_waf",
+                        detalhe=(f"0 resultados em {consecutive_zeros + 1} palavras-chave seguidas "
+                                 f"(scraping) — provável bloqueio de IP, hipótese, não fato"),
                         error_message=(
                             "Google retornou 0 resultados (possivel bloqueio de IP). "
                             "Instale 'ddgs' para busca sem bloqueio: pip install ddgs"

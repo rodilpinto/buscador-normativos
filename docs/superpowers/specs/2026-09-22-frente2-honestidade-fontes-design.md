@@ -266,6 +266,7 @@ docstring/comentário removido é reposto ou movido. Alvo conhecido: a docstring
 | `levantamento-normativos/searchers/base.py` | `class FonteIndisponivel(Exception)` |
 | `levantamento-normativos/searchers/lexml_searcher.py` | sniff de conteúdo em `_try_fetch`; `ParseError` levanta; cache de falha em `_fetch_sru`; mapeamento para `motivo` em `_search_keyword_safe` |
 | `levantamento-normativos/searchers/tcu_searcher.py` | `_fetch_all_pages` → `(itens, erro, parcial)`; classificação por endpoint em `search()` |
+| `levantamento-normativos/searchers/google_searcher.py` | `_search_urls`/`_search_ddgs`/`_search_cse_api`/`_search_scraping` → `(resultados, FonteIndisponivel \| None)`; DDG "No results found." é `empty`; rate limit/timeout do ddgs e CSE 429/403/404/4xx/5xx/200 não-JSON mapeados; laço de retry fala `FonteIndisponivel` (retry pulado não marca `retried`); `nao_consultada` para keywords além de `MAX_GOOGLE_KEYWORDS` e cortadas por `max_results`; bloqueio do scraping → `bloqueio_waf` com o fato no detalhe; logs com URL/exceção passam por `redigir()` |
 | `levantamento-normativos/llm/gemini_client.py` | `score_relevance_com_origem`; `score_relevance` vira wrapper |
 | `levantamento-normativos/deduplicator.py` | `_merge` leva a origem; docstring |
 | `levantamento-normativos/excel_export.py` | coluna "Origem da nota"; aba "Diagnostico da busca"; parâmetro `diagnostico=` |
@@ -275,6 +276,8 @@ docstring/comentário removido é reposto ou movido. Alvo conhecido: a docstring
 | `tools/run_all_tests.py` | `BASELINE` atualizado por commit que acrescenta teste; nova suíte em `SUITES_PYTEST` |
 | `tests/golden/planilha_sha256.txt` · `ambiente.txt` | recongelados no commit de V9/V10 |
 | `_TODO.md` · `log.md` · `LESSONS.md` · `SESSION-ONBOARD-buscador.md` | fechamento |
+
+> ⚠ Emendado em 23/09 (plano v4, T5; triagem M5/R2-H3/R3-H1/R3-H2): `google_searcher.py` entra na lista — a v1.0 tratava "No results found." do DuckDuckGo como erro, o laço de retry não falava o vocabulário (a aba diria "Sem resultado · timeout"), retry pulado marcava `retried` e keywords além de 5 ou cortadas por `max_results` sumiam do relatório. Item carregado da review da T2: nenhum log do Google imprime a chave do CSE.
 
 ⚠ **Colisão com a frente 5** (`gemini_client.py`, `app.py`): esta frente fecha e pusha antes
 de a frente 5 começar (D-C11). A frente 5 lê o `git log` desta.
