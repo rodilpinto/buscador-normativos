@@ -20,7 +20,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
 ## Fase 2 — Fontes honestas (trilha A)
 - [x] **T2** LexML — impl ✅ `8f5ccfc` (16 · runner 238 verde · golden OK) · teste ✅ APROVADO (sondas + ao vivo + e2e: "2 erros" LexML; `revisoes/T2.md`) · review ✅ 1 importante + 1 menor a corrigir (2 adiados → `_TODO` P3) · fix ✅ `407e341` (+1 teste → 17; runner 239) · doc ✅ `3be5d85` · push ✅ · review · fix · doc
 - [x] **T3** TCU falhas — impl ✅ `f044a3c` (26+1 xfail · runner 248 · golden OK) · teste ✅ APROVADO (40 sondas; e2e "4 erros", TCU não é mais "sem resultado"; 4 achados no código do plano → `revisoes/T3.md`) · review ✅ 2 importantes + 1 menor a corrigir (+3 testes → 29) · fix ✅ `e8d59a4` (runner 251) · doc ✅ `dfa6f6f` · push ✅ · review · fix · doc
-- [ ] **T4** TCU esquema real — impl ▶ · teste · review · fix · doc
+- [ ] **T4** TCU esquema real — impl ✅ `e960497` (33 · runner 255 · golden OK; ao vivo "turismo" 0 → 1 acórdão literal) · teste ▶ · review · fix · doc
 - [ ] **T5** Google — impl · teste · review · fix · doc
 - [ ] merge trilha A → `master` · `/checkpoint` fase 2
 
@@ -30,8 +30,8 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [ ] (fase 3 fecha no merge da trilha B, depois da T8 — ver Fase 4)
 
 ## Fase 4 — Saída honesta
-- [ ] **T8** planilha (trilha B; recongela golden) — impl ✅ `6178f9d` (71 · runner 246 · golden recongelado: só planilha divergiu, dedup intacto) · teste ✅ APROVADO (recongelamento re-derivado: sem a coluna nova reproduz o sha pré-T8; `revisoes/T8.md`) · review ✅ 3 menores de comentário · fix ▶ · review · fix · doc
-- [ ] merge trilha B → `master` (BASELINE unido conferido) · `/checkpoint` fase 3
+- [x] **T8** planilha (trilha B; recongela golden) — impl ✅ `6178f9d` (71 · runner 246 · golden recongelado: só planilha divergiu, dedup intacto) · teste ✅ APROVADO (recongelamento re-derivado: sem a coluna nova reproduz o sha pré-T8; `revisoes/T8.md`) · review ✅ 3 menores de comentário · fix ✅ `04b2947` · doc ✅ `6eaf590` · review · fix · doc
+- [x] merge trilha B → `master` ✅ `9e259ca` (merge de master na trilha sem conflito; runner 246 + golden OK no merge; ff de master) · [x] `/checkpoint` fase 3 (23/09)
 - [ ] **T9** tela + V11 (`master`) — impl · teste · review · fix · doc
 - [ ] `/checkpoint` fase 4
 

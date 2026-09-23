@@ -2,6 +2,16 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] checkpoint | frente 2, fase 3 fechada: trilha B (T6, T7, T8) em master
+
+Trilha B fechou o ciclo nas três tasks e entrou em `master` por fast-forward em `9e259ca` (merge de `origin/master` na
+branch sem conflito; runner 246 + golden OK no merge). Achados que viraram código além do plano: **T6** — `NaN`/`Infinity`/
+`true` do modelo saíam rotulados "modelo" (NaN → nota máxima) → `fallback_erro` (+1 teste); **T8** — recongelamento do
+golden provado por reconstrução: sem a coluna nova, a aba reproduz o sha pré-T8. Trilha A: T2 e T3 fechadas (review da
+T2 pegou corpo ilegível sem URL; o da T3, 200 com corpo de erro lido como "sem resultado", `null` na pág. 2 descartando a
+pág. 1 e contagem inflada — +4 testes além do plano na suíte nova); T4 em teste. Detalhe: `execucao/INSIGHTS.md` e
+`execucao/revisoes/`. Snapshot de memória não escrito (política de autorização).
+
 ## [2026-09-23] checkpoint | frente 2, fase 1 fechada; trilhas A e B em voo
 
 Rodrigo pediu (22/09, noite) a execução do plano inteiro **por agentes**: o orquestrador não escreve código;

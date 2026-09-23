@@ -84,7 +84,7 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
 - Ciclo limpo: testador sem defeito (sondagem exaustiva de 12.288 combinações), reviewer "nada a corrigir". Invariante
   declarado: o dedup roda antes da pontuação no app, então a origem mesclada é sempre `padrao_fonte` hoje.
 
-## T8 · planilha (trilha B, em andamento)
+## T8 · planilha (trilha B, fechada 23/09)
 
 - Recongelamento como o plano manda: `comparar` → só "planilha divergiu" (nenhum "dedup divergiu") → `congelar` →
   `comparar` 2× OK, mesmo sha; `dedup_esperado.json` fora do diff.
@@ -99,3 +99,13 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   40 itens por página de 20. Corrigidos com 3 testes além do plano → a suíte nova fica **+4** sobre o plano a partir daqui.
   Padrão das três rodadas adversariais confirmado de novo: **o que só aparece rodando contra a fonte real e contra
   entrada malformada não aparece lendo o plano.**
+
+- (T8 fechada) Testador provou o recongelamento de forma independente: sem a coluna 11, a aba `Normativos` nova reproduz o
+  sha pré-T8 exato — **o jeito de provar que um golden recongelado não escondeu nada é reconstruir o hash antigo a partir
+  da saída nova**, não só conferir que o dedup não mudou. Review: só 3 correções de comentário (sem recongelar).
+
+## Merge da trilha B (23/09) — fase 3 fechada
+
+- `git merge origin/master` na branch da trilha: **sem conflito** (master só tinha docs de orquestração); runner 246 +
+  golden OK no commit de merge; `master` avançou por fast-forward para `9e259ca`. A trilha A vai ter conflito esperado no
+  `BASELINE` de `tools/run_all_tests.py` quando fizer o mesmo.
