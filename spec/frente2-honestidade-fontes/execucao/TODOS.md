@@ -33,7 +33,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] **T8** planilha (trilha B; recongela golden) — impl ✅ `6178f9d` (71 · runner 246 · golden recongelado: só planilha divergiu, dedup intacto) · teste ✅ APROVADO (recongelamento re-derivado: sem a coluna nova reproduz o sha pré-T8; `revisoes/T8.md`) · review ✅ 3 menores de comentário · fix ✅ `04b2947` · doc ✅ `6eaf590` · review · fix · doc
 - [x] merge trilha B → `master` ✅ `9e259ca` (merge de master na trilha sem conflito; runner 246 + golden OK no merge; ff de master) · [x] `/checkpoint` fase 3 (23/09)
 - [x] **T9** tela + V11 (worktree `../bn-t9`, branch `frente2/t9`, porta 8501; esperado `test_phase4` 72, runner **292**) — impl ✅ `49d19e1` (V11 OK 7/7; escape duplo consertado +2 testes → 74; runner 294) · teste ✅ APROVADO (7 cenários AppTest; F1 médio: texto da fonte formatado como Markdown/LaTeX no card; `revisoes/T9.md`) · review ✅ F1 (com `_md_html`) + F2 + 3 menores · fix ✅ `0370a21` (76; V11 7/7 de novo; card hostil literal) · doc ✅ `0566533` · merge ✅ `d4cab80` (ff de master; runner 296 + golden OK) · review · fix · doc
-- [ ] `/checkpoint` fase 4 ▶
+- [x] `/checkpoint` fase 4 (23/09)
 
 ## Revisão final (várias perspectivas)
 - [ ] reviewers do estado final despachados ▶ (5 perspectivas, sobre `master` `d4cab80`; vereditos em `revisoes/final-*.md`)

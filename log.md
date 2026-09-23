@@ -2,6 +2,15 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] checkpoint | frente 2, fase 4 fechada: T9 em master; revisão final despachada
+
+T9 (tela) fechou o ciclo e entrou em `master` em `d4cab80`: relatório por motivo, aviso por fonte (TCU "respondeu
+parcialmente" ≠ indisponível), pontuação sempre (heurística sem LLM, com a origem no card/preview/planilha), a aba de
+diagnóstico com os status reais e hora BRT; gate visual **V11 7/7**. Além do plano: o **escape HTML duplo** (item carregado
+da T2/T3) e, no review, o **texto da fonte formatado como Markdown/LaTeX no card** (`R$ … R$` sumia) — os dois consertados
+com helpers e testes que falham no padrão velho; a sugestão do testador para o F1 escaparia em dobro e foi trocada pela do
+reviewer. Revisão final: 5 reviewers de perspectivas diferentes sobre `d4cab80`. 🔴 D-C17 segue aberta.
+
 ## [2026-09-23] checkpoint | frente 2, fase 2 fechada: trilha A (T2–T5) em master
 
 Trilha A entrou em `master` em `08d9d8c` (conflito só no `BASELINE` de `tools/run_all_tests.py`, previsto pelo dogfood com
