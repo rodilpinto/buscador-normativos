@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <srw:version>1.1</srw:version>
+  <srw:numberOfRecords>1</srw:numberOfRecords>
+  <srw:records>
+    <srw:record>
+      <srw:recordData>
+        <dc:title>Lei nº 14.133, de 1º de Abril de 2021</dc:title>
+        <dc:description>Lei de Licitações e Contratos Administrativos.</dc:description>
+        <dc:date>2021-04-01</dc:date>
+        <dc:creator>Presidência da República</dc:creator>
+        <dc:type>Lei</dc:type>
+        <dc:identifier>urn:lex:br:federal:lei:2021-04-01;14133</dc:identifier>
+      </srw:recordData>
+    </srw:record>
+  </srw:records>
+</srw:searchRetrieveResponse>

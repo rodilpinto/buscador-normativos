@@ -6,7 +6,7 @@ nao repete o numero de proposito, para nao ficar falsa quando uma suite entrar
 (a emenda C2 pegou exatamente esse defeito no plano).
 
 A maioria das suites sao scripts com helper record() e NAO sao pytest: elas
-imprimem um resumo no fim e o processo sai. Uma e pytest. Este runner normaliza
+imprimem um resumo no fim e o processo sai. As de SUITES_PYTEST sao pytest. Este runner normaliza
 as duas formas num unico resultado, e compara cada suite com a linha de base
 (BASELINE) para que uma suite que ENCOLHEU nao passe como verde.
 """
@@ -36,10 +36,12 @@ SUITES_SCRIPT = {
         r"Total:\s*\d+\s*\|\s*Passed:\s*(\d+)\s*\|\s*Failed:\s*(\d+)"
     ),
 }
-# Nasce com UMA suite pytest (emenda B2): test_backends.py so existe a partir
+# Nasceu com UMA suite pytest (emenda B2): test_backends.py so existe a partir
 # da Task 5/6, e registra-la antes faria o pytest sair com 4 (arquivo ausente)
-# e o runner acusar regressao onde nao houve.
-SUITES_PYTEST = ["test_phase4.py"]
+# e o runner acusar regressao onde nao houve. Pela mesma regra, cada suite entra
+# aqui no commit que a CRIA: tests/test_fontes_indisponiveis.py entrou na frente 2
+# (Task 2, 2026-09-23) — sem rede, requests.get e time.sleep dublados.
+SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py"]
 
 PADRAO_PYTEST = re.compile(r"(\d+) passed")
 
@@ -54,6 +56,7 @@ BASELINE = {
     "test_llm_phase3.py": 53,
     "test_comprehensive.py": 98,
     "test_phase4.py": 58,
+    "tests/test_fontes_indisponiveis.py": 16,
 }
 
 

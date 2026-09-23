@@ -360,11 +360,18 @@ def test_lexml_parse_sru_response_empty():
 
 
 def test_lexml_parse_sru_response_malformed_xml():
-    """Malformed XML should return empty results without crashing."""
+    """Malformed XML must be DECLARED as resposta_ilegivel, never silently ([], 0).
+
+    Contrato mudou na frente 2 (2026-09-22): devolver ([], 0) era a linha que
+    transformava o bloqueio do LexML em "sem resultado"."""
+    from searchers.base import FonteIndisponivel
     searcher = LexMLSearcher()
-    results, total = searcher._parse_sru_response("<not>valid<xml", "teste")
-    assert total == 0
-    assert len(results) == 0
+    try:
+        searcher._parse_sru_response("<not>valid<xml", "teste")
+    except FonteIndisponivel as e:
+        assert e.motivo == "resposta_ilegivel"
+    else:
+        raise AssertionError("esperava FonteIndisponivel")
 
 
 def test_lexml_search_empty_keywords():
@@ -375,11 +382,13 @@ def test_lexml_search_empty_keywords():
 
 
 def test_lexml_cql_injection_sanitization():
-    """Keywords with quotes should be sanitized."""
+    """Keywords with quotes should be sanitized.
+
+    Contrato mudou na frente 2: (results, erro_fatal, erro_paginacao)."""
     searcher = LexMLSearcher()
     # This tests _search_keyword_safe - the CQL query should not break
     # We just verify it doesn't crash with injection-like input
-    results, error = searcher._search_keyword_safe('"; DROP TABLE laws --', max_results=5)
+    results, erro, _pag = searcher._search_keyword_safe('"; DROP TABLE laws --', max_results=5)
     # Should not crash, just return empty or valid results (with possible error)
     assert isinstance(results, list)
 
