@@ -214,6 +214,8 @@ frente 5.
 
 ### 3.7 O que NÃO muda
 
+> ⚠ Emendado em 22/09 (plano v3, T4): o mapeamento do acórdão do TCU MUDA — a API real não devolve as chaves que o código lia. Ver a fixture real. Limite medido: sumário vazio nos acórdãos recentes.
+
 - Nenhum searcher muda **o que** busca (CQL, endpoints, filtros, mapeamento de campos).
 - `deduplicate` não muda estratégia, ordem nem critério; `dedup_esperado.json` é o gate.
 - `score_relevance` não muda assinatura nem os 53 testes que a cobrem.

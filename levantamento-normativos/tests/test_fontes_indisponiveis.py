@@ -319,7 +319,7 @@ def test_tcu_500_num_endpoint_e_error_parcial_mesmo_com_o_outro_ok(monkeypatch):
         "recupera-atos-normativos": _500_atos,
     })
     resultados = s.search(["turismo"], max_results=5)
-    assert len(resultados) == 0          # T4 troca para 1: ate la _texto_do_acordao le so `ementa`, que a API nao tem
+    assert len(resultados) == 1          # T4: o acordao real casa "turismo" no sumario
     st = s.keyword_statuses[0]
     assert (st.status, st.motivo, st.source) == ("error", "http_5xx", "tcu")
     assert st.parcial is True            # R2: um endpoint respondeu -> a coleta e parcial
@@ -477,7 +477,6 @@ def test_tcu_itens_repetidos_entre_paginas_contam_uma_vez_por_key(monkeypatch):
     s.search(["turismo"], max_results=100)
     assert "Acórdãos: ok (50 itens" in s.keyword_statuses[0].detalhe
 
-@pytest.mark.xfail(reason="so na T4 _texto_do_acordao le sumario/titulo; ate la o item nem e mapeado", strict=True)
 def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatch):
     """H2: um item malformado derrubava search() inteiro; agora e erro_interno por keyword, nao sumico."""
     quebrado = dict(ACORDAO, titulo=None, numeroAcordao=None, sumario=123)   # " ".join com int -> TypeError
@@ -487,3 +486,34 @@ def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatc
     st = s.keyword_statuses[0]
     assert (st.status, st.motivo) == ("error", "erro_interno")
     assert "TypeError" in st.detalhe
+
+
+def test_tcu_acordao_real_mapeia_titulo_numero_ano_sumario_link_situacao():
+    from searchers.tcu_searcher import TCUSearcher
+    r = TCUSearcher()._map_acordao(ACORDAO, "turismo")
+    assert r.nome == ACORDAO["titulo"]
+    assert r.numero == f'{ACORDAO["numeroAcordao"]}/{ACORDAO["anoAcordao"]}'
+    assert r.data == ACORDAO["dataSessao"]
+    assert r.ementa == ACORDAO["sumario"]          # literal, sem parafrase
+    assert r.link == ACORDAO["urlAcordao"]
+    assert r.orgao_emissor == f'TCU - {ACORDAO["colegiado"]}'
+    assert r.situacao == ACORDAO["situacao"]
+
+
+def test_tcu_acordaos_reais_tem_ids_distintos_e_casam_o_sumario(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=ACORDAOS_REAIS),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo"], max_results=10)
+    ids = {s._map_acordao(a, "x").id for a in ACORDAOS_REAIS}
+    assert len(ids) == len(ACORDAOS_REAIS)
+    assert len(resultados) >= 1 and all("TURISMO" in (r.ementa + r.nome).upper() for r in resultados)
+
+
+def test_tcu_pagina_cheia_com_numeros_distintos_da_page_size_resultados(monkeypatch):
+    from searchers import tcu_searcher
+    pagina = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i), titulo=f"ACÓRDÃO {i}/2026 - TURISMO") for i in range(tcu_searcher.PAGE_SIZE)]
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=pagina if p["inicio"] == 0 else []),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo"], max_results=100)
+    assert len(resultados) == tcu_searcher.PAGE_SIZE
+    assert len({r.id for r in resultados}) == tcu_searcher.PAGE_SIZE

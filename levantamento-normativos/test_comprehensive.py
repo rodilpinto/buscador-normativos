@@ -475,6 +475,7 @@ def test_tcu_map_acordao_missing_fields():
     assert result.tipo == "Acordao TCU"
     assert result.numero == "999/2024"
     assert result.ementa == ""
+    assert result.data == ""   # R3 (frente 2, T4): vazio continua "" e nao None — `data` entra no id
 
 
 def test_tcu_search_empty_keywords():

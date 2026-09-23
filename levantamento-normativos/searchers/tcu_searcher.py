@@ -53,7 +53,8 @@ class TCUSearcher(BaseSearcher):
         """Search TCU for acordaos and atos normativos matching keywords.
 
         Fetches records from both endpoints, then filters client-side
-        for keyword matches in the ementa field.  Tracks per-keyword
+        for keyword matches: acordaos in sumario + titulo (_texto_do_acordao;
+        esquema real da API, frente 2 T4), atos in ementa.  Tracks per-keyword
         diagnostics in ``self.keyword_statuses``.
 
         Um endpoint que falha na primeira pagina marca status="error" para toda
@@ -177,9 +178,11 @@ class TCUSearcher(BaseSearcher):
         return list(results_by_id.values())
 
     def _texto_do_acordao(self, item: dict) -> str:
-        """Texto onde a palavra-chave e procurada. Ate a T4: `ementa` (que a API
-        real nao devolve — ver tests/fixtures/tcu_acordaos_real.json)."""
-        return item.get("ementa", "") or ""
+        """Onde a palavra-chave e procurada: sumario + titulo (esquema real da
+        API, medido em 22/09) — com fallback para `ementa` se a API tiver dois
+        formatos. Antes lia so `ementa`, que a API nao devolve: zero match, sempre.
+        Acordaos recentes vem SEM sumario (medido): so o titulo casa neles."""
+        return " ".join(x for x in (item.get("sumario"), item.get("titulo"), item.get("ementa")) if x)
 
     def _matches_keyword(self, text: str, keyword: str) -> bool:
         """Check if keyword appears in text, accent/case insensitive."""
@@ -344,7 +347,11 @@ class TCUSearcher(BaseSearcher):
             raise FonteIndisponivel("resposta_ilegivel", detalhe) from e
 
     def _map_acordao(self, item: dict, found_by: str) -> NormativoResult:
-        """Map a raw acordao JSON item to a NormativoResult.
+        """Map a raw acordao JSON item (esquema real de 22/09) to a NormativoResult.
+
+        Campos literais da API, sem parafrase: titulo -> nome, sumario -> ementa,
+        numeroAcordao/anoAcordao -> numero, dataSessao -> data, urlAcordao -> link,
+        situacao -> situacao. Chaves antigas (numero/ano/ementa) aceitas como fallback.
 
         Args:
             item: Raw API response item.
@@ -353,24 +360,22 @@ class TCUSearcher(BaseSearcher):
         Returns:
             NormativoResult with tipo="Acordao TCU".
         """
-        numero = str(item.get("numero", ""))
-        ano = str(item.get("ano", ""))
+        numero = str(item.get("numeroAcordao") or item.get("numero") or "")
+        ano = str(item.get("anoAcordao") or item.get("ano") or "")
         colegiado = item.get("colegiado", "")
-
-        # Parse date from dataAta or dataSessao
-        date_raw = item.get("dataAta") or item.get("dataSessao", "")
-        date_str = self._safe_date_format(date_raw)
-
+        date_raw = item.get("dataSessao") or item.get("dataAta") or ""   # precedencia invertida de proposito (API real)
+        date_str = self._safe_date_format(str(date_raw)) if date_raw else ""  # "" e nao None: `data` entra no id
         return NormativoResult(
-            nome=f"Acordao {numero}/{ano} - TCU - {colegiado}",
+            nome=item.get("titulo") or f"Acordao {numero}/{ano} - TCU - {colegiado}",
             tipo="Acordao TCU",
             numero=f"{numero}/{ano}",
             data=date_str,
             orgao_emissor=f"TCU - {colegiado}",
-            ementa=item.get("ementa", ""),
-            link=self._build_acordao_link(numero, ano),
+            ementa=item.get("sumario") or item.get("ementa", "") or "",
+            link=item.get("urlAcordao") or self._build_acordao_link(numero, ano),
             source="tcu",
             found_by=found_by,
+            situacao=item.get("situacao") or "Nao identificado",
             relevancia=0.5,
             raw_data=item,
         )

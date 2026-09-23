@@ -112,7 +112,8 @@ class NormativoResult:
         link: URL para o documento original.
         categoria: Tema ou categoria atribuida. Default "Nao categorizado".
         situacao: Vigencia do normativo.
-              "Vigente", "Revogado" ou "Nao identificado" (default).
+              "Vigente", "Revogado", "Nao identificado" (default) ou o valor
+              literal da fonte (ex.: "OFICIALIZADO" do TCU).
         relevancia: Score de relevancia entre 0.0 e 1.0. Default 0.0.
         relevancia_origem: De onde veio ``relevancia``. Um de ORIGENS_RELEVANCIA.
               Default "padrao_fonte": os searchers atribuem uma constante e
