@@ -271,5 +271,7 @@ tocada exige varredura própria, por vizinhança (o pacote, a pasta), não por d
   CLI — o token do Credential Manager que faz o `push` não autoriza a chamada de API.
   (3) `sed -i` do Git Bash em arquivo CRLF converte para LF e pode não aplicar a edição; (4) duração absurda de suíte ou
   de agente = a máquina suspendeu (`time.monotonic` avança na suspensão) — as duas registradas em 23/09.
+  (5) as chaves `GEMINI_API_KEY`/`GOOGLE_API_KEY`/`OPENAI_API_KEY` estão DEFINIDAS no ambiente da máquina — app lançado
+  à mão sem `env -u …` chama o Gemini de verdade (23/09).
 - Bloqueios que dependem do humano: `BLOCKED-ON-RODRIGO.md`.
 - Decisões: `_DECISOES-PENDENTES.md` e `decisions/DECISIONS-LOG.md`.

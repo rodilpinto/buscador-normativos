@@ -155,3 +155,6 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   tasks combinadas afirmam ao usuário** — e o app real, rodado por quem o usa, vê o que nenhum teste vê.
 - Triagem (📝 minha): entra o que é segurança ou afirmação falsa; explicabilidade vai para a frente 4. Duas trilhas de
   conserto em paralelo (`fix-fontes`, `fix-saida`).
+- ⚠ (FIX-SAÍDA) **As chaves de LLM estão definidas no ambiente da máquina**: um V11 do testador chamou o Gemini de verdade.
+  O runner zera as chaves; os apps lançados à mão, não. Os e2e anteriores declararam "chaves vazias" (T1, T6, T9 impl.);
+  não há como provar retroativamente que todos os outros fizeram. Regra no `BRIEFS.md` e no `~/.claude/ENVIRONMENT.md`.
