@@ -75,9 +75,10 @@ def _sha_planilha(itens: list) -> str:
 
     .xlsx e um ZIP: o date_time de cada membro e o docProps/core.xml carregam o
     relogio da geracao, entao o sha dos bytes crus muda a CADA execucao, com
-    entrada identica (medido por tres revisores em 2026-09-16). Congelar bytes
-    faria o comparador imprimir DIVERGIU sem nada ter mudado — e o risco pior
-    nao e o falso vermelho, e o executor apagar a prova para destravar a task.
+    entrada identica (medido por tres revisores independentes em 2026-09-16).
+    Congelar bytes faria o comparador imprimir DIVERGIU na sequencia imediata,
+    sem nada ter mudado — e o risco pior nao e o falso vermelho, e o executor
+    apagar a prova para destravar a task.
 
     load_workbook e a mesma tecnica que test_phase4.py ja usa.
 
@@ -87,10 +88,10 @@ def _sha_planilha(itens: list) -> str:
     motivo e detalhe; ok parcial; empty; nao_consultada; error retentado sem
     detalhe (so error_message). `quando` e fixo para o hash ser estavel.
 
-    ⚠ O hash da aba de diagnostico depende de models.redigir e rotulo_status e
-    de excel_export.ORIGEM_LABEL, VAZIO e do titulo com `quando` fixo (rodada 3):
-    mudanca INTENCIONAL em qualquer um deles = recongelar com justificativa,
-    nao regressao do dedup/export.
+    ⚠ O hash da planilha depende de models.redigir e rotulo_status (aba de
+    diagnostico), de excel_export.ORIGEM_LABEL (aba Normativos), de VAZIO e do
+    titulo com `quando` fixo (rodada 3): mudanca INTENCIONAL em qualquer um
+    deles = recongelar com justificativa, nao regressao do dedup/export.
 
     A funcao publica e generate_excel(results, topic, diagnostico=None, quando=None)
     (excel_export.py) — e o que app.py e test_phase4.py usam.

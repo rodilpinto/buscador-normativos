@@ -426,7 +426,8 @@ def generate_excel(
 
     # ----------------------------------------------------------------
     # Sheet 2: Diagnostico da busca (always present). redigir NAO e
-    # chamada aqui: o KeywordStatus ja redigiu detalhe/error_message.
+    # reaplicada a detalhe/error_message: o KeywordStatus ja redigiu
+    # (source/keyword sao redigidos dentro da funcao).
     # ----------------------------------------------------------------
     _write_diagnostico_sheet(wb, topic, diagnostico, quando)
     wb.active = 0  # garante 'Normativos' como aba ativa
