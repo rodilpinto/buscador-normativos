@@ -1,4 +1,4 @@
-> Self-review do plano v4, extraído **verbatim** (`docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, linhas 2885-2890).
+> Self-review do plano v4, extraído **verbatim** (`docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, linhas 2886-2891).
 
 ## Self-review (v4)
 

@@ -19,7 +19,7 @@ palavras-chave → busca → **triagem em poucas decisões** → download → or
 pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
 board de 16/09 (decisão D-C2).
 
-## 2. Estado na última pausa (2026-09-23, checkpoint da fase 3 da frente 2)
+## 2. Estado na última pausa (2026-09-23, checkpoint da fase 2 da frente 2)
 
 🟢 **Frente 1 da v1.x fechada** (T3 merge → T1 golden-master → T2 runner). O código de A vive em
 `levantamento-normativos/` **neste repo**, com história preservada; **repo A privado e arquivado**.
@@ -32,10 +32,11 @@ segue a branch **`deploy`** (congelada em `v1.0.1`); o trabalho segue em `master
 ▶ **Frente 2 (honestidade das fontes) EM EXECUÇÃO desde 22/09 (noite), por agentes.** Plano v4 dividido em
 `spec/frente2-honestidade-fontes/` (D-C16). **Status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`
 (SSOT)**; regras do orquestrador e trilhas: `execucao/CONTEXTO.md`; briefs dos agentes: `execucao/BRIEFS.md`.
-✅ **Fase 1 (T1) em `master`.** ✅ **Trilha B inteira (T6, T7, T8) em `master`** desde `9e259ca` → **fase 3 fechada**;
-a T8 entrou junto (a fase 4 fecha com a T9). ▶ **Trilha A** (T2→T5) no worktree `../bn-trilha-a`, branch
-`frente2/trilha-a`: T2 e T3 fechadas no ciclo; T4 em teste — ver "Trabalho em voo" em §6. O worktree `../bn-trilha-b`
-fica até o fim (guarda os screenshots de evidência, não versionados); a branch dele já está em `master`.
+✅ **Em `master`: fases 1, 2 e 3 inteiras + a T8** — T1; trilha B (T6–T8) desde `9e259ca`; trilha A (T2–T5) desde
+`08d9d8c` (runner 291 + golden OK no merge). ▶ **T9** (tela + gate visual V11) no worktree `../bn-t9`, branch
+`frente2/t9`, porta 8501 — ver "Trabalho em voo" em §6. Faltam: T9 → revisão final de várias perspectivas → T10.
+Os worktrees `../bn-trilha-a` e `../bn-trilha-b` ficam até o fim (guardam os screenshots de evidência, não versionados);
+as branches deles já estão em `master`.
 
 **Cadeia da sessão de 22–23/09:** rode `git log --oneline --reverse 1c063ea..HEAD` (é longa e cresce a cada task;
 não é mais restatada aqui). Marcos: `da543be` T1 · `a6de0af` checkpoint fase 1 · `9e259ca` merge da trilha B.
@@ -103,19 +104,19 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 `spec/frente2-honestidade-fontes/implementacao/NN-*.md`; `/checkpoint` a cada fase; no fim, reviewers de várias
 perspectivas, depois a T10. Briefs prontos em `execucao/BRIEFS.md`.
 
-**Trabalho em voo no checkpoint da fase 3 (23/09):** trilha A — testador da **T4** rodando em `../bn-trilha-a`
-(o coder da trilha fica disponível para o review/doc da T4 e depois a T5). O passo exato de cada task está em
-`execucao/TODOS.md`; os vereditos já recebidos em `execucao/revisoes/T{N}.md`. **Onde o resultado cai:** commits na branch da trilha (`git -C ../bn-trilha-a log
---oneline master..` / idem `bn-trilha-b`). **Se a sessão morreu com eles no meio:** `git -C ../bn-trilha-X status`
+**Trabalho em voo no checkpoint da fase 2 (23/09):** coder da **T9** implementando em `../bn-t9` (branch `frente2/t9`,
+criada de `master` `3e1f279`). O passo exato está em `execucao/TODOS.md`; vereditos em `execucao/revisoes/T{N}.md`;
+item carregado para a T9 (escape HTML duplo) em `execucao/CONTEXTO.md`. **Onde o resultado cai:** commits na branch do worktree da vez (`git worktree list`; `git -C <worktree> log
+--oneline master..`). **Se a sessão morreu com ele no meio:** `git -C <worktree> status`
 — árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
 estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2
 (teste). Worktrees criados com `git worktree add -b frente2/trilha-X ../bn-trilha-X master`.
 **Casos do trabalho em voo:** árvore limpa sem commit = task nem começou → brief 1; commit + árvore suja = fix/doc
 pela metade → brief 4 com `execucao/revisoes/T{N}.md`; na dúvida, `git -C <wt> log -1 --stat` e o `TODOS.md` dizem o passo.
-**Próximo passo agêntico:** fechar o ciclo da T4 e da T5 (briefs 2 → 3 → 4); então a trilha A faz `git merge
-origin/master` na própria branch — ⚠ **conflito esperado em `tools/run_all_tests.py`** (`BASELINE`: a trilha B mudou
-`test_llm_phase3`/`test_phase4`, a A mudou `SUITES_PYTEST` e a chave da suíte nova), resolvido por coder mantendo os
-dois lados; runner + golden no merge; fast-forward de `master` → `/checkpoint` fase 2 → T9 em `master`.
+**Próximo passo agêntico:** fechar o ciclo da T9 (briefs 2 → 3 → 4; o testador roda o V11 na porta 8501); a branch
+`frente2/t9` faz `git merge origin/master` e entra por fast-forward (receita em `execucao/CONTEXTO.md`, "Merge") →
+`/checkpoint` fase 4 → **revisão final**: vários code-reviewers do estado de `master`, de perspectivas diferentes
+(pedido do Rodrigo) → coder aplica os achados → **T10** → `/checkpoint` fase 5.
 
 Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy), 🔴 **D-C17** (dedup fuzzy funde acórdãos
 distintos — não trava a execução, mas é perda silenciosa até o Rodrigo decidir). (D-C10.1 fechada em 22/09:

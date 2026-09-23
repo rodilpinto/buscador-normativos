@@ -2,6 +2,16 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] checkpoint | frente 2, fase 2 fechada: trilha A (T2–T5) em master
+
+Trilha A entrou em `master` em `08d9d8c` (conflito só no `BASELINE` de `tools/run_all_tests.py`, previsto pelo dogfood com
+`git merge-tree`; dois lados mantidos; runner 291 + golden OK no merge). Achados da trilha que viraram código além do
+plano: **T4** — o testador **reprovou**: acórdãos da 1ª e 2ª Câmara colidiam no `id` e no dedup (212 colisões, ~1.175
+fusões em 3.200 reais) → `numero` na forma de citação do TCU com o colegiado literal; efeito colateral: o dedup fuzzy passou
+a fundir acórdãos distintos (26/900) → 🔴 **D-C17** para o Rodrigo (a spec proíbe mudar o dedup nesta frente); **T5** — o
+teste de "a chave do CSE não vaza no log" não podia falhar (provado com mutante) → reescrito. Suíte nova +8 sobre o plano.
+T9 em worktree próprio (`../bn-t9`). Detalhe: `execucao/INSIGHTS.md` e `execucao/revisoes/`.
+
 ## [2026-09-23] checkpoint | frente 2, fase 3 fechada: trilha B (T6, T7, T8) em master
 
 Trilha B fechou o ciclo nas três tasks e entrou em `master` por fast-forward em `9e259ca` (merge de `origin/master` na

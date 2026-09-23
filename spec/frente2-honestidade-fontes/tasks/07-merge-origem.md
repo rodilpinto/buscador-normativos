@@ -1,12 +1,12 @@
 ---
 task: 7
 fase: "Fase 3 — Procedência da nota"
-plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 2338-2385)
+plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 2339-2386)
 reference: spec/frente2-honestidade-fontes/reference/global-constraints.md
 depends_on: [T1]
 ---
 
-> Extraído **verbatim** do plano v4 (linhas 2338-2385). **O plano segue fonte de verdade**:
+> Extraído **verbatim** do plano v4 (linhas 2339-2386). **O plano segue fonte de verdade**:
 > divergência entre o plano e esta cópia → o plano ganha. Status em `../execucao/TODOS.md` — **não marque
 > os checkboxes aqui**. Antes de começar, ler `../reference/global-constraints.md` (Global
 > Constraints, Estrutura de arquivos, BASELINE por task). Ordem e dependências: `../00-overview.md`.
