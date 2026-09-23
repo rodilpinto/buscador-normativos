@@ -1,6 +1,6 @@
 """LLM integration module for Gemini Flash.
 
-Provides keyword expansion, relevance scoring, and auto-categorization
+Provides keyword expansion, relevance scoring (scores carry their origin: see score_relevance_com_origem), and auto-categorization
 of Brazilian legislation search results. All functions degrade gracefully
 when the Gemini API key is not configured.
 
@@ -17,12 +17,14 @@ from .gemini_client import (
     expand_topic_to_keywords,
     is_available,
     score_relevance,
+    score_relevance_com_origem,
 )
 
 __all__ = [
     "is_available",
     "expand_topic_to_keywords",
     "score_relevance",
+    "score_relevance_com_origem",
     "categorize_results",
     "CATEGORIES",
 ]
