@@ -22,6 +22,10 @@ também `4f36080..1c063ea`: só as 3 linhas do `MODEL_NAME` antigo (`18ad975`), 
 `git ls-tree -r --name-only <base> | grep '\.py$'`. É a mesma família da entrada de 22/09 sobre o gate rodado depois do
 `git add`: um gate que compara contra o vazio dá verde.
 
+**Cobertura.** ✅ Faixa refeita na T10 (`1c063ea..HEAD`, 555 linhas lidas). ⚠ Os gates de diff da frente 1 e das
+tasks da frente 2 (`HEAD~1`) não foram reconferidos quanto à base — lá a base sempre tinha os `.py`, mas ninguém
+checou com `git ls-tree`.
+
 ## 2026-09-23 · Revisão por task olha o diff da task; só a revisão do ESTADO INTEIRO vê o que as tasks juntas afirmam
 
 **Problema.** Na frente 2, cada uma das 9 tasks passou por testador (com e2e) e por code-reviewer. Mesmo assim, as 5 revisões
@@ -44,6 +48,10 @@ Os achados viraram duas trilhas de conserto (FIX-FONTES, FIX-SAÍDA), cada uma c
 várias lentes, que inclua **o app real rodado por quem o usa** e uma pergunta direta: *"o que a tela e a planilha afirmam, e
 é verdade?"*. Item deixado "fora do escopo" num plano (a fórmula na planilha estava assim) deve ser relido nessa revisão.
 
+**Cobertura.** ✅ Aplicado na frente 2: 5 revisões finais + triagem + 2 trilhas de conserto antes da T10. ⚠ A revisão
+final foi sobre `d4cab80`; o estado depois das trilhas de conserto (`51883f6`) teve só o ciclo das trilhas (teste +
+review de cada uma) e o V11 da T10, não uma nova rodada de 5 lentes.
+
 ## 2026-09-23 · Identidade de registro se testa contra o VOLUME real, não contra a fixture
 
 **Problema.** A T4 da frente 2 passou a montar o `id` do acórdão como `tipo|numero|data`. Os testes estavam verdes, e a
@@ -59,6 +67,9 @@ existem registros diferentes, mas não mostram que dois registros nunca terão o
 
 **Regra.** Toda chave de identidade nova (id, chave de dedup, hash) é conferida contra uma amostra real **grande**, contando
 `len(set(chaves)) == len(registros)`, antes de a task fechar. Fixture prova forma, não unicidade.
+
+**Cobertura.** ✅ `id` do TCU (3.200 acórdãos ao vivo, T4). ⚠ `id` do LexML **sem** volume real: a fonte está atrás do
+WAF (B-05); o do Google/DDG (URL normalizada) também não foi medido em volume.
 
 ## 2026-09-23 · Teste de "não vaza segredo" (e de qualquer proteção) só vale se for DEMONSTRADO falhando sem a proteção
 
@@ -76,7 +87,11 @@ que 11 de 14 testes novos falham no código antigo (os 3 que passam são guardas
 **Regra.** Todo teste de proteção (redação de segredo, escape, SSRF, fórmula) é rodado **uma vez contra a proteção
 desligada** e tem de ficar vermelho. O registro da task diz qual mutante foi usado. Corolário das previsões do plano: um
 teste-guarda, que protege comportamento que já existe, **passa** no "ver falhar". O plano deve prevê-lo como passed (T2:
-15 failed + 1 passed, não 16 failed).
+15 failed + 1 passed, não 16 failed). É a mesma família da entrada de 22/09 (gate depois do `git add`: todo gate
+precisa ser capaz de reprovar), aplicada a testes.
+
+**Cobertura.** ✅ T5 (log do CSE), F-T1 (CQL), revisão final (15/15 mutações), FIX-SAÍDA (11/14). ⚠ Os testes
+anteriores à frente 2 (`test_comprehensive`, `test_searchers`) não passaram por mutação.
 
 ## 2026-09-23 · Dar nome à procedência revela lixo que antes era só um número
 
@@ -95,16 +110,25 @@ normalização do filtro); `e8d59a4` (dedup por `key` na contagem).
 **Regra.** Rotular a procedência é também uma auditoria. Ao dar nome à origem de um valor, teste o rótulo contra entradas
 **hostis** (NaN, bool, acento, repetição) e não só contra o caso feliz.
 
+**Cobertura.** ✅ `relevancia_origem` (T6, NaN/bool), heurística (F-UX2, acento), contagem do TCU (T3, repetição).
+⚠ O rótulo "padrão da fonte" não foi testado contra entrada hostil (é constante do searcher).
+
 ## 2026-09-23 · Golden recongelado se prova RECONSTRUINDO o hash antigo a partir da saída nova
 
 **Problema.** A T8 da frente 2 mudou a planilha, então o golden-master precisava ser recongelado. Conferir que o dedup não
 mudou não prova que o recongelamento não escondeu uma regressão no resto da planilha.
+
+**Causa-raiz.** O hash compara o todo, então recongelar aceita **qualquer** diferença — a esperada e as outras
+juntas. Só a reconstrução separa uma da outra.
 
 **Conserto.** O testador tirou a coluna nova da aba `Normativos` gerada pelo código novo e recalculou o hash. Deu **o sha
 pré-T8 exato**. Assim a única diferença é a coluna declarada (`revisoes/T8.md`).
 
 **Regra.** Todo recongelamento de golden vem com a prova de reconstrução: remova da saída nova o que a mudança acrescentou e
 mostre que o hash antigo volta. Se não voltar, o recongelamento está escondendo alguma coisa.
+
+**Cobertura.** ✅ T8 (`6178f9d`, sha pré-T8 reconstruído, `revisoes/T8.md`). A FIX-SAÍDA **não** recongelou: o sha
+ficou inalterado (`c7a5dd57…`), conferido pelo testador e de novo na T10 (`golden_master.py comparar` OK).
 
 ## 2026-09-23 · As 3 lições que o plano da frente 2 mandou registrar na T10: onde estão
 
@@ -117,9 +141,8 @@ As lições (1) e (2) da Task 10 do plano **já estavam registradas desde 22/09*
    entrada de 2026-09-22 abaixo.
 3. **Falta a captura real de SRU do LexML**: continua aberta. `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml`
    é 📝 escrita à mão, porque o LexML segue atrás do desafio de WAF do Senado (B-05; medido de novo no V11 da T10, 23/09).
-   ⚠ Conferido na T10: o arquivo **não traz** a nota "📝 escrita à mão, sem captura" que a regra de 22/09 pede no cabeçalho.
-   A procedência só aparece na tabela "Estrutura de arquivos" do plano. Fica pendente (é dado de teste, fora do escopo
-   de docs da T10; um comentário XML depois do `<?xml ...?>` não muda o parse).
+   As pendências concretas (capturar; o cabeçalho do arquivo ainda sem a nota "escrita à mão") vivem só no `_TODO.md` P3
+   (linha "(T10)" das sobras da execução).
    **Regra:** na primeira vez que o SRU responder XML (ou quando o B-05 der acesso), capture uma resposta real com o `curl`
    da entrada de 22/09, versione-a ao lado da escrita à mão e rode as suítes contra ela. Até lá, a fixture escrita à mão
    tem de dizer que é escrita à mão.
@@ -203,7 +226,7 @@ captura` no cabeçalho, e capturar vira item pendente — não se apaga a nota q
 **Cobertura.** ✅ TCU: fixture real, capturada com
 `curl "https://dados-abertos.apps.tcu.gov.br/api/acordao/recupera-acordaos?inicio=0&quantidade=2"`
 (o HTML do desafio veio de `curl "https://www.lexml.gov.br/busca/SRU?operation=searchRetrieve&version=1.1&query=dc.title%3D%22licitacao%22&maximumRecords=2"`).
-⚠ LexML: **sem captura real de SRU** (fonte bloqueada); registrado como pendência na T10 do plano. Google/DDG: dublê de objeto, sem fixture — aceitável, a forma da
+⚠ LexML: **sem captura real de SRU** (fonte bloqueada); registrado como pendência na T10 do plano → `_TODO` P3 (T10). Google/DDG: dublê de objeto, sem fixture — aceitável, a forma da
 resposta é do pacote `ddgs`, não de uma API.
 
 ---
@@ -263,7 +286,7 @@ fonte sem nada a dizer viram a mesma tela** — e o usuário conclui que o tema 
 
 **Conserto.** ⚠ *Retratado no mesmo dia, mais tarde:* virou a **frente 2 da v1.x** — spec + plano v4
 (`docs/superpowers/{specs,plans}/2026-09-22-frente2-*`), ainda **não implementado**. A frente 1 (golden-master
-+ runner) já existe. Continua insumo do **B-04**.
++ runner) já existe. Continua insumo do **B-04**. ⚠ *retratado 23/09: implementada e fechada, T10 `074ed62`*.
 
 **Regra.** **Degradação graciosa sem sinalização é perda de informação, não robustez.** Toda fonte
 que falha por bloqueio, 5xx ou resposta não-parseável tem de aparecer na UI como **fonte
@@ -395,5 +418,10 @@ tocada exige varredura própria, por vizinhança (o pacote, a pasta), não por d
   de agente = a máquina suspendeu (`time.monotonic` avança na suspensão) — as duas registradas em 23/09.
   (5) as chaves `GEMINI_API_KEY`/`GOOGLE_API_KEY`/`OPENAI_API_KEY` estão DEFINIDAS no ambiente da máquina — app lançado
   à mão sem `env -u …` chama o Gemini de verdade (23/09).
+  (6) `grep -F` do Git Bash dá falso negativo em padrão com emoji no locale UTF-8 — prova de sobrevivência de texto
+  com `LC_ALL=C` ou Python (23/09, review da T10).
+- Regra de adiamento dentro de uma frente executada por agentes: achado "adiado → Tn" entra na hora nos **itens
+  carregados** (`spec/frente2-honestidade-fontes/execucao/CONTEXTO.md`, seção "Itens carregados entre tasks", e o
+  brief em `execucao/BRIEFS.md`); adiado para fora da frente → `_TODO.md` P3 ou a frente-alvo.
 - Bloqueios que dependem do humano: `BLOCKED-ON-RODRIGO.md`.
 - Decisões: `_DECISOES-PENDENTES.md` e `decisions/DECISIONS-LOG.md`.

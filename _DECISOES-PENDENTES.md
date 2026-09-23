@@ -17,7 +17,7 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 - **Onde aparece:** 23/09, re-teste da T4 da frente 2 (`spec/frente2-honestidade-fontes/execucao/revisoes/T4.md`).
 - **Fato medido:** depois da T4 os acórdãos passam a ter o `sumario` literal como ementa, e o passo **fuzzy** do dedup
-  (`deduplicator.py:251-270` — hoje `:256-280`, conferido na T10 em 23/09 —, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
+  (`deduplicator.py:251-270` — hoje `:256-286`, conferido na T10 em 23/09 —, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
   distintos, **26 somem fundidos em outros** (ex.: "ACÓRDÃO 2344/2026 ATA 33/2026 - PLENÁRIO" fundido no 2225/2026 — os dois
   sumários começam "TOMADA DE CONTAS ESPECIAL. FRAUDE NA CONCESSÃO DE BENEFÍCIOS PREVIDENCIÁRIOS…"). Repro:
   `scratchpad/fuzzy.py` do testador — ⚠ **fora do repo, efêmero**: se a decisão for consertar, o primeiro passo do coder é
@@ -49,7 +49,7 @@ para matar.
 ⚠ **2026-09-23 — a frente 2 FECHOU com a D-C17 aberta** (T10, sem resposta até o fim da execução), declarada como lacuna
 conhecida em `SESSION-ONBOARD` §6 e no `BLOCKED-ON-RODRIGO.md` B-04. O "nesta frente" das opções `a`/`a'`/`c` deixou de
 existir: qualquer escolha vira **task própria**, com o conserto no passo fuzzy de `deduplicator.deduplicate` ("Strategy 3:
-Fuzzy ementa match", `levantamento-normativos/deduplicator.py:256-280`) — ou, na `c`, no `_merge`/diagnóstico — com golden
+Fuzzy ementa match", `levantamento-normativos/deduplicator.py:256-286`) — ou, na `c`, no `_merge`/diagnóstico — com golden
 conferido e fixture real dos dois acórdãos capturada ao vivo. A revisão final de spec (`revisoes/final-spec.md`) pede que
 não passe do início da frente 5.
 
@@ -98,6 +98,10 @@ fora deles — piorando exatamente o problema que a `b` já tem.
 pequeno depois que as emendas já foram dobradas, e o benefício (contexto por task) é o mesmo que
 justificou o split de 10/09. Ganha da `b` porque os marcadores `⛔` mitigam, mas não eliminam, o
 risco de alguém executar um trecho do corpo que uma emenda derrubou.
+
+**Fechar a D-C9** quando respondida (só importa na v2.0): mover para 🟢 em `_DECISOES-PENDENTES.md` com a
+data, abrir seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-ON-RODRIGO.md`.
+(Receita movida do `SESSION-ONBOARD` §8 na review da T10, 23/09.)
 
 **Decisão tomada:** _(pendente)_
 

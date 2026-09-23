@@ -2,6 +2,64 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] review | T10: state file enxugado (§3/§7/§8 históricos arquivados aqui); SSOT dos números do fechamento
+
+Review da T10 (testador APROVADO; reviewer: aprovável com consertos). O `SESSION-ONBOARD` caiu para perto de 1 página:
+§3 itens 1–4 e 8–9, a tabela de ponteiros do §7 (→ `CLAUDE.md`), o histórico das linhas "Chave do LLM" e "Hospedagem"
+do §8 e os avisos antigos (assimetria de branch, `R1-*`, 6.533/6.561, receita da D-C9 → D-C9) estão abaixo, verbatim.
+Também: "336" deixou de ser restatado (`implementacao/10-fechar-frente.md` é a casa); LESSONS ganhou as linhas de
+Cobertura e a causa-raiz que faltavam; D-C17 com a faixa `:256-286`.
+
+<details><summary>Arquivado do <code>SESSION-ONBOARD-buscador.md</code> na review da T10 (linhas removidas ou reescritas, verbatim, na ordem do arquivo; a receita da D-C9 também foi para a D-C9 em <code>_DECISOES-PENDENTES.md</code>)</summary>
+
+ (`7322cc0`) + FIX-SAÍDA (`51883f6`) → T10. Critérios §7 conferidos: runner **336 TUDO VERDE**, golden OK,
+ `dedup_esperado.json` = `d054d5b`, **V11 7/7**. Registro completo: `spec/frente2-honestidade-fontes/execucao/` (TODOS =
+ **Ferramentas:** `python tools/run_all_tests.py` (≈9 min — as suítes LIVE batem em fontes quebradas) e
+ 1. **O projeto NÃO é greenfield.** O app `levantamento-normativos` existe desde março/2026 em
+    `~/Documents/projeto-nuati-normativos-levantamento/`: **205 testes verdes** medidos em 16/09 (13+53+98+41),
+    busca por API (LexML SRU/CQL, TCU Dados Abertos, Google CSE/DuckDuckGo). A spec de 08/09 dizia
+    o contrário — a varredura dela não cobriu essa pasta. Detalhe em `LESSONS.md`.
+ 2. **A decisão B2 foi REVERTIDA:** a base é o **Streamlit já escrito**, não um FastAPI novo.
+ 3. **(Plano de 16/09 apenas — v2.0)** Precedência das emendas: C > B > A > corpo; cada seção do corpo
+    derrubada carrega um marcador `⛔` apontando a emenda. **O plano da frente 2 não tem isso: está dobrado.**
+ 4. **(Plano de 16/09 apenas)** A ordem das tasks não é a numeração (emenda A1). No plano da frente 2,
+    **ordem = numeração**.
+ 8. **As duas fontes catalogadas estão quebradas hoje (medido 22/09):** LexML `/busca/SRU` atrás de desafio
+    de JavaScript do Senado (200 `text/html`; fallbacks 404; sem conserto legítimo → B-05); TCU
+    `atonormativo` em 500 e, pior, a API de acórdãos **não devolve `ementa`/`numero`/`ano`** — o código lia
+    só isso, então todo acórdão colapsa num id e nunca casa. Só a web aberta (DuckDuckGo; `GOOGLE_CSE_ID`
+    vazio) traz resultado. A frente 2 conserta o que dá; detalhe em `LESSONS.md` (22/09).
+ 9. **Fixture real do TCU** em `levantamento-normativos/tests/fixtures/tcu_acordaos_real.json`; o HTML real do
+    desafio do Senado em `lexml_desafio_senado.html`. Fixtures de API são captura, não redação.
+ | Doc | Papel |
+ |---|---|
+ | `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (em execução) |
+ | `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração; **fonte de verdade** |
+ | `spec/frente2-honestidade-fontes/` | **split do plano v4** (22/09, D-C16): `00-overview.md` (5 fases, dependências) + `tasks/01..10` (verbatim + critérios de aceite) + `reference/` — é o que o subagente lê |
+ | `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura; vale) |
+ | `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — T3/T1/T2/T9 **feitas**; T5/T6 viraram a frente 5; T4/T7/T8 = **v2.0** (emendas no topo, D-C9) |
+ | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
+ | `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` | lições transversais · o que espera o humano |
+ | `decisions/DECISIONS-LOG.md` + o board `.html` | as rodadas de decisão, com os comentários |
+ | ⛔ `docs/.../2026-09-08-*` e `spec/buscador/tasks/` | **SUPERADOS**, histórico apenas |
+ | **Chave do LLM no app da nuvem** | Chave Gemini do projeto Google **`nuati.secin`**, gravada pelo Rodrigo em 22/09 nos *Secrets* do app `buscador-normativos` (share.streamlit.io) — **o valor nunca passa pelo chat nem pelo repo**. O v1.0 só lê o segredo **`GEMINI_API_KEY`** (`llm/gemini_client.py:58`, SDK `google-genai`, modelo **`gemini-3.5-flash-lite`** desde 22/09 — o `2.5-flash-lite` dá 404 para chave nova). ⚠ O segredo só é lido **no import do módulo**: depois de mudar Secrets, **Reboot app**. O app antigo `levantamento-normativos.streamlit.app` foi **apagado** pelo Rodrigo em 22/09. ⛔ **Não criar `levantamento-normativos/.streamlit/secrets.toml` nesta máquina até a frente 5:** `st.secrets` vence a variável vazia do runner e a suíte passaria a chamar o Gemini de verdade. Para LLM local, variável só no terminal do `streamlit run`. |
+ | Hospedagem / deploy | ⚠ **CORRIGIDO 22/09 (noite):** existe **deploy no Streamlit Community Cloud** — `https://levantamento-normativos.streamlit.app/`, apontado pelo Rodrigo. Prova: GET → `303` para `share.streamlit.io/-/auth/app` (app **privado**, exige login). A verificação anterior ("nenhum") só olhou arquivos do repo, e deploy no Community Cloud **não deixa rastro no repo**. Esse app vinha do **repo A** (confirmado pelo Rodrigo). ✅ **22/09 (noite): redeploy a partir deste repo B** → **`https://buscador-normativos.streamlit.app/`**, privado (GET → `303` para login), branch **`master`** (única branch de B; `main file` = `levantamento-normativos/app.py`). Streamlit recebeu acesso a repo privado; B **segue privado** (decisão do Rodrigo, depois de ver o que ficaria exposto: IP interno, nomes, ledgers — nenhum segredo no histórico). ⚠ **Branch do deploy: `deploy`**, não `master` (22/09) — congelada em `v1.0.1`; **só avança num marco, com ok do Rodrigo**
+ (`git push origin master:deploy`). ✅ Rodrigo trocou o app para `deploy` em 22/09 e confirmou a IA gerando palavras-chave (precisou regravar o segredo + reboot). ❓ O app antigo (`levantamento-normativos.streamlit.app`) ainda responde `303` em 22/09 — apagar ou não é do Rodrigo (B-06 item 4). Único outro endereço de infra: o LM local `10.10.111.125:1234` (D-C5). Nenhuma org da Câmara visível no `gh` deste token (só `neuko-repo`). |
+ 
+ ⚠ **Assimetria de branch:** A usa `main`, B usa `master`. No merge (T3) isso aparece como
+ `git fetch levantamento` + `levantamento/main`, enquanto o push daqui é `origin master`.
+ 
+ ⚠ **Namespace `R1-*` tem dois significados:** no plano de 08/09 são as emendas de 2026-09-11; na
+ revisão de 16/09 os achados brutos foram numerados à parte. Diga sempre de qual documento.
+ 
+ ⚠ **A mensagem da tag de rollback é imutável e cita `6.533 linhas`** — medição antiga, que omitia
+ `llm/__init__.py`. O valor correto é **6.561** (`git ls-files 'levantamento-normativos/*.py' | xargs wc -l` — ⚠ só o app; `'*.py'` cru soma `tools/`, medido em 22/09: 6.849).
+ 
+ **Fechar a D-C9** quando respondida (só importa na v2.0): mover para 🟢 em `_DECISOES-PENDENTES.md` com a
+ data, abrir seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-ON-RODRIGO.md`.
+
+</details>
+
 ## [2026-09-23] fechamento | frente 2 (honestidade das fontes) fechada — T10; próxima: frente 5
 
 Depois da fase 4, a revisão final do estado combinado (`d4cab80`, 5 lentes: spec, segurança, testes com mutação,

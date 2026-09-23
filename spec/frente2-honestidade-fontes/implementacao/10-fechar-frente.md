@@ -35,7 +35,7 @@
 | V10 | golden recongelado no commit de V9, citando §3.5 | `6178f9d` (T8): `git log -- tests/golden/planilha_sha256.txt` → `6178f9d`, `d054d5b` | — |
 | V11 | app dirigido pelo navegador: indisponíveis ≥ 1, aviso por fonte, origem no card | `49d19e1` (T9, `tools/dirigir_app.py`) | `0370a21`; S-N1 `624bed5` (o aviso deixou de ser "Nenhuma fonte catalogada…" quando só parte das catalogadas caiu; ver §5) |
 
-### Commits reais da frente (`git log --oneline dc99d73..HEAD`, 94 commits)
+### Commits reais da frente (`git log --oneline dc99d73..HEAD`: 94 commits antes deste; 95 com ele)
 
 O plano fala em "9 commits das tasks". A execução real, por trilhas e com ciclo de teste e review, ficou assim (código e
 docs de cada task; os commits só de orquestração, `docs(frente2): … no ciclo`, checkpoints e dogfoods, estão no `git log`):
@@ -235,7 +235,7 @@ Todos editados no lugar, sem apagar conteúdo que ainda vale. 📝 marca o que �
   - LexML em WAF;
   - D-C17.
 - `_DECISOES-PENDENTES.md` D-C17: continua 🔴. Ganhou uma linha dizendo que a frente fechou com ela aberta e onde entra o
-  conserto (`deduplicator.py:256-280`, "Strategy 3"). A linha antiga `:251-270` foi anotada com a posição de hoje.
+  conserto (`deduplicator.py:256-286`, "Strategy 3"). A linha antiga `:251-270` foi anotada com a posição de hoje.
 - `LESSONS.md`: 7 entradas novas no topo. A primeira é a faixa de auditoria vazia (achada nesta task). As outras vêm do
   INSIGHTS:
   - a revisão do estado inteiro;

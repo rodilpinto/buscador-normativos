@@ -50,12 +50,12 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] **FIX-SAÍDA** (`../bn-fix-saida`, porta 8551; S-SEC S-N1 S-UX1+N3 S-N8 S-N9 S-MT2) — impl ✅ `624bed5` (phase4 90; runner 310; golden sha inalterado; V11 5/6 — 0 cards ao vivo hoje) · teste ✅ APROVADO (0 `<f>` nas 2 abas; V11 7/7 com cards; `revisoes/fix-saida.md`) · review ✅ + caractere de controle nesta trilha · fix ✅ `f749360` (phase4 94; runner 314; golden inalterado) · doc ✅ `9a7a240` · merge ✅ `51883f6` (conflito só no `BASELINE`, dois lados; runner **336** + golden OK + V11 7/7; ff de master)
 
 ## Fase 5 — Fechamento
-- [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — ⚠ sem resposta até o fim da execução:
+- [x] n/a nesta frente — (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — ⚠ sem resposta até o fim da execução:
       a T10 fecha a frente com a D-C17 **aberta e declarada** como lacuna conhecida; o conserto vira task própria depois
+      → fora da frente 2: vira task própria via 🔴 D-C17 (`_DECISOES-PENDENTES.md`); não trava o fechamento (review da T10)
 - [x] **T10** fechar a frente (worktree `../bn-t10`, branch `frente2/t10`) — critérios §7, duráveis, LESSONS ✅ (23/09, commit
-      `docs: fecha a frente 2` na branch; runner **336** verde sem `[AVISO] cresceu` · golden OK · `dedup_esperado.json` = `d054d5b` ·
-      V11 7/7 · auditoria de docs sobre `1c063ea..HEAD` — `dc99d73..HEAD` sai vazia por construção; registro em
-      `../implementacao/10-fechar-frente.md`). ⚠ Só a parte do coder: merge, push, a limpeza abaixo e o `/checkpoint` são do orquestrador.
+      `docs: fecha a frente 2` na branch; os gates do fechamento (runner, golden, dedup, V11, auditoria de docs) e as saídas
+      estão em `../implementacao/10-fechar-frente.md`, a casa desses números). ⚠ Só a parte do coder: merge, push, a limpeza abaixo e o `/checkpoint` são do orquestrador.
 - [ ] **T10 · limpeza (orquestrador)** — limpar os worktrees: `git worktree list`; para cada
       `../bn-*`: (1) inventariar `ls <wt>/tests/evidencia/` (⚠ em `bn-t9` ela é **ignorada**, não untracked — `git status`
       não mostra; os PNG/`.xlsx` são citados pelos `implementacao/*.md`); (2) **preservar** copiando para o repo principal:

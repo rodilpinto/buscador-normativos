@@ -75,7 +75,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 - [x] **Frente 2 · honestidade das fontes** — ✅ **fechada em 23/09 (T10)**: as fontes declaram por que não responderam
       (`motivo`/`detalhe`/`parcial`), o TCU lê o esquema real do acórdão, a nota diz de onde veio, planilha (coluna + aba
       de diagnóstico) e tela dizem indisponível ≠ parcial ≠ sem resultado; 9 tasks + revisão final de 5 perspectivas + 2
-      trilhas de conserto (FIX-FONTES, FIX-SAÍDA); runner 336 verde, golden OK, V11 7/7. ⚠ Fechou com a 🔴 **D-C17**
+      trilhas de conserto (FIX-FONTES, FIX-SAÍDA); gates do fechamento (runner, golden, V11) em `implementacao/10-fechar-frente.md`. ⚠ Fechou com a 🔴 **D-C17**
       aberta (dedup fuzzy funde acórdãos distintos). Registro completo: **`spec/frente2-honestidade-fontes/execucao/`**
       (TODOS, INSIGHTS, `revisoes/`) e `spec/frente2-honestidade-fontes/implementacao/10-fechar-frente.md`.
       Histórico da execução (fases e status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`):
