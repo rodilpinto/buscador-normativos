@@ -124,7 +124,7 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
    (`levantamento-normativos.streamlit.app`, do repo A arquivado) ainda responde — apagar? E confirmar que os segredos
    foram copiados para o app novo. ✅ **22/09:** app antigo **apagado**; chave Gemini `nuati.secin` gravada nos Secrets
    do app novo. ✅ Nome do segredo confirmado (`GEMINI_API_KEY`). Consertos: reboot (chave lida só no import) + modelo trocado para
-   `gemini-3.5-flash-lite` (o antigo dava 404 para chave nova). ❓ Falta: confirmar no app da nuvem que a IA gera palavras-chave.
+   `gemini-3.5-flash-lite` (o antigo dava 404 para chave nova). ✅ IA gerando palavras-chave na nuvem, já na branch `deploy` (22/09).
    📝 Rotacionar a chave (um trecho dela passou pelo chat em 22/09). Histórico do item: ~~O app `https://levantamento-normativos.streamlit.app/` já existe~~ (privado). No painel
    `share.streamlit.io` → app → *Settings*: **qual repo, branch e main file** ele usa, e **quais segredos** estão
    lá (há `GEMINI_API_KEY`?). ⚠ Se for o repo A: ele foi **arquivado e ficou privado hoje** — o app fica congelado
