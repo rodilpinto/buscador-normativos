@@ -134,6 +134,36 @@ def _forcar_texto(cell) -> None:
         cell.data_type = "s"
 
 
+# Quebras manuais: \x0b (vertical tab) e a quebra de linha manual do Word
+# (Shift+Enter) e aparece colada de .doc no sumario do TCU; \x0c (form feed) e
+# a quebra de pagina. Viram "\n", o que a quebra quer dizer.
+_QUEBRAS_MANUAIS = str.maketrans({"\x0b": "\n", "\x0c": "\n"})
+
+NOTA_CONTROLE = ("{n} célula(s) tinham caracteres de controle não representáveis em .xlsx: quebras manuais "
+                 "viraram quebra de linha, os demais foram removidos; o texto na fonte está no Link.")
+
+
+def _texto_xlsx(valor: str) -> tuple[str, int]:
+    """(texto representavel em .xlsx, quantos chars foram trocados ou removidos).
+
+    Por que isto NAO e parafrase (CLAUDE.md: texto normativo nunca e
+    parafraseado): o .xlsx e XML 1.0, que NAO representa os chars de controle
+    \\x00-\\x08, \\x0b, \\x0c, \\x0e-\\x1f — nenhuma grafia deles cabe na celula.
+    Antes o openpyxl levantava IllegalCharacterError e a exportacao INTEIRA
+    falhava ("Erro ao gerar Excel", review da FIX-SAIDA). Nenhuma letra,
+    digito ou pontuacao muda; a troca e contada e declarada numa linha da aba
+    de diagnostico (NOTA_CONTROLE), e o original fica na fonte (coluna Link).
+    \\n e \\t sao legais e ficam como estao.
+
+    >>> _texto_xlsx("a\\x0bb\\x01c")
+    ('a\\nbc', 2)
+    """
+    trocado = valor.translate(_QUEBRAS_MANUAIS)
+    n = sum(1 for a, b in zip(valor, trocado) if a != b)
+    limpo, removidos = ILLEGAL_CHARACTERS_RE.subn("", trocado)
+    return limpo, n + removidos
+
+
 # ---------------------------------------------------------------------------
 # Helper: Date formatting
 # ---------------------------------------------------------------------------
@@ -226,7 +256,7 @@ def _write_header_row(ws) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
+def _write_data_row(ws, row_idx: int, item: NormativoResult) -> int:
     """Write a single data row for one NormativoResult.
 
     Handles per-column formatting including:
@@ -235,18 +265,28 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
     - Hyperlink creation for the Link column
     - Percentage formatting and conditional fill for Relevancia
     - Origem da nota em portugues (ORIGEM_LABEL)
+    - Chars de controle nao representaveis em .xlsx (_texto_xlsx)
 
     Args:
         ws: Active worksheet.
         row_idx: The 1-based row number to write to.
         item: The NormativoResult to render.
+
+    Returns:
+        Quantas celulas da linha tinham chars de controle trocados/removidos
+        (o chamador soma e declara em NOTA_CONTROLE na aba de diagnostico).
     """
+    celulas_com_controle = 0
     for col_idx, (_, _, field_name) in enumerate(COLUMNS, start=1):
         cell = ws.cell(row=row_idx, column=col_idx)
         raw_value = getattr(item, field_name, "")
         # Preserve numeric 0.0 for relevancia; the generic `or ""` guard
         # would convert falsy 0.0 to "", breaking the round-trip.
         value = raw_value if field_name == "relevancia" else (raw_value or "")
+        if isinstance(value, str):
+            # antes de qualquer `cell.value =`: um \x0b derrubava a exportacao inteira
+            value, trocados = _texto_xlsx(value)
+            celulas_com_controle += bool(trocados)
 
         # -- Per-field formatting --
 
@@ -316,6 +356,7 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
         # S-SEC: toda coluna de texto (nome, ementa, link, tipo, numero, data,
         # orgao, categoria, situacao, origem) — num ponto so, depois de cada ramo
         _forcar_texto(cell)
+    return celulas_com_controle
 
 
 # ---------------------------------------------------------------------------
@@ -323,15 +364,32 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordStatus]], quando: Optional[str]) -> None:
+def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordStatus]], quando: Optional[str],
+                             celulas_com_controle: int = 0) -> None:
     """Aba 'Diagnostico da busca': uma linha por (fonte, palavra-chave).
 
     Existe SEMPRE, mesmo sem dados, para que quem abre a planilha saiba que o
     registro e previsto. E o que diz, seis meses depois, que o LexML nao
     respondeu naquele dia — a planilha e o artefato que sobrevive a sessao.
     `quando` vem formatado pelo chamador (o golden passa um valor fixo).
+    `celulas_com_controle` (da aba Normativos) soma com as de keyword/source
+    desta aba; N > 0 escreve UMA linha NOTA_CONTROLE abaixo da tabela, depois
+    de uma linha em branco. N == 0 nao escreve nada (o golden nao muda).
     """
     ws = wb.create_sheet(DIAGNOSTICO_SHEET)
+    celulas_com_controle += _write_diagnostico_tabela(ws, topic, diagnostico, quando)
+    if celulas_com_controle:
+        c = ws.cell(row=ws.max_row + 2, column=1)
+        c.value, c.font = NOTA_CONTROLE.format(n=celulas_com_controle), DATA_FONT
+        _forcar_texto(c)
+
+
+def _write_diagnostico_tabela(ws, topic: str, diagnostico: Optional[list[KeywordStatus]],
+                              quando: Optional[str]) -> int:
+    """Titulo, cabecalho e uma linha por status (ou a linha 'Nenhum diagnostico').
+
+    Devolve quantas celulas (keyword/source) tinham chars de controle trocados.
+    """
     n = len(DIAGNOSTICO_COLUMNS)
     ws.merge_cells(f"A1:{get_column_letter(n)}1")
     t = ws.cell(row=1, column=1)
@@ -346,15 +404,19 @@ def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordS
         c = ws.cell(row=3, column=1)
         c.value = "Nenhum diagnóstico registrado nesta exportação"
         c.font = DATA_FONT
-        return
+        return 0
     sim_nao = lambda b: "Sim" if b else "Não"
+    celulas_com_controle = 0
     for row, s in enumerate(diagnostico, start=3):
         # keyword e source vem do usuario/LLM: '=1+1' viraria formula (R3). Vao LITERAIS
         # (revisao final, N8): redigir() trocava 'token=x' por 'token=***' e punha "'"
         # na frente de '=' — a keyword gravada nao era a buscada. A formula e
         # neutralizada por _forcar_texto; so saem os chars de controle que o
-        # openpyxl recusa (IllegalCharacterError derrubaria a exportacao).
-        valores = [ILLEGAL_CHARACTERS_RE.sub("", s.source or ""), ILLEGAL_CHARACTERS_RE.sub("", s.keyword or ""),
+        # .xlsx nao representa (_texto_xlsx: IllegalCharacterError derrubaria a
+        # exportacao), contados na mesma NOTA_CONTROLE da aba Normativos.
+        (fonte, n_fonte), (keyword, n_kw) = _texto_xlsx(s.source or ""), _texto_xlsx(s.keyword or "")
+        celulas_com_controle += bool(n_fonte) + bool(n_kw)
+        valores = [fonte, keyword,
                    STATUS_LABEL(s), s.motivo or VAZIO,
                    (s.detalhe or s.error_message) or VAZIO, s.result_count, sim_nao(s.parcial), sim_nao(s.retried)]
         for col, v in enumerate(valores, start=1):
@@ -364,6 +426,7 @@ def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordS
             _forcar_texto(c)
     ws.freeze_panes = "A3"
     ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(diagnostico) + 2}"
+    return celulas_com_controle
 
 
 # ---------------------------------------------------------------------------
@@ -426,8 +489,8 @@ def generate_excel(
     # ----------------------------------------------------------------
     # Rows 3+: Data rows
     # ----------------------------------------------------------------
-    for row_idx, item in enumerate(results, start=3):
-        _write_data_row(ws, row_idx, item)
+    # celulas com chars de controle trocados: declaradas na aba de diagnostico
+    celulas_com_controle = sum(_write_data_row(ws, row_idx, item) for row_idx, item in enumerate(results, start=3))
 
     # ----------------------------------------------------------------
     # Column widths
@@ -461,8 +524,9 @@ def generate_excel(
     # reaplicada a detalhe/error_message: o KeywordStatus ja redigiu.
     # source/keyword NAO sao redigidos (revisao final, N8): vao literais,
     # com a formula neutralizada por _forcar_texto dentro da funcao.
+    # A NOTA_CONTROLE (se houver) soma as celulas das duas abas.
     # ----------------------------------------------------------------
-    _write_diagnostico_sheet(wb, topic, diagnostico, quando)
+    _write_diagnostico_sheet(wb, topic, diagnostico, quando, celulas_com_controle)
     wb.active = 0  # garante 'Normativos' como aba ativa
 
     # ----------------------------------------------------------------

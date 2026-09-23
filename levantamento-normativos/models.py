@@ -106,9 +106,11 @@ def rotulo_status(s: "KeywordStatus") -> str:
     """
     if s.status == "error" and s.motivo == "nao_consultada":
         return "Não consultada"
-    if s.status == "error" and s.parcial:
+    if e_indisponivel(s):   # a mesma regra da tela, sem copia (review da FIX-SAIDA)
+        return "Indisponível"
+    if s.status == "error":  # o error que sobra e o parcial
         return "Parcial"
-    return {"ok": "OK", "empty": "Sem resultado", "error": "Indisponível"}.get(s.status, s.status)
+    return {"ok": "OK", "empty": "Sem resultado"}.get(s.status, s.status)
 
 
 @dataclass

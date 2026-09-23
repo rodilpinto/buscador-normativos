@@ -942,6 +942,45 @@ class TestN8KeywordLiteralNoDiagnostico:
         assert ws.cell(row=3, column=2).value == "ab"          # openpyxl recusa o char; o resto fica
 
 
+_NOTA_CONTROLE = "tinham caracteres de controle não representáveis em .xlsx"
+
+
+def _notas_controle(ws) -> list[str]:
+    return [c.value for linha in ws.iter_rows() for c in linha
+            if isinstance(c.value, str) and _NOTA_CONTROLE in c.value]
+
+
+class TestControleNaoDerrubaExportacao:
+    """Review da FIX-SAIDA: um char de controle (a quebra manual do Word, \\x0b) na ementa
+    fazia a exportacao INTEIRA falhar ("Erro ao gerar Excel")."""
+
+    def test_nome_e_ementa_com_controle_exportam_e_registram_a_nota(self):
+        r = _make_result(nome="x\x01y", ementa="a\x0bb")
+        wb = _load_workbook_from_buffer(generate_excel([r], "t"))
+        campos = [campo for _, _, campo in COLUMNS]
+        ws = wb.active
+        assert ws.cell(row=3, column=campos.index("nome") + 1).value == "xy"
+        assert ws.cell(row=3, column=campos.index("ementa") + 1).value == "a\nb"   # quebra manual -> quebra de linha
+        notas = _notas_controle(wb[DIAGNOSTICO_SHEET])
+        assert len(notas) == 1 and notas[0].startswith("2 célula(s) ")
+
+    def test_keyword_com_controle_soma_na_mesma_nota(self):
+        diag = [_KS(keyword="a\x07b", source="lexml", status="empty")]
+        wb = _load_workbook_from_buffer(generate_excel([_make_result(ementa="a\x0cb")], "t", diagnostico=diag))
+        notas = _notas_controle(wb[DIAGNOSTICO_SHEET])
+        assert len(notas) == 1 and notas[0].startswith("2 célula(s) ")
+
+    def test_sem_controle_sem_nota(self):
+        diag = [_KS(keyword="k", source="lexml", status="empty")]
+        wb = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=diag))
+        assert _notas_controle(wb[DIAGNOSTICO_SHEET]) == []
+
+    def test_texto_xlsx_conta_os_chars_trocados(self):
+        from excel_export import _texto_xlsx
+        assert _texto_xlsx("a\x0bb\x0cc\x01d") == ("a\nb\ncd", 3)
+        assert _texto_xlsx("Lei n. 8.666\n\ttexto") == ("Lei n. 8.666\n\ttexto", 0)   # \n e \t sao legais
+
+
 class TestUX1ParcialNaoEIndisponivel:
     """S-UX1+N3: error+parcial (TCU: um endpoint caiu, o outro respondeu) e 'Parcial'."""
 
