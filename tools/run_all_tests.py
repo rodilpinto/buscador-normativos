@@ -51,7 +51,7 @@ PADRAO_PYTEST = re.compile(r"(\d+) passed")
 # que acrescenta o teste — o aviso de crescimento existe para lembrar disso.
 BASELINE = {
     "test_searchers.py": 13,
-    "test_llm_phase3.py": 63,
+    "test_llm_phase3.py": 64,
     "test_comprehensive.py": 98,
     "test_phase4.py": 58,
 }

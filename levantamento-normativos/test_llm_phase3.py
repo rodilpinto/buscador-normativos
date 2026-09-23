@@ -323,6 +323,12 @@ try:
         _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: "[0.9]"
         pares6 = score_relevance_com_origem("tema", _docs, ["x"])
         record("tamanho errado -> lote inteiro fallback_erro", all(p == (0.5, "fallback_erro") for p in pares6), str(pares6))
+
+        # review da T6 (alem do plano): json.loads aceita NaN e true; nao podem virar nota do modelo
+        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: '[NaN, true]'
+        pares7 = score_relevance_com_origem("tema", _docs, ["x"])
+        record("NaN e bool do modelo -> fallback_erro",
+               pares7 == [(0.5, "fallback_erro"), (0.5, "fallback_erro")], str(pares7))
     finally:
         _gc.is_available, _gc._generate = _orig_avail, _orig_gen
 except Exception as e:

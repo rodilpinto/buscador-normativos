@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 import time
@@ -415,7 +416,13 @@ Exemplo: [0.9, 0.3, 0.7, 0.1]'''
             batch_scores = []
             for val in parsed:
                 try:
-                    score = max(0.0, min(1.0, float(val)))
+                    # json.loads aceita true/false, NaN e Infinity: lixo do modelo nao pode sair rotulado como nota do modelo.
+                    if isinstance(val, bool):
+                        raise TypeError("bool nao e nota")
+                    score = float(val)
+                    if not math.isfinite(score):
+                        raise ValueError("nota nao finita")
+                    score = max(0.0, min(1.0, score))
                     batch_scores.append((score, "modelo"))
                 except (TypeError, ValueError):
                     batch_scores.append((0.5, "fallback_erro"))
