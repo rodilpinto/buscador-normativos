@@ -22,7 +22,7 @@ com o onboard, siga com ela após o resumo; senão, NÃO comece nada até ele da
 aponta para ele). Conferir o trabalho em voo com `git worktree list` e `git -C <worktree> log --oneline master..`.
 
 ### Passo 2 — Ledgers
-- `_TODO.md` — status por task. **Só aqui.**
+- `_TODO.md` — status por task (**exceto** frente em execução: aí o SSOT é `spec/<frente>/execucao/TODOS.md`).
 - `_DECISOES-PENDENTES.md` — decisões abertas. Procure **🔴, 🟡 e ⛔** (a legenda está no topo do
   arquivo); ⛔ são permissões pendentes, não escolhas.
 - `BLOCKED-ON-RODRIGO.md` — o que espera uma ação do humano.

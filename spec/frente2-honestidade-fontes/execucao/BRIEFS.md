@@ -5,7 +5,8 @@ related: [CONTEXTO.md, TODOS.md]
 
 # Briefs dos agentes
 
-> Modelos que o orquestrador preenche (`{TASK}`, `{ARQ}`, `{DIR}`, `{BRANCH}`, `{PORTA}`) ao despachar.
+> Modelos que o orquestrador preenche (`{TASK}` número, `{ARQ}` arquivo da task, `{NN}`/`{slug}` = prefixo e nome
+> desse arquivo, `{DIR}`, `{BRANCH}`, `{PORTA}`) ao despachar.
 > Existem para sobreviver à compactação e para as trilhas receberem as mesmas regras.
 
 ## Regras comuns (vão em todo brief)
@@ -52,6 +53,9 @@ testes afirmam o que dizem. **Não editar.** Saída: lista priorizada (bloqueado
 e a correção sugerida; "nada a corrigir" se for o caso.
 
 ## 4 · Coder A — aplicar review e documentar (SendMessage ao mesmo Coder A)
+
+⚠ **Se o Coder A não existe mais** (sessão nova): despachar um coder novo com este brief + o arquivo
+`execucao/revisoes/T{TASK}.md` (o orquestrador grava lá o veredito do testador e do reviewer assim que chegam).
 
 Aplicar os achados aceitos (bloqueadores e importantes; menores com julgamento, justificando os rejeitados);
 re-rodar suítes da task + golden (+ runner se tocou código); commit `fix(frente2): review da T{TASK} — ...`.

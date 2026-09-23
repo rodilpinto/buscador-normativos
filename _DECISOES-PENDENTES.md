@@ -122,8 +122,8 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
   [...] Carefully consider the dependencies between features."* Feito em `spec/frente2-honestidade-fontes/`: 5 fases,
   10 tasks, corte **verbatim** (script `tools/split_frente2.py`, cobertura verificada) + header com "Depende de" e
   critérios de aceite **derivados do plano**. Regra herdada do split de 10/09 (D-C9, opção `c`): **o plano segue fonte
-  de verdade**; divergência → o plano ganha; status só no `_TODO.md`. Ordem continua sequencial T1 → T10; a execução
-  em duas trilhas paralelas depois da T1 ficou como 📝 proposta minha no overview, **não** decidida.
+  de verdade**; divergência → o plano ganha. ~~Status só no `_TODO.md`. Ordem sequencial; trilhas = 📝 não decidida.~~
+  ⚠ Superado no mesmo dia pelo ➕ abaixo: status em `execucao/TODOS.md`; execução por trilhas.
   ⚠ Não fecha a D-C9: aquela é sobre o plano de 16/09 (v2.0).
   ➕ **Execução por trilhas decidida pelo Rodrigo (22/09, noite):** *"create different tracks [...] find any phases
   or tasks that do not have a dependency on each other"* — a proposta 📝 do overview (trilhas A = T2→T5 e B = T6→T8

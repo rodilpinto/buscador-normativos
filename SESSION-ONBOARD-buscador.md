@@ -23,7 +23,7 @@ board de 16/09 (decisão D-C2).
 
 🟢 **Frente 1 da v1.x fechada** (T3 merge → T1 golden-master → T2 runner). O código de A vive em
 `levantamento-normativos/` **neste repo**, com história preservada; **repo A privado e arquivado**.
-Nenhuma linha de produção mudou. Contagem atual de testes: `BASELINE` em `tools/run_all_tests.py`.
+Nenhuma linha de produção mudou **na frente 1** (a frente 2 muda — ver abaixo). Contagem atual de testes: `BASELINE` em `tools/run_all_tests.py`.
 
 🟢 **Noite de 22/09 — app na nuvem funcional:** `https://buscador-normativos.streamlit.app/` (privado), IA gerando
 palavras-chave (chave `nuati.secin`, modelo `gemini-3.5-flash-lite`). Ponto de retorno: tag **`v1.0.1`**. A nuvem
@@ -108,8 +108,10 @@ cada um no seu worktree. **Onde o resultado cai:** commits na branch da trilha (
 — árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
 estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2
 (teste). Worktrees criados com `git worktree add -b frente2/trilha-X ../bn-trilha-X master`.
-**Próximo passo agêntico:** quando a trilha A fechar a T5 e a B a T8, merge das duas em `master` (conflito
-esperado só em `tools/run_all_tests.py`, resolvido por coder), depois T9 em `master`.
+**Casos do trabalho em voo:** árvore limpa sem commit = task nem começou → brief 1; commit + árvore suja = fix/doc
+pela metade → brief 4 com `execucao/revisoes/T{N}.md`; na dúvida, `git -C <wt> log -1 --stat` e o `TODOS.md` dizem o passo.
+**Próximo passo agêntico:** fechar o ciclo de cada task (briefs 2 → 3 → 4); cada trilha entra em `master` inteira
+quando fecha (regra em `execucao/CONTEXTO.md`, "Merge"); depois T9 em `master`.
 
 Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy). (D-C10.1 fechada em 22/09:
 tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do
@@ -119,7 +121,7 @@ Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a fre
 
 | Doc | Papel |
 |---|---|
-| `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (próxima) |
+| `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (em execução) |
 | `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração; **fonte de verdade** |
 | `spec/frente2-honestidade-fontes/` | **split do plano v4** (22/09, D-C16): `00-overview.md` (5 fases, dependências) + `tasks/01..10` (verbatim + critérios de aceite) + `reference/` — é o que o subagente lê |
 | `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura; vale) |

@@ -16,7 +16,7 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   `channel="chrome"` (os navegadores do Playwright não estão baixados — `ENVIRONMENT.md`).
 - Paralelismo: trilhas A (T2–T5) e B (T6–T8) depois da T1, em worktrees; portas distintas para o e2e.
 
-## T1 · vocabulário (em andamento)
+## T1 · vocabulário (fechada 23/09)
 
 - Impl: previsão do plano bateu exatamente (fail = `ImportError MOTIVOS` na coleta; 41 + 17 = 58; total 222).
 - Runner: 9m21s, **411s só no `test_searchers`** (fontes LIVE quebradas) — o gargalo que a T2 deve reduzir.

@@ -69,7 +69,7 @@ ciclo de agentes de `execucao/CONTEXTO.md` (coder → testador + e2e → reviewe
 3. Gate: `python tools/run_all_tests.py` TUDO VERDE (+ `BASELINE` atualizado no mesmo commit) **e**
    `python tools/golden_master.py comparar` OK (exceto T8, que recongela no mesmo commit) **e** os 2
    comandos de auditoria de documentação lidos inteiros.
-4. Commit + **push** em `master` (D-C7). A nuvem segue a branch `deploy`, congelada em `v1.0.1` —
+4. Commit + **push** em `master` (D-C7) — na execução por trilhas: push da **branch da trilha**; `master` só no merge. A nuvem segue a branch `deploy`, congelada em `v1.0.1` —
    ⛔ **não avançar `deploy`** durante a frente; só no marco, com ok do Rodrigo.
 5. Marcar a task em `execucao/TODOS.md`, e só então a próxima.
 
