@@ -19,7 +19,7 @@ palavras-chave → busca → **triagem em poucas decisões** → download → or
 pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
 board de 16/09 (decisão D-C2).
 
-## 2. Estado na última pausa (2026-09-23, checkpoint da fase 4 da frente 2)
+## 2. Estado na última pausa (2026-09-23, frente 2 fechada — T10)
 
 🟢 **Frente 1 da v1.x fechada** (T3 merge → T1 golden-master → T2 runner). O código de A vive em
 `levantamento-normativos/` **neste repo**, com história preservada; **repo A privado e arquivado**.
@@ -29,20 +29,18 @@ Nenhuma linha de produção mudou **na frente 1** (a frente 2 muda — ver abaix
 palavras-chave (chave `nuati.secin`, modelo `gemini-3.5-flash-lite`). Ponto de retorno: tag **`v1.0.1`**. A nuvem
 segue a branch **`deploy`** (congelada em `v1.0.1`); o trabalho segue em `master`. Detalhe em §4 e §8.
 
-▶ **Frente 2 (honestidade das fontes) EM EXECUÇÃO desde 22/09 (noite), por agentes.** Plano v4 dividido em
-`spec/frente2-honestidade-fontes/` (D-C16). **Status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`
-(SSOT)**; regras do orquestrador e trilhas: `execucao/CONTEXTO.md`; briefs dos agentes: `execucao/BRIEFS.md`.
-✅ **T1–T9 em `master` (fases 1–4 fechadas)** — trilha B desde `9e259ca`, trilha A desde `08d9d8c`, T9 desde `d4cab80`
-(V11 7/7; runner + golden OK). ▶ **Revisão final** de 5 perspectivas rodando sobre `d4cab80` — ver "Trabalho em voo" em §6.
-Faltam: revisão final → coder aplica os achados → (D-C17, se o Rodrigo decidir consertar nesta frente) → T10.
-Os worktrees `../bn-trilha-a`, `../bn-trilha-b` e `../bn-t9` ficam até a T10 (guardam os screenshots de evidência, não versionados);
-as branches deles já estão em `master`.
+✅ **Frente 2 (honestidade das fontes) FECHADA em 23/09 (T10).** As fontes declaram por que não responderam
+(`motivo`/`detalhe`/`parcial`); o TCU lê o esquema real do acórdão; a nota diz de onde veio; tela e planilha separam
+indisponível, parcial e sem resultado. Executada por agentes (D-C16): T1–T9 → revisão final de 5 lentes → FIX-FONTES
+(`7322cc0`) + FIX-SAÍDA (`51883f6`) → T10. Critérios §7 conferidos: runner **336 TUDO VERDE**, golden OK,
+`dedup_esperado.json` = `d054d5b`, **V11 7/7**. Registro completo: `spec/frente2-honestidade-fontes/execucao/` (TODOS =
+SSOT, INSIGHTS, `revisoes/`) e `implementacao/10-fechar-frente.md` (comandos e saídas). ⚠ Fechou com a 🔴 **D-C17 aberta**.
+Os worktrees `../bn-*` guardam screenshots de evidência (não versionados); a limpeza deles é o último passo da fase 5
+(`execucao/TODOS.md`).
 
-**Cadeia da sessão de 22–23/09:** rode `git log --oneline --reverse 1c063ea..HEAD` (é longa e cresce a cada task;
-não é mais restatada aqui). Marcos: `da543be` T1 · `a6de0af` checkpoint fase 1 · `9e259ca` merge da trilha B.
-Sessões anteriores: `git log`. ⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou
-este arquivo** — a cadeia real termina em `git log --oneline -3`. ⚠ Commits das trilhas vivem nas branches
-`frente2/trilha-*` até o merge.
+**Cadeia:** `git log --oneline --reverse 1c063ea..HEAD` (frente 2 inteira; não é restatada aqui). Marcos: `da543be` T1 ·
+`9e259ca` trilha B · `08d9d8c` trilha A · `d4cab80` T9 · `7322cc0`/`51883f6` consertos da revisão final. ⚠ O SHA mais
+novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo; a cadeia real termina em `git log --oneline -3`.
 
 **Working tree (`master`):** limpo no checkpoint; `master` = `origin/master`. Remoto `levantamento` (repo A local) segue
 configurado; A está arquivado no GitHub. A tag `levantamento-v1-streamlit` existe aqui **e** no remoto de B.
@@ -98,31 +96,23 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 
 ## 6. Próximo movimento
 
-▶ **Frente 2 EM EXECUÇÃO.** Ler `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md` e `TODOS.md` (SSOT)
-**antes de tudo**. Regra do Rodrigo (22/09): **o orquestrador não escreve código** — despacha, por task, coder
-(implementa) → coder (testa + e2e Playwright) → code-reviewer → o mesmo coder aplica o review e documenta em
-`spec/frente2-honestidade-fontes/implementacao/NN-*.md`; `/checkpoint` a cada fase; no fim, reviewers de várias
-perspectivas, depois a T10. Briefs prontos em `execucao/BRIEFS.md`.
+▶ **Frente 5 (LM local)** — a próxima pela ordem D-C11 (1 → 2 → **5** → 3 → 4). A spec **não está escrita**. O primeiro
+passo é o desenho (brainstorm → spec → plano), a partir dos insumos (a)–(g) da linha da frente 5 no `_TODO.md`. Entre eles:
+backend por ambiente, endpoint OpenAI-compatível do Gemini, **`st.secrets` vencendo a variável vazia do runner**, chave lida
+só no import e `ementa None` com LLM ligado. ⚠ As chaves de LLM estão definidas no ambiente desta máquina: app lançado à mão
+usa `env -u GEMINI_API_KEY -u GOOGLE_API_KEY -u OPENAI_API_KEY` (`~/.claude/ENVIRONMENT.md`).
+**Antes disso**, se ainda estiver aberto em `spec/frente2-honestidade-fontes/execucao/TODOS.md`, feche a fase 5 da frente 2:
+`/checkpoint` e limpeza dos worktrees, pela receita que está lá.
 
-**Trabalho em voo no checkpoint da fase 4 (23/09):** 5 reviewers finais, só leitura, sobre `master` `d4cab80`:
-conformidade com a spec; segurança; qualidade dos testes e gates (com mutação); manutenibilidade + preservação de docs;
-UX do app real (Playwright, porta 8531). **Onde cai:** o orquestrador grava cada veredito em
-`execucao/revisoes/final-<perspectiva>.md`. **Se a sessão morreu antes:** despachar de novo os que não têm arquivo (os
-perspectivas, slugs e o que cada um faz estão na linha "reviewers do estado final" de `execucao/TODOS.md`; custo: ~5 agentes). **Onde o resultado cai:** commits na branch do worktree da vez (`git worktree list`; `git -C <worktree> log
---oneline master..`). **Se a sessão morreu com ele no meio:** `git -C <worktree> status`
-— árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
-estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2
-(teste). Worktrees criados com `git worktree add -b frente2/trilha-X ../bn-trilha-X master`.
-**Casos do trabalho em voo:** árvore limpa sem commit = task nem começou → brief 1; commit + árvore suja = fix/doc
-pela metade → brief 4 com `execucao/revisoes/T{N}.md`; na dúvida, `git -C <wt> log -1 --stat` e o `TODOS.md` dizem o passo.
-**Próximo passo agêntico:** triar os 5 vereditos finais (bloqueador/importante → coder aplica num worktree novo, com
-teste + re-teste; menor → `_TODO.md` P3) → **T10** (critérios §7, duráveis, LESSONS, limpeza dos worktrees) →
-`/checkpoint` fase 5.
+🔴 **D-C17 aberta e declarada** (dedup fuzzy funde acórdãos distintos: 26 de 900 numa amostra real; perda silenciosa).
+Opções `a` / `a'` / `b` / `c` em `_DECISOES-PENDENTES.md`. Qualquer escolha vira **task própria** no passo fuzzy de
+`deduplicator.py`, com golden conferido e fixture real. A revisão final de spec pede que não passe do início da frente 5.
+📝 Sugestão minha: perguntar ao Rodrigo na abertura da próxima sessão.
 
-Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy), 🔴 **D-C17** (dedup fuzzy funde acórdãos
-distintos — não trava a execução, mas é perda silenciosa até o Rodrigo decidir). (D-C10.1 fechada em 22/09:
-tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do
-Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a frente 2.
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy). (D-C10.1 fechada em 22/09: tags só nos
+marcos.) ⛔ **Não avançar a branch `deploy`**: só num marco, com ok do Rodrigo (`git push origin master:deploy`). O fim da
+frente 2 **não** é autorização. Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`). O B-04 (medir a lacuna
+de cobertura) ganhou as medições da frente 2.
 
 ## 7. Ponteiros
 

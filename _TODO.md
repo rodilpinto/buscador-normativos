@@ -6,11 +6,13 @@ related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SES
 
 # TODOs — o que está pendente
 
-> **Frente ativa: frente 2** — conteúdo das tasks em `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`
-> (tudo dobrado no corpo; ordem = numeração). O plano de 16/09 só volta na v2.0 (T4/T7/T8) e aí valem
+> **Frente 2 fechada em 23/09** (T10). **Próxima: frente 5 (LM local)** — ordem D-C11 1 → 2 → **5** → 3 → 4; spec
+> ainda não escrita (insumos na linha da frente 5, abaixo). Histórico da frente 2: conteúdo das tasks em
+> `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` (tudo dobrado no corpo; ordem = numeração).
+> O plano de 16/09 só volta na v2.0 (T4/T7/T8) e aí valem
 > as três seções de emendas dele (precedência **C > B > A > corpo**, marcadores `⛔` no corpo).
-> **Status**: aqui, e só aqui — **exceto a frente 2 em execução**, cujo status por task vive em
-> `spec/frente2-honestidade-fontes/execucao/TODOS.md` (SSOT da execução, 22/09).
+> **Status**: aqui, e só aqui. O status por task da frente 2 (já fechada) ficou em
+> `spec/frente2-honestidade-fontes/execucao/TODOS.md` (SSOT da execução, 22–23/09).
 
 ## ⛔ Superado — o plano de 16 tasks NÃO vale mais
 
@@ -70,7 +72,13 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 
 - [x] **Frente 1 · rede de proteção** — ✅ T3 `4f36080` · T1 `d054d5b` · T2 `e18dd4b` (22/09). Baseline atual:
       `BASELINE` em `tools/run_all_tests.py` (**única casa do número**; não restatar aqui).
-- [ ] **Frente 2 · honestidade das fontes** — ▶ **em execução por agentes** (fases e status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`).
+- [x] **Frente 2 · honestidade das fontes** — ✅ **fechada em 23/09 (T10)**: as fontes declaram por que não responderam
+      (`motivo`/`detalhe`/`parcial`), o TCU lê o esquema real do acórdão, a nota diz de onde veio, planilha (coluna + aba
+      de diagnóstico) e tela dizem indisponível ≠ parcial ≠ sem resultado; 9 tasks + revisão final de 5 perspectivas + 2
+      trilhas de conserto (FIX-FONTES, FIX-SAÍDA); runner 336 verde, golden OK, V11 7/7. ⚠ Fechou com a 🔴 **D-C17**
+      aberta (dedup fuzzy funde acórdãos distintos). Registro completo: **`spec/frente2-honestidade-fontes/execucao/`**
+      (TODOS, INSIGHTS, `revisoes/`) e `spec/frente2-honestidade-fontes/implementacao/10-fechar-frente.md`.
+      Histórico da execução (fases e status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`):
       Spec: `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md`.
       Plano **v4** (3 rodadas adversariais, tudo dobrado no corpo — não há seção de emendas a consultar):
       `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, 10 tasks, TDD, BASELINE previsto
@@ -79,9 +87,9 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       ✅ **Split em arquivos por task (22/09, D-C16):** `spec/frente2-honestidade-fontes/` — `00-overview.md`
       (5 fases, grafo de dependências, protocolo por task), `tasks/01..10` (verbatim + "Depende de" + critérios de
       aceite derivados do plano), `reference/`. O plano segue fonte de verdade.
-      ▶ **Em execução desde 22/09.** Status por task da frente 2: **`spec/frente2-honestidade-fontes/execucao/TODOS.md`**
+      Executada de 22/09 (noite) a 23/09. Status por task da frente 2: **`spec/frente2-honestidade-fontes/execucao/TODOS.md`**
       (SSOT da execução — aqui não se marca mais nada da frente 2). Contexto/regras: `execucao/CONTEXTO.md`.
-- [ ] **Frente 5 · LM local** — T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
+- [ ] **Frente 5 · LM local** — ▶ **próxima** (frente 2 fechada em 23/09). T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
       do conector do wiki-chat no `log.md` (22/09).
       ➕ **Insumos de 22/09 (noite):** (a) configuração **por ambiente** — nuvem Streamlit = Gemini (não alcança a
       rede interna); servidor Nuati = LM local primário + Gemini de reserva (coerente com D-C5). (b) 📝 o Gemini tem
@@ -127,10 +135,16 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       malformado; (c) o default do searcher (`0.3` Google, `0.5` LexML/TCU) quando o LLM não roda.
       **`0.5` pode ser as três coisas.** Contra o princípio de rastreabilidade do projeto —
       precisa de campo de procedência da nota, não só da fonte.
+      ✅ **Virou código na frente 2 (23/09):** `relevancia_origem` (`modelo` / `fallback_erro` / `padrao_fonte` /
+      `heuristica`, vocabulário `ORIGENS_RELEVANCIA` em `models.py`) — T6 `score_relevance_com_origem`, T7 `_merge`,
+      T8 coluna "Origem da nota" na planilha, T9 origem no card e no preview. A F9 continua valendo para a **explicação**
+      da régua na interface (o campo existe; o texto que diz o que "30%" significa, não).
       ⚠ **Segundo achado:** a heurística determinística `_keyword_relevance` é **inalcançável
       pelo app**. `score_relevance` só é chamada dentro de `if llm_available()` (`app.py:571`),
       então sem chave a nota **nunca é calculada** — fica no default do searcher. A heurística só
       roda se alguém chamar a função direto.
+      ✅ **Virou código na frente 2 (23/09):** T9 — a pontuação roda **sempre** (sem LLM, a heurística, rotulada
+      `heuristica`); FIX-FONTES F-UX2 (`66b7145`) — a heurística compara sem acento, com a mesma normalização do filtro de busca.
 
 ### 📥 Observações do Rodrigo sobre a planilha de saída (em coleta)
 
@@ -154,10 +168,25 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       fórmula na aba `Normativos`; dublar `test_lexml_cql_injection_sanitization` (faz rede real); na tela, agrupar
       o detalhe do TCU por fonte (é idêntico por keyword); runner "sem LLM" de verdade — `st.secrets` vence a
       variável vazia (frente 5); reduzir os ~390s dos testes LIVE (📝 `BUSCADOR_SKIP_LIVE=1`, não decidido).
+      **Reconciliado na T10 (23/09)** — são os 4 itens de P3 do plano da frente 2 (Task 10) mais o dos testes LIVE:
+      - [x] fórmula na aba `Normativos` — ✅ **feito na própria frente 2** (a revisão final de segurança o classificou
+            como crítico): FIX-SAÍDA **S-SEC** `624bed5`, toda célula de texto das duas abas gravada como string literal
+            (sem `<f>` no XML, sem apóstrofo); caractere de controle `f749360`.
+      - [x] dublar `test_lexml_cql_injection_sanitization` — ✅ **feito**: FIX-FONTES **F-T1** `9fb4aeb` (sem rede, provado
+            por mutante). É o mesmo item da linha "(T2, Step 11b)" das sobras da execução, abaixo.
+      - [ ] tela: agrupar o detalhe do TCU por fonte (é idêntico por keyword) — **aberto**; conversa com o "relatório
+            enxuto" da frente 4.
+      - [ ] runner sem LLM de verdade (`st.secrets` vence a variável vazia) — **aberto, frente 5** (é o insumo (c) de lá;
+            não duplicar). ⚠ Agravante medido na execução: as chaves de LLM estão **definidas no ambiente da máquina**
+            (`~/.claude/ENVIRONMENT.md`, 23/09) — o runner as zera, o app lançado à mão não.
+      - [ ] reduzir os ~390s dos testes LIVE — **aberto**. Medido na T3: o custo é **paginação** do TCU (~114s por busca),
+            não retry; ver a linha "(T3) `max_results<=0`" abaixo.
 - [ ] **Sobras achadas na EXECUÇÃO da frente 2** (testadores/reviewers; detalhe em
       `spec/frente2-honestidade-fontes/execucao/revisoes/T*.md` e `INSIGHTS.md`):
-      - (T2, Step 11b do plano) `test_lexml_cql_injection_sanitization` em `test_comprehensive.py` faz **rede real** — dublar.
-      - (T2 M2) LexML: WAF/HTML num URL já cacheado (`_sru_url`) não entra em `_urls_mortos` nem tenta fallback.
+      - ✅ (T2, Step 11b do plano) `test_lexml_cql_injection_sanitization` em `test_comprehensive.py` faz **rede real** — dublar.
+        → **feito** em FIX-FONTES F-T1 (`9fb4aeb`), 23/09.
+      - ✅ (T2 M2) LexML: WAF/HTML num URL já cacheado (`_sru_url`) não entra em `_urls_mortos` nem tenta fallback.
+        → **feito** em FIX-FONTES F-M2 (`9fb4aeb`), 23/09 (a revisão final de spec subiu para importante).
       - (T2 obs. 2) keyword que sanitiza para vazio nunca é enviada mas sai `empty` — tratar em `search()`.
       - (T2 obs. 3 + T5) keywords além de `MAX_RETRIES` ou cortadas no retry ficam sem nota no detalhe — LexML e Google.
       - (T5) ddgs devolveu lista vazia depois de HTTP 202 do DDG (COBIT, ISO 27001 → "sem resultado"): possível mascaramento no ddgs — investigar.
@@ -173,12 +202,17 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       - (revisão final) Relevancia int/float variando entre exportações; Numero/Data vazios em vez de "—".
       - (revisão final) deriva do retry LexML × Google (guarda B2 só no LexML; helper `aplicar_retry` em `base.py`);
         `e_indisponivel(s)` em `models.py`; e os menores de `revisoes/final-manutencao.md`.
+        ✅ Parte feita: `models.e_indisponivel(s)` nasceu na FIX-SAÍDA (`624bed5`/`f749360`, usada pela tela e pela
+        planilha). A deriva do retry e os menores seguem abertos.
       - (revisão final, testes alto) golden que passe pelos searchers: payload real congelado de TCU/LexML → parse real →
         hash de `KeywordStatus`/`NormativoResult` (hoje o golden são 14 `NormativoResult` à mão).
       - (FIX-SAÍDA) `topic` com caractere de controle ainda derruba o título das duas abas (improvável: vem do usuário).
       - (FIX-FONTES) mover `BaseSearcher._normalize_text` para um módulo de texto leve (`llm` importa de `searchers` hoje).
       - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
         validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
+      - (T10) `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml` não tem a nota "📝 escrita à mão, sem captura"
+        no cabeçalho, que a regra de 22/09 do `LESSONS.md` exige; e falta a **captura real** do SRU do LexML, a fazer
+        quando a fonte responder (lição (3) do plano, `LESSONS.md` 23/09).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
       ⛔ **Bloqueado em autorização** — é auto-memória; a regra `memory-write-policy` exige que o
       Rodrigo autorize antes.

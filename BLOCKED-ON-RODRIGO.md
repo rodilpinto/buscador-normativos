@@ -1,7 +1,7 @@
 ---
 title: "Bloqueios no humano — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-22
+last_updated: 2026-09-23
 related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -78,6 +78,20 @@ explícita. **Pergunta ao Rodrigo:** autoriza acrescentar uma linha lá apontand
 > HTTP 500. E a UI reportou **"0 erros"**. Detalhe completo e as medições: `LESSONS.md`, entrada
 > de 2026-09-22. Isto **muda o pacote deste bloqueio**: não é só medir o que falta, é decidir o
 > que fazer quando a fonte catalogada cai — hoje o usuário não fica sabendo.
+
+> **2026-09-23 — frente 2 fechada (T10).** ✅ a UI e a planilha distinguem indisponível de sem resultado; acórdãos do TCU
+> deixaram de ser invisíveis — mas os recentes chegam sem sumário (medido), a lacuna continua.
+> **O que ficou medido na execução** (detalhe em `spec/frente2-honestidade-fontes/execucao/INSIGHTS.md` e `revisoes/`):
+> - **Janela do TCU:** o app só vê os **~500 acórdãos mais recentes** (`MAX_PAGES` = 25 páginas) — ao vivo em 23/09, "os 500
+>   acórdãos mais recentes, de 08/09/2026 a 22/09/2026" (≈ **2 semanas**; testador da FIX-FONTES, `revisoes/fix-fontes.md`; a mesma janela no V11 da T10).
+>   A revisão final de UX, antes do conserto, viu ~1 semana. A janela agora aparece no detalhe (FIX-FONTES F-UX3); acórdão
+>   mais antigo que isso **não é buscado** — é lacuna de cobertura, não de honestidade.
+> - **Sem sumário:** **327 de 500 (65%)** dos acórdãos trazidos chegaram sem `sumario` — nesses, só o título casa a
+>   palavra-chave (medido ao vivo na T4, 23/09, `implementacao/04-tcu-esquema-real.md`; o detalhe diz "N sem sumário").
+> - **Atos normativos do TCU:** endpoint em HTTP 500 em todas as medições da execução (22–23/09) — o TCU aparece **Parcial**.
+> - **LexML:** segue atrás do desafio de WAF do Senado (`bloqueio_waf`; B-05).
+> - 🔴 **D-C17:** o dedup fuzzy funde acórdãos **distintos** (26 de 900 numa amostra real) — perda silenciosa que afeta
+>   justamente esta medição. A frente 2 fechou com ela aberta (`_DECISOES-PENDENTES.md`).
 
 Rodar uma busca sobre um **tema real** e avaliar o que as fontes catalogadas (LexML + TCU)
 deixaram passar, comparado ao que a web aberta trouxe. Precisa de um tema real e do julgamento de

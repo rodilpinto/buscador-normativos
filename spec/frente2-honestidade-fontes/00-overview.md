@@ -35,6 +35,10 @@ deduplica.
 
 A coluna de total é a tabela de BASELINE do plano (`reference/global-constraints.md`). **O observado manda.**
 
+✅ **Frente fechada em 23/09 (T10).** Total observado ao fechar: **336** (13 + 65 + 98 + 94 + 66), contra os 283 do plano —
+a diferença são os testes além do plano (reviews de cada task e as trilhas de conserto da revisão final, FIX-FONTES e
+FIX-SAÍDA, que não estão nesta tabela). Status por task: `execucao/TODOS.md`; fechamento: `implementacao/10-fechar-frente.md`.
+
 ## Grafo de dependências (por símbolo consumido — ver o "Depende de" de cada task)
 
 ```

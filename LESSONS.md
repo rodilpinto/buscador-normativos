@@ -4,6 +4,128 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-23 · A faixa de auditoria do plano (`dc99d73..HEAD`) tem base sem nenhum `.py` — o comando de remoções dá vazio e "passa"
+
+**Problema.** Na T10 da frente 2, o critério §7 manda rodar a auditoria de documentação sobre `dc99d73..HEAD`.
+`git diff -U0 dc99d73..HEAD -- '*.py' | grep '^-' | grep -v '^---'` devolveu **0 linhas**. Parecia "nenhuma explicação
+removida". Era vazio por construção: em `dc99d73` o repo **não tinha nenhum `.py`**, porque o código de A só chegou depois,
+pelo merge `4f36080`. Todo `.py` da faixa aparece como arquivo novo, e arquivo novo não tem linha removida.
+
+**Causa-raiz.** A faixa foi escolhida pela história dos **docs** (o commit das decisões de 22/09), não pela do código. Um
+diff de dois pontos mede árvore contra árvore. Se a base não tem os arquivos, o gate não tem como reprovar.
+
+**Conserto.** Rodei os dois comandos sobre a faixa que tem código dos dois lados: `1c063ea..HEAD`, o início da frente 2
+(555 linhas removidas, lidas por arquivo, cada explicação com destino; ver `implementacao/10-fechar-frente.md`). Conferi
+também `4f36080..1c063ea`: só as 3 linhas do `MODEL_NAME` antigo (`18ad975`), que têm destino.
+
+**Regra.** Antes de acreditar num diff de auditoria vazio, confira que a **base** contém os arquivos auditados:
+`git ls-tree -r --name-only <base> | grep '\.py$'`. É a mesma família da entrada de 22/09 sobre o gate rodado depois do
+`git add`: um gate que compara contra o vazio dá verde.
+
+## 2026-09-23 · Revisão por task olha o diff da task; só a revisão do ESTADO INTEIRO vê o que as tasks juntas afirmam
+
+**Problema.** Na frente 2, cada uma das 9 tasks passou por testador (com e2e) e por code-reviewer. Mesmo assim, as 5 revisões
+finais sobre o estado combinado (`d4cab80`) acharam coisas que nenhuma revisão por task tinha visto:
+- **(crítico de segurança)** a aba principal da planilha gravava texto de página web cru, e o texto virava fórmula;
+- **(bloqueador)** o aviso "nenhuma fonte catalogada entregou" aparecia com o TCU entregando;
+- o TCU parcial aparecia como "indisponível";
+- a legenda do 0% era falsa por causa de acento;
+- a janela de ~2 semanas do TCU não era dita em lugar nenhum.
+
+**Causa-raiz.** Cada revisor lê o diff da sua task e confere contra o texto da task. Ninguém lê o que a tela e a planilha
+**afirmam ao usuário** quando todas as tasks estão juntas. O gate visual V11 também não ajudava: ele pressupõe um cenário
+fixo (TCU parcial de 22/09) e nunca exercita "LexML morto + TCU saudável".
+
+**Conserto.** Revisão final com 5 lentes (spec, segurança, testes com mutação, manutenção com auditoria de docs, UX do app
+real com Playwright) e triagem explícita: entra o que é segurança ou afirmação falsa (`execucao/revisoes/final-triagem.md`).
+Os achados viraram duas trilhas de conserto (FIX-FONTES, FIX-SAÍDA), cada uma com o ciclo completo.
+
+**Regra.** Nenhuma frente fecha só com revisões por task. Antes do fechamento, rode uma revisão do estado combinado, em
+várias lentes, que inclua **o app real rodado por quem o usa** e uma pergunta direta: *"o que a tela e a planilha afirmam, e
+é verdade?"*. Item deixado "fora do escopo" num plano (a fórmula na planilha estava assim) deve ser relido nessa revisão.
+
+## 2026-09-23 · Identidade de registro se testa contra o VOLUME real, não contra a fixture
+
+**Problema.** A T4 da frente 2 passou a montar o `id` do acórdão como `tipo|numero|data`. Os testes estavam verdes, e a
+janela de 500 acórdãos que eles usavam tinha **0 colisões**. O testador buscou 3.200 acórdãos ao vivo e achou **212
+colisões**: a 1ª e a 2ª Câmara têm séries de numeração próprias e fazem sessão no mesmo dia. O segundo acórdão
+**sumia em silêncio**, e o dedup (`tipo_numero`) fundiria os dois também.
+
+**Causa-raiz.** Unicidade é uma afirmação sobre **toda** a população. Duas fixtures reais e uma janela pequena mostram que
+existem registros diferentes, mas não mostram que dois registros nunca terão o mesmo `id`.
+
+**Conserto.** `bdd89a1`: o `numero` passou a seguir a forma de citação do TCU, com o colegiado literal. Resultado: 3.200 keys
+= 3.200 ids = 3.200 depois do dedup. Efeito colateral honesto: a ementa real expôs a fusão fuzzy (🔴 D-C17).
+
+**Regra.** Toda chave de identidade nova (id, chave de dedup, hash) é conferida contra uma amostra real **grande**, contando
+`len(set(chaves)) == len(registros)`, antes de a task fechar. Fixture prova forma, não unicidade.
+
+## 2026-09-23 · Teste de "não vaza segredo" (e de qualquer proteção) só vale se for DEMONSTRADO falhando sem a proteção
+
+**Problema.** Na T5 da frente 2, o teste "a chave do CSE não aparece no log" passava, mas não podia falhar. O ramo `conexao`
+truncava a mensagem em 120 caracteres, e o segredo nunca chegava ao detalhe. Um mutante (`redigir` = identidade) também
+passava.
+
+**Causa-raiz.** O teste afirmava a **ausência** do segredo sem garantir que o segredo **chegaria** até ali sem a proteção.
+Esse tipo de verde é vazio.
+
+**Conserto.** `e70d9f6`: teste reescrito e provado com o mutante. O padrão virou prática da execução: o F-T1 da FIX-FONTES
+foi provado por mutante, a revisão final matou 15/15 mutações da lógica de honestidade, e a revisão da FIX-SAÍDA conferiu
+que 11 de 14 testes novos falham no código antigo (os 3 que passam são guardas declarados).
+
+**Regra.** Todo teste de proteção (redação de segredo, escape, SSRF, fórmula) é rodado **uma vez contra a proteção
+desligada** e tem de ficar vermelho. O registro da task diz qual mutante foi usado. Corolário das previsões do plano: um
+teste-guarda, que protege comportamento que já existe, **passa** no "ver falhar". O plano deve prevê-lo como passed (T2:
+15 failed + 1 passed, não 16 failed).
+
+## 2026-09-23 · Dar nome à procedência revela lixo que antes era só um número
+
+**Problema.** A T6 da frente 2 passou a rotular de onde vem cada nota. Com isso apareceu um defeito antigo: `NaN`,
+`Infinity` e `true` devolvidos pelo modelo saíam como nota **do modelo**, e `NaN` virava 1,0, a nota máxima. Na mesma
+família: a legenda "0% = nenhuma palavra-chave na ementa" só se mostrou falsa (por causa de acento) quando a origem
+"heurística" passou a aparecer na tela. E na T3 o "ok (N itens)" do TCU mostrava um N inflado, porque a API devolve 40
+itens por página de 20.
+
+**Causa-raiz.** Um número sem rótulo não afirma nada que se possa conferir. Quando ele ganha um rótulo ("veio do modelo",
+"heurística", "500 itens"), vira uma afirmação testável, e a afirmação errada aparece.
+
+**Conserto.** `6594cd8` (`fallback_erro` para não-número/`bool`/não-finito); `66b7145` (heurística sem acento, com a
+normalização do filtro); `e8d59a4` (dedup por `key` na contagem).
+
+**Regra.** Rotular a procedência é também uma auditoria. Ao dar nome à origem de um valor, teste o rótulo contra entradas
+**hostis** (NaN, bool, acento, repetição) e não só contra o caso feliz.
+
+## 2026-09-23 · Golden recongelado se prova RECONSTRUINDO o hash antigo a partir da saída nova
+
+**Problema.** A T8 da frente 2 mudou a planilha, então o golden-master precisava ser recongelado. Conferir que o dedup não
+mudou não prova que o recongelamento não escondeu uma regressão no resto da planilha.
+
+**Conserto.** O testador tirou a coluna nova da aba `Normativos` gerada pelo código novo e recalculou o hash. Deu **o sha
+pré-T8 exato**. Assim a única diferença é a coluna declarada (`revisoes/T8.md`).
+
+**Regra.** Todo recongelamento de golden vem com a prova de reconstrução: remova da saída nova o que a mudança acrescentou e
+mostre que o hash antigo volta. Se não voltar, o recongelamento está escondendo alguma coisa.
+
+## 2026-09-23 · As 3 lições que o plano da frente 2 mandou registrar na T10: onde estão
+
+As lições (1) e (2) da Task 10 do plano **já estavam registradas desde 22/09**. Não as repito aqui (SSOT):
+1. **"Fixture escrita à mão sobre esquema não capturado é falsa testemunha"**: está na entrada de 2026-09-22 abaixo. A
+   execução confirmou: a fixture real do TCU sustentou a T4 inteira. O que ela não pegava (colisão de `id`), só o volume
+   real pegou (entrada acima).
+2. **"O pior achado foi um CRUZAMENTO de duas correções da rodada anterior"** (`redigir(300)` × cadeia agregada, R2-B1;
+   `sem_texto` fora do try × `_texto_do_acordao` não-total, R3-B1; o plano só ficou executável na 4ª versão): está na
+   entrada de 2026-09-22 abaixo.
+3. **Falta a captura real de SRU do LexML**: continua aberta. `levantamento-normativos/tests/fixtures/lexml_sru_valido.xml`
+   é 📝 escrita à mão, porque o LexML segue atrás do desafio de WAF do Senado (B-05; medido de novo no V11 da T10, 23/09).
+   ⚠ Conferido na T10: o arquivo **não traz** a nota "📝 escrita à mão, sem captura" que a regra de 22/09 pede no cabeçalho.
+   A procedência só aparece na tabela "Estrutura de arquivos" do plano. Fica pendente (é dado de teste, fora do escopo
+   de docs da T10; um comentário XML depois do `<?xml ...?>` não muda o parse).
+   **Regra:** na primeira vez que o SRU responder XML (ou quando o B-05 der acesso), capture uma resposta real com o `curl`
+   da entrada de 22/09, versione-a ao lado da escrita à mão e rode as suítes contra ela. Até lá, a fixture escrita à mão
+   tem de dizer que é escrita à mão.
+
+---
+
 ## 2026-09-22 · Modelo aposentado "só para usuários novos": o mesmo código funciona com chave velha e falha com chave nova
 
 **Problema:** no app da nuvem, com chave Gemini nova (projeto `nuati.secin`), a IA não gerava nada; localmente, com a

@@ -2,6 +2,72 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] fechamento | frente 2 (honestidade das fontes) fechada — T10; próxima: frente 5
+
+Depois da fase 4, a revisão final do estado combinado (`d4cab80`, 5 lentes: spec, segurança, testes com mutação,
+manutenção, UX do app real) achou o que nenhuma revisão por task viu: **fórmula na aba Normativos** (crítico de segurança),
+o aviso "nenhuma fonte catalogada entregou" com o TCU entregando (bloqueador), o TCU parcial chamado de indisponível, a
+legenda do 0% falsa por acento e a janela do TCU escondida. Triagem (`execucao/revisoes/final-triagem.md`) → duas trilhas
+de conserto com ciclo completo: **FIX-FONTES** (em master `7322cc0`: SSRF com revalidação por salto, LexML/TCU/Google nos
+cantos, janela do TCU no detalhe, heurística sem acento, CQL dublado) e **FIX-SAÍDA** (em master `51883f6`: toda célula de
+texto como string literal, "Parcial" na tela e na planilha, Passo 3 não verde com tudo indisponível, caractere de controle
+não derruba a exportação). **T10:** critérios da spec §7 conferidos no worktree `bn-t10`: runner **336 TUDO VERDE** sem
+`[AVISO] cresceu`, golden OK, `dedup_esperado.json` idêntico ao de `d054d5b`, **V11 7/7** (app sem chaves de LLM),
+auditoria de docs sobre `1c063ea..HEAD` (a faixa `dc99d73..HEAD` do plano sai vazia por construção, porque a base não tem
+nenhum `.py`; lição nova). Comandos e saídas: `spec/frente2-honestidade-fontes/implementacao/10-fechar-frente.md`.
+Duráveis atualizados (`_TODO.md`, B-04, D-C17, `LESSONS.md` com 7 entradas, `SESSION-ONBOARD`). 🔴 **D-C17 fica aberta
+e declarada**: o conserto vira task própria. Não foram feitos: o `deploy` (⛔ intocado), o push, o `/checkpoint` da fase 5
+e a limpeza dos worktrees (os três ficam com o orquestrador).
+
+<details><summary>Arquivado do <code>SESSION-ONBOARD-buscador.md</code> na T10 (texto substituído em §2/§6, verbatim; só os títulos de seção viraram <code>####</code>)</summary>
+
+#### (§) 2. Estado na última pausa (2026-09-23, checkpoint da fase 4 da frente 2)
+
+▶ **Frente 2 (honestidade das fontes) EM EXECUÇÃO desde 22/09 (noite), por agentes.** Plano v4 dividido em
+`spec/frente2-honestidade-fontes/` (D-C16). **Status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`
+(SSOT)**; regras do orquestrador e trilhas: `execucao/CONTEXTO.md`; briefs dos agentes: `execucao/BRIEFS.md`.
+✅ **T1–T9 em `master` (fases 1–4 fechadas)** — trilha B desde `9e259ca`, trilha A desde `08d9d8c`, T9 desde `d4cab80`
+(V11 7/7; runner + golden OK). ▶ **Revisão final** de 5 perspectivas rodando sobre `d4cab80` — ver "Trabalho em voo" em §6.
+Faltam: revisão final → coder aplica os achados → (D-C17, se o Rodrigo decidir consertar nesta frente) → T10.
+Os worktrees `../bn-trilha-a`, `../bn-trilha-b` e `../bn-t9` ficam até a T10 (guardam os screenshots de evidência, não versionados);
+as branches deles já estão em `master`.
+
+**Cadeia da sessão de 22–23/09:** rode `git log --oneline --reverse 1c063ea..HEAD` (é longa e cresce a cada task;
+não é mais restatada aqui). Marcos: `da543be` T1 · `a6de0af` checkpoint fase 1 · `9e259ca` merge da trilha B.
+Sessões anteriores: `git log`. ⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou
+este arquivo** — a cadeia real termina em `git log --oneline -3`. ⚠ Commits das trilhas vivem nas branches
+`frente2/trilha-*` até o merge.
+
+#### (§) 6. Próximo movimento
+
+▶ **Frente 2 EM EXECUÇÃO.** Ler `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md` e `TODOS.md` (SSOT)
+**antes de tudo**. Regra do Rodrigo (22/09): **o orquestrador não escreve código** — despacha, por task, coder
+(implementa) → coder (testa + e2e Playwright) → code-reviewer → o mesmo coder aplica o review e documenta em
+`spec/frente2-honestidade-fontes/implementacao/NN-*.md`; `/checkpoint` a cada fase; no fim, reviewers de várias
+perspectivas, depois a T10. Briefs prontos em `execucao/BRIEFS.md`.
+
+**Trabalho em voo no checkpoint da fase 4 (23/09):** 5 reviewers finais, só leitura, sobre `master` `d4cab80`:
+conformidade com a spec; segurança; qualidade dos testes e gates (com mutação); manutenibilidade + preservação de docs;
+UX do app real (Playwright, porta 8531). **Onde cai:** o orquestrador grava cada veredito em
+`execucao/revisoes/final-<perspectiva>.md`. **Se a sessão morreu antes:** despachar de novo os que não têm arquivo (os
+perspectivas, slugs e o que cada um faz estão na linha "reviewers do estado final" de `execucao/TODOS.md`; custo: ~5 agentes). **Onde o resultado cai:** commits na branch do worktree da vez (`git worktree list`; `git -C <worktree> log
+--oneline master..`). **Se a sessão morreu com ele no meio:** `git -C <worktree> status`
+— árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
+estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2
+(teste). Worktrees criados com `git worktree add -b frente2/trilha-X ../bn-trilha-X master`.
+**Casos do trabalho em voo:** árvore limpa sem commit = task nem começou → brief 1; commit + árvore suja = fix/doc
+pela metade → brief 4 com `execucao/revisoes/T{N}.md`; na dúvida, `git -C <wt> log -1 --stat` e o `TODOS.md` dizem o passo.
+**Próximo passo agêntico:** triar os 5 vereditos finais (bloqueador/importante → coder aplica num worktree novo, com
+teste + re-teste; menor → `_TODO.md` P3) → **T10** (critérios §7, duráveis, LESSONS, limpeza dos worktrees) →
+`/checkpoint` fase 5.
+
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy), 🔴 **D-C17** (dedup fuzzy funde acórdãos
+distintos — não trava a execução, mas é perda silenciosa até o Rodrigo decidir). (D-C10.1 fechada em 22/09:
+tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do
+Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a frente 2.
+
+</details>
+
 ## [2026-09-23] checkpoint | frente 2, fase 4 fechada: T9 em master; revisão final despachada
 
 T9 (tela) fechou o ciclo e entrou em `master` em `d4cab80`: relatório por motivo, aviso por fonte (TCU "respondeu

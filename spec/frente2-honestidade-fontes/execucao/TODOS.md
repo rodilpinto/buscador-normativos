@@ -52,7 +52,11 @@ related: [CONTEXTO.md, INSIGHTS.md]
 ## Fase 5 — Fechamento
 - [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — ⚠ sem resposta até o fim da execução:
       a T10 fecha a frente com a D-C17 **aberta e declarada** como lacuna conhecida; o conserto vira task própria depois
-- [ ] **T10** fechar a frente ▶ (worktree `../bn-t10`) — critérios §7, duráveis, LESSONS · e limpar os worktrees: `git worktree list`; para cada
+- [x] **T10** fechar a frente (worktree `../bn-t10`, branch `frente2/t10`) — critérios §7, duráveis, LESSONS ✅ (23/09, commit
+      `docs: fecha a frente 2` na branch; runner **336** verde sem `[AVISO] cresceu` · golden OK · `dedup_esperado.json` = `d054d5b` ·
+      V11 7/7 · auditoria de docs sobre `1c063ea..HEAD` — `dc99d73..HEAD` sai vazia por construção; registro em
+      `../implementacao/10-fechar-frente.md`). ⚠ Só a parte do coder: merge, push, a limpeza abaixo e o `/checkpoint` são do orquestrador.
+- [ ] **T10 · limpeza (orquestrador)** — limpar os worktrees: `git worktree list`; para cada
       `../bn-*`: (1) inventariar `ls <wt>/tests/evidencia/` (⚠ em `bn-t9` ela é **ignorada**, não untracked — `git status`
       não mostra; os PNG/`.xlsx` são citados pelos `implementacao/*.md`); (2) **preservar** copiando para o repo principal:
       `mkdir -p tests/evidencia/<wt> && cp -r <wt>/tests/evidencia/. tests/evidencia/<wt>/` (ignorado lá também — fica local);

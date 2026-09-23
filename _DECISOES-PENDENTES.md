@@ -17,7 +17,7 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 - **Onde aparece:** 23/09, re-teste da T4 da frente 2 (`spec/frente2-honestidade-fontes/execucao/revisoes/T4.md`).
 - **Fato medido:** depois da T4 os acórdãos passam a ter o `sumario` literal como ementa, e o passo **fuzzy** do dedup
-  (`deduplicator.py:251-270`, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
+  (`deduplicator.py:251-270` — hoje `:256-280`, conferido na T10 em 23/09 —, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
   distintos, **26 somem fundidos em outros** (ex.: "ACÓRDÃO 2344/2026 ATA 33/2026 - PLENÁRIO" fundido no 2225/2026 — os dois
   sumários começam "TOMADA DE CONTAS ESPECIAL. FRAUDE NA CONCESSÃO DE BENEFÍCIOS PREVIDENCIÁRIOS…"). Repro:
   `scratchpad/fuzzy.py` do testador — ⚠ **fora do repo, efêmero**: se a decisão for consertar, o primeiro passo do coder é
@@ -45,6 +45,13 @@ Continua sendo mudança no dedup → decisão sua.
 📝 **Recomendação minha (revista):** `a'`, nesta frente, com o golden conferido intacto e um teste com os dois acórdãos
 reais que se fundiam; se preferir não mexer no dedup agora, `c`. É exatamente a classe de defeito que a frente existe
 para matar.
+
+⚠ **2026-09-23 — a frente 2 FECHOU com a D-C17 aberta** (T10, sem resposta até o fim da execução), declarada como lacuna
+conhecida em `SESSION-ONBOARD` §6 e no `BLOCKED-ON-RODRIGO.md` B-04. O "nesta frente" das opções `a`/`a'`/`c` deixou de
+existir: qualquer escolha vira **task própria**, com o conserto no passo fuzzy de `deduplicator.deduplicate` ("Strategy 3:
+Fuzzy ementa match", `levantamento-normativos/deduplicator.py:256-280`) — ou, na `c`, no `_merge`/diagnóstico — com golden
+conferido e fixture real dos dois acórdãos capturada ao vivo. A revisão final de spec (`revisoes/final-spec.md`) pede que
+não passe do início da frente 5.
 
 **Decisão tomada:** _(pendente)_
 
