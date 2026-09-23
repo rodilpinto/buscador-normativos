@@ -200,24 +200,54 @@ class TCUSearcher(BaseSearcher):
             falha era `break` silencioso ("return what we have").
         """
         all_items: list[dict] = []
+        vistas: set = set()   # keys ja acumuladas (I2 da review da T3)
         offset = 0
         for page in range(MAX_PAGES):
             params = {"inicio": offset, "quantidade": PAGE_SIZE}
             try:
                 data = self._request_with_retry(url, params)
             except FonteIndisponivel as e:
+                # Menor 1 (review da T3): devolve ao console o rastro que o 503/4xx
+                # tinham antes; o detalhe ja vem redigido pela FonteIndisponivel
+                logger.warning(f"TCU: {e}")
                 if page == 0:
                     return [], e, False
                 e.detalhe = f"pagina {page + 1} (inicio={offset}): {e.motivo}: {e.detalhe}"
                 return all_items, e, True
             # The response may be a list directly or wrapped in an object.
             # Handle both cases.
+            # I1 (review da T3): qualquer outra forma e falha declarada, nunca
+            # "sem resultado" — um 200 com o corpo de erro do proprio TCU
+            # ({"url": "Erro no servico", "erro": ...}) passava como lista vazia, e
+            # um JSON null/str/numero dava AttributeError -> erro_interno que, na
+            # pagina 2, jogava fora a pagina 1. Pagina >= 2 fica parcial.
+            if not isinstance(data, (list, dict)) or (
+                isinstance(data, dict) and "items" not in data and "data" not in data
+            ):
+                chaves = f" chaves={str(sorted(data))[:80]}" if isinstance(data, dict) else ""
+                erro = FonteIndisponivel(
+                    "resposta_ilegivel",
+                    f"pagina {page + 1} (inicio={offset}): formato inesperado {type(data).__name__}{chaves}"
+                    f" | GET {url}?inicio={offset}")
+                logger.warning(f"TCU: {erro}")
+                return all_items, erro, page > 0
             items = data if isinstance(data, list) else data.get("items", data.get("data", []))
             if not isinstance(items, list):
                 erro = FonteIndisponivel("resposta_ilegivel", f"formato inesperado {type(data).__name__} | GET {url}?inicio={offset}")
                 return all_items, erro, page > 0
-            all_items.extend(items)
+            # I2 (review da T3): a API as vezes devolve 40 itens para quantidade=20,
+            # repetindo os da pagina anterior (medido: 580 itens, 500 keys unicas) —
+            # sem isto o "ok (N itens, M sem sumario)" do detalhe mostrava um N
+            # inflado e variavel. Item sem `key` (ou com key nao escalar) entra sempre.
+            for item in items:
+                key = item.get("key") if isinstance(item, dict) else None
+                if isinstance(key, (str, int)):   # key nao-hashable nao pode virar TypeError
+                    if key in vistas:
+                        continue
+                    vistas.add(key)
+                all_items.append(item)
             # If we got fewer items than PAGE_SIZE, no more pages
+            # (conta a pagina CRUA: duplicata nao encurta a pagina)
             if len(items) < PAGE_SIZE:
                 break
             offset += PAGE_SIZE

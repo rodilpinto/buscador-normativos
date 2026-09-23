@@ -423,6 +423,60 @@ def test_tcu_acordaos_sem_sumario_sao_contados_e_nao_casam(monkeypatch):
     assert st.status == "empty" and "2 sem sumário" in st.detalhe
 
 
+
+# --- Review da T3 (ALEM do plano): I1 formato inesperado, I2 contagem por key ---
+
+class RespostaJsonNulo(RespostaFake):
+    """200 cujo corpo e o JSON `null`: .json() devolve None (o RespostaFake levanta)."""
+
+    def json(self):
+        return None
+
+
+def test_tcu_200_json_sem_items_e_resposta_ilegivel(monkeypatch):
+    """I1: um 200 com o corpo de erro do proprio TCU nao pode ser lido como "sem resultado"."""
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data={"erro": "x"}),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "resposta_ilegivel")
+    assert "formato inesperado dict" in st.detalhe and "chaves=['erro']" in st.detalhe
+    assert "| GET " in st.detalhe and "recupera-acordaos" in st.detalhe
+
+
+def test_tcu_json_nulo_na_segunda_pagina_e_parcial(monkeypatch):
+    """I1: JSON null na pagina 2 nao pode descartar a pagina 1 como erro_interno."""
+    from searchers import tcu_searcher
+    pagina_cheia = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i)) for i in range(tcu_searcher.PAGE_SIZE)]
+
+    def acordaos(p):
+        if p["inicio"] == 0:
+            return RespostaFake(200, json_data=pagina_cheia)
+        return RespostaJsonNulo(200, "null", "application/json")
+
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": acordaos,
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=100)
+    st = s.keyword_statuses[0]
+    assert st.parcial is True and st.motivo != "erro_interno"
+    assert "pagina 2 (inicio=20)" in st.detalhe and "formato inesperado NoneType" in st.detalhe
+    assert f"Acórdãos: parcial ({tcu_searcher.PAGE_SIZE} itens" in st.detalhe   # a pagina 1 ficou
+
+
+def test_tcu_itens_repetidos_entre_paginas_contam_uma_vez_por_key(monkeypatch):
+    """I2: a API as vezes devolve 40 itens para quantidade=20 (medido: 580 itens, 500 keys unicas)."""
+    def acordaos(p):
+        if p["inicio"] == 0:
+            return RespostaFake(200, json_data=[dict(ACORDAO, key=f"A-{i}") for i in range(0, 20)])
+        if p["inicio"] == 20:
+            return RespostaFake(200, json_data=[dict(ACORDAO, key=f"A-{i}") for i in range(10, 50)])
+        return RespostaFake(200, json_data=[])
+
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": acordaos,
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=100)
+    assert "Acórdãos: ok (50 itens" in s.keyword_statuses[0].detalhe
+
 @pytest.mark.xfail(reason="so na T4 _texto_do_acordao le sumario/titulo; ate la o item nem e mapeado", strict=True)
 def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatch):
     """H2: um item malformado derrubava search() inteiro; agora e erro_interno por keyword, nao sumico."""
