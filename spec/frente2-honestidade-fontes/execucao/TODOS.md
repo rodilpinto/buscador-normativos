@@ -47,11 +47,12 @@ related: [CONTEXTO.md, INSIGHTS.md]
       sobre o diff `1c063ea..d4cab80`.
 - [x] achados triados — `revisoes/final-triagem.md` (📝 critério meu: entra o que é segurança ou afirmação falsa)
 - [x] **FIX-FONTES** (`../bn-fix-fontes`, porta 8541; F-N2 F-M2 F-N4 F-N5 F-UX3 F-UX2 F-SSRF F-MT1 F-MT3 F-MT503 F-T1) — impl ✅ `66b7145` + `9fb4aeb` (llm 65, fontes 60; runner 312; golden OK) · teste ✅ APROVADO (SSRF sem bypass em 16 formas; `revisoes/fix-fontes.md`) · review ✅ 3 importantes + 1 menor · fix ✅ `cb9e0b5` (fontes 66; runner 318) · doc ✅ `89b2492` · merge ✅ `7322cc0` (ff de master; runner 318 + golden OK)
-- [ ] **FIX-SAÍDA** (`../bn-fix-saida`, porta 8551; S-SEC S-N1 S-UX1+N3 S-N8 S-N9 S-MT2) — impl ✅ `624bed5` (phase4 90; runner 310; golden sha inalterado; V11 5/6 — 0 cards ao vivo hoje) · teste ✅ APROVADO (0 `<f>` nas 2 abas; V11 7/7 com cards; `revisoes/fix-saida.md`) · review ✅ + caractere de controle nesta trilha · fix ✅ `f749360` (phase4 94; runner 314; golden inalterado) · doc ✅ `9a7a240` · merge ▶ (refazendo com master que já tem a FIX-FONTES; esperado 336)
+- [x] **FIX-SAÍDA** (`../bn-fix-saida`, porta 8551; S-SEC S-N1 S-UX1+N3 S-N8 S-N9 S-MT2) — impl ✅ `624bed5` (phase4 90; runner 310; golden sha inalterado; V11 5/6 — 0 cards ao vivo hoje) · teste ✅ APROVADO (0 `<f>` nas 2 abas; V11 7/7 com cards; `revisoes/fix-saida.md`) · review ✅ + caractere de controle nesta trilha · fix ✅ `f749360` (phase4 94; runner 314; golden inalterado) · doc ✅ `9a7a240` · merge ✅ `51883f6` (conflito só no `BASELINE`, dois lados; runner **336** + golden OK + V11 7/7; ff de master)
 
 ## Fase 5 — Fechamento
-- [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — **antes** da T10
-- [ ] **T10** fechar a frente — critérios §7, duráveis, LESSONS · e limpar os worktrees: `git worktree list`; para cada
+- [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — ⚠ sem resposta até o fim da execução:
+      a T10 fecha a frente com a D-C17 **aberta e declarada** como lacuna conhecida; o conserto vira task própria depois
+- [ ] **T10** fechar a frente ▶ (worktree `../bn-t10`) — critérios §7, duráveis, LESSONS · e limpar os worktrees: `git worktree list`; para cada
       `../bn-*`: (1) inventariar `ls <wt>/tests/evidencia/` (⚠ em `bn-t9` ela é **ignorada**, não untracked — `git status`
       não mostra; os PNG/`.xlsx` são citados pelos `implementacao/*.md`); (2) **preservar** copiando para o repo principal:
       `mkdir -p tests/evidencia/<wt> && cp -r <wt>/tests/evidencia/. tests/evidencia/<wt>/` (ignorado lá também — fica local);
