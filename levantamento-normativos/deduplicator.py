@@ -102,7 +102,7 @@ def _merge(existing: NormativoResult, incoming: NormativoResult) -> None:
     - ementa: keep whichever is longer (more informative)
     - source: combine as comma-separated, deduplicated
     - found_by: combine as comma-separated, deduplicated
-    - relevancia: keep the higher score
+    - relevancia: keep the higher score, and relevancia_origem of whichever won (tie keeps existing)
     - link: keep link from most authoritative source (lexml > tcu > google)
     - nome: keep whichever is longer (more descriptive)
     - orgao_emissor: keep whichever is non-empty, prefer longer
@@ -143,8 +143,15 @@ def _merge(existing: NormativoResult, incoming: NormativoResult) -> None:
     combined_keywords = existing_keywords | incoming_keywords
     existing.found_by = ", ".join(sorted(combined_keywords))
 
-    # Relevancia: keep higher score
-    existing.relevancia = max(existing.relevancia, incoming.relevancia)
+    # Relevancia: keep higher score — e a ORIGEM da nota que venceu.
+    # Invariante DECLARADO (M8 da rodada de 22/09): no app o dedup roda ANTES
+    # da pontuacao, entao aqui todo item ainda e "padrao_fonte" e o efeito
+    # pratico e nulo hoje. Existe para o dia em que a pontuacao vier antes
+    # (ex.: nota por fonte), sem que a planilha diga "modelo" sobre uma nota
+    # da heuristica.
+    if incoming.relevancia > existing.relevancia:
+        existing.relevancia = incoming.relevancia
+        existing.relevancia_origem = incoming.relevancia_origem
 
     # Link: prefer more authoritative source (using original source names)
     existing_priority = _SOURCE_PRIORITY.get(

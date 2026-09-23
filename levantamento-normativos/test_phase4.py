@@ -678,6 +678,29 @@ class TestStatusesParaFalhaTotal:
         assert len(sts) == 1 and sts[0].keyword == "(todas)"
 
 
+class TestMergeOrigem:
+    """_merge guarda a maior nota E a origem dela (spec §3.4). Invariante: no app o
+    dedup roda ANTES da pontuacao, entao hoje o efeito e nulo — ver docstring."""
+
+    def test_incoming_maior_leva_sua_origem(self):
+        a = _make_result(relevancia=0.4); a.relevancia_origem = "padrao_fonte"
+        b = _make_result(source="google", relevancia=0.9); b.relevancia_origem = "modelo"
+        _merge(a, b)
+        assert (a.relevancia, a.relevancia_origem) == (0.9, "modelo")
+
+    def test_existing_maior_mantem_sua_origem(self):
+        a = _make_result(relevancia=0.9); a.relevancia_origem = "heuristica"
+        b = _make_result(source="google", relevancia=0.2); b.relevancia_origem = "modelo"
+        _merge(a, b)
+        assert (a.relevancia, a.relevancia_origem) == (0.9, "heuristica")
+
+    def test_empate_mantem_existing(self):
+        a = _make_result(relevancia=0.5); a.relevancia_origem = "modelo"
+        b = _make_result(source="google", relevancia=0.5); b.relevancia_origem = "fallback_erro"
+        _merge(a, b)
+        assert a.relevancia_origem == "modelo"
+
+
 # ===========================================================================
 #  Run via pytest or direct execution
 # ===========================================================================
