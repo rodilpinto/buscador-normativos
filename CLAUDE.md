@@ -19,6 +19,7 @@ Nasceu do projeto "Auditoria Interna apoiada por IA" (Secin/Nuati), área `ai-co
 | `SESSION-ONBOARD-buscador.md` | estado, ponto de entrada |
 | `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura) |
 | `docs/superpowers/{specs,plans}/2026-09-22-frente2-*` | spec + plano v4 da **frente 2** (próxima) — tudo dobrado no corpo |
+| `spec/frente2-honestidade-fontes/` | split do plano v4 por task (fases, dependências, critérios de aceite) — o plano ganha em divergência |
 | `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — ⛔ emendas no topo prevalecem sobre o corpo; T3/T1/T2 feitas, o resto é v2.0 |
 | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
 | `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` · `decisions/` | lições · pendências humanas · rodadas de decisão |

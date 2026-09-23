@@ -70,7 +70,9 @@ risco de alguém executar um trecho do corpo que uma emenda derrubou.
 `https://levantamento-normativos.streamlit.app/` no Community Cloud, **privado** (GET → `303` para o login do
 `share.streamlit.io`). A verificação só olhou o repo; deploy no Community Cloud não deixa arquivo no repo.
 Vinha do repo A. ✅ **Redeploy feito em 22/09 (noite)** a partir do repo B, branch `master`:
-`https://buscador-normativos.streamlit.app/`, privado; B continua privado. ⚠ Push em `master` = deploy.
+`https://buscador-normativos.streamlit.app/`, privado; B continua privado. ~~⚠ Push em `master` = deploy.~~
+⚠ **CORRIGIDO em 22/09:** o app segue a branch **`deploy`** (congelada em `v1.0.1`), não `master` — Rodrigo
+confirmou nesta data que a versão publicada roda a partir da branch. Push em `master` **não** é deploy.
 ✅ Continua valendo: sem Dockerfile/Procfile. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
 herda a visibilidade do repo (privado → só convidados, login Google/e-mail); **limite de 1 app
 privada por conta**. A nuvem da Streamlit **não alcança o LM local** (`10.10.111.125`) — lá só
@@ -113,6 +115,16 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 ---
 
 ## 🟢 Decididas em 2026-09-22
+
+- **D-C16 · O plano da frente 2 é dividido em arquivos por task, agrupados em fases.** Rodrigo, 22/09: *"Please
+  split this plan into separate files in a tasks subfolder. This implementation plan should be split up into phases
+  and actionable tasks. Each is a individual feature with detailed actionable tasks, tests and acceptance criteria
+  [...] Carefully consider the dependencies between features."* Feito em `spec/frente2-honestidade-fontes/`: 5 fases,
+  10 tasks, corte **verbatim** (script `tools/split_frente2.py`, cobertura verificada) + header com "Depende de" e
+  critérios de aceite **derivados do plano**. Regra herdada do split de 10/09 (D-C9, opção `c`): **o plano segue fonte
+  de verdade**; divergência → o plano ganha; status só no `_TODO.md`. Ordem continua sequencial T1 → T10; a execução
+  em duas trilhas paralelas depois da T1 ficou como 📝 proposta minha no overview, **não** decidida.
+  ⚠ Não fecha a D-C9: aquela é sobre o plano de 16/09 (v2.0).
 
 - **D-C15 · Como a frente 2 é revisada e executada.** Rodrigo, 22/09: *"2 rodadas de adversarial review e
   depois vamos parar e começar a implementação em uma nova sessão com contexto zerado."* Feito: o plano

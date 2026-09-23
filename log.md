@@ -1,6 +1,28 @@
 # Log — Buscador de Base Normativa
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
+
+## [2026-09-22] split | plano v4 da frente 2 cortado em 10 arquivos de task, 5 fases
+
+Pedido do Rodrigo (D-C16). O plano tem **2.882 linhas**; o subagente de cada task passa a ler o arquivo da task
+(42–791 linhas) + `reference/global-constraints.md` (74). Destino: `spec/frente2-honestidade-fontes/`
+(`00-overview.md`, `tasks/01..10`, `reference/{global-constraints,triagem-adversarial,self-review-v4}.md`).
+Fases: 1 fundação (T1) · 2 fontes honestas (T2–T5) · 3 procedência da nota (T6–T7) · 4 saída honesta (T8–T9) ·
+5 fechamento (T10).
+
+**Corte verbatim por script** (`tools/split_frente2.py`): toda linha não vazia e diferente de `---` do plano cai em
+exatamente um arquivo, sem sobreposição; cercas de código pares. Cada task ganha um header com **"Depende de"**
+(por símbolo consumido, não por ordem) e **critérios de aceite derivados do próprio plano** — nenhum critério novo.
+O plano segue fonte de verdade.
+
+**Dependências achadas lendo as tasks:** a T9 consome T2, T3, T4, T5, T6 e T8; a T5 não consome código da T3/T4, mas
+soma na mesma suíte e no mesmo `BASELINE`; a T8 depende da T7 só na contagem. 📝 Depois da T1, as trilhas T2→T5 e
+T6→T8 só colidem em `tools/run_all_tests.py` — ficou como proposta no overview, não decidida; o plano manda sequencial.
+
+**Deploy:** Rodrigo confirmou nesta data que o app da nuvem roda a partir da branch `deploy`. Corrigida a D-C14, que
+ainda dizia "push em `master` = deploy". Push por task em `master` segue valendo e não publica nada.
+
+Nenhuma linha de produção mudou.
 ## [2026-09-22] deploy descoberto | o app já estava no Streamlit Community Cloud
 
 Rodrigo apontou `https://levantamento-normativos.streamlit.app/`. GET → `303` para login (app privado). Docs

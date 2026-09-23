@@ -94,22 +94,24 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 ## 6. Próximo movimento
 
 **Executar o plano v4 da frente 2, a partir da T1**, em sessão nova. Primeiro passo agêntico, sem
-depender de ninguém: abrir `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, ler
-"Global Constraints" + "Estrutura de arquivos" + **só a Task 1**, e despachar um subagente para a T1
+depender de ninguém: abrir `spec/frente2-honestidade-fontes/00-overview.md` (fases, dependências, protocolo),
+dar ao subagente **`tasks/01-vocabulario-honestidade.md` + `reference/global-constraints.md`** (split verbatim
+do plano, 22/09, D-C16 — o plano segue fonte de verdade), e despachar a T1
 (`superpowers:subagent-driven-development`), com o gate por task: `python tools/run_all_tests.py` verde
 **e** `python tools/golden_master.py comparar` OK **e** push. ⚠ A regra do plano "se o observado divergir,
 parar" vale para a diferença entre o **bloco de testes** e o observado — contar `def test_` antes de
 suspeitar do código.
 
-Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C10.1 🟡 (tag por task ou só nos marcos),
-D-C14 (deploy). ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a T1.
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy). (D-C10.1 fechada em 22/09:
+tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a T1.
 
 ## 7. Ponteiros
 
 | Doc | Papel |
 |---|---|
 | `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (próxima) |
-| `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração |
+| `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração; **fonte de verdade** |
+| `spec/frente2-honestidade-fontes/` | **split do plano v4** (22/09, D-C16): `00-overview.md` (5 fases, dependências) + `tasks/01..10` (verbatim + critérios de aceite) + `reference/` — é o que o subagente lê |
 | `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura; vale) |
 | `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — T3/T1/T2/T9 **feitas**; T5/T6 viraram a frente 5; T4/T7/T8 = **v2.0** (emendas no topo, D-C9) |
 | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |

@@ -1,0 +1,8 @@
+> Self-review do plano v4, extraído **verbatim** (`docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, linhas 2877-2882).
+
+## Self-review (v4)
+
+**Cobertura da spec + emendas:** §3.1 → T1 · §3.2 → T2 · §3.3 → T3 · §3.4 → T6+T7+T9 · §3.5 → T8 · §3.6 → T9 · §3.7 → gates de golden (exceção declarada em T4) · §4 V1–V11 → T1..T9 · §5 → estrutura (+ google, tcu mapping) · §7 → T10. Emendas à spec: §3.1 (motivos; redigir em toda atribuição; rotulo_status na planilha; parcial com empty/error), §3.7 (T4; data vazia continua `""`), §5 (T5), §3.5 (`quando`, `—`, golden nas 2 abas, detalhe até 2000 com corte marcado).
+**Contagens (recomputadas dos blocos, v4):** T1 41+17=58 · T2 16 · T3 +10 = 26 coletados (25 passed + 1 xfail) · T4 xfail→passed +3 = 29 · T5 +8 = 37 · T6 63 · T7 61 · T8 71 · T9 +1 (`test_origem_curta_do_app…`) = 72 · **final 13 + 63 + 98 + 72 + 37 = 283**. A tabela do topo já traz T9 = 72 / 283; o executor atualiza o BASELINE no commit da T9.
+**Delegações à v1:** nenhuma. **Placeholders:** nenhum `TBD`/`TODO`/`# inalterado`/`...`.
+**Nomes:** `FonteIndisponivel(motivo, detalhe)` · `SOURCE_ID` · `_search_keyword_safe -> (list, erro_fatal, erro_paginacao)` · `_fetch_all_pages -> (itens, erro, parcial)` · `_search_urls -> (list, erro)` · `_texto_do_acordao` (não-total, sempre dentro de `try`) · `_sem_sumario` (total) · `score_relevance_com_origem -> list[tuple[float, str]]` · `generate_excel(results, topic, diagnostico=None, quando=None)` · `redigir(texto, limite=2000)` (corte no meio, marcado) · `rotulo_status(s)` (só planilha) · `statuses_para_falha_total(source, keywords, exc)` · `_render_search_diagnostics(kw_statuses)`.

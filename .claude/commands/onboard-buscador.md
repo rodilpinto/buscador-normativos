@@ -35,6 +35,9 @@ A §6 do state file diz qual frente está ativa. Para cada frente há uma spec e
   (b) **seções de emendas no topo** que prevalecem sobre o corpo (precedência declarada em cada seção; cada
   seção do corpo derrubada tem marcador `⛔`; a ordem real está no `_TODO.md`) — é o caso do plano de 16/09.
   O topo do plano diz qual formato ele usa; não leia o corpo antes disso.
+- **Split da frente, quando existir** — `spec/<frente>/00-overview.md` (fases, dependências, protocolo) e
+  `spec/<frente>/tasks/NN-*.md` (cópia verbatim de cada task + critérios de aceite). É o que o subagente lê.
+  O plano continua fonte de verdade. A frente 2 tem: `spec/frente2-honestidade-fontes/`.
 
 ⛔ **Superados, histórico apenas — não execute:** `docs/superpowers/plans/2026-09-08-*`,
 `docs/superpowers/specs/2026-09-08-*` na parte contrariada, e `spec/buscador/tasks/`.

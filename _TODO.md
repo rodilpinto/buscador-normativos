@@ -75,6 +75,9 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, 10 tasks, TDD, BASELINE previsto
       por task na tabela do próprio plano. ⚠ Ordem de execução = numeração (T1…T10). Executar em **sessão
       nova**, subagente por task (`superpowers:subagent-driven-development`), runner + golden como gate.
+      ✅ **Split em arquivos por task (22/09, D-C16):** `spec/frente2-honestidade-fontes/` — `00-overview.md`
+      (5 fases, grafo de dependências, protocolo por task), `tasks/01..10` (verbatim + "Depende de" + critérios de
+      aceite derivados do plano), `reference/`. O plano segue fonte de verdade; status só aqui.
       - [ ] T1 vocabulário · [ ] T2 LexML · [ ] T3 TCU · [ ] T4 TCU esquema real · [ ] T5 Google
       - [ ] T6 origem da nota · [ ] T7 `_merge` · [ ] T8 planilha (recongela golden) · [ ] T9 tela (V11) · [ ] T10 fechar
 - [ ] **Frente 5 · LM local** — T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
