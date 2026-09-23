@@ -95,12 +95,19 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
 - [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
+      ➕ **Insumos da revisão final da frente 2 (23/09, `spec/frente2-honestidade-fontes/execucao/revisoes/final-ux.md`):**
+      relatório enxuto (uma linha por fonte + "Detalhe técnico" recolhido; hoje 16 blocos de debug); rótulo humano para cada
+      motivo com o código entre colchetes; lembrete de cobertura no Passo 5; acentos nos rótulos (Orgao, Relevancia…) e
+      cores (laranja = parcial, "sem resultado" neutro); emissor/tipo inventados — `"gov.br": "Governo Federal"`
+      (`google_searcher.py:101`) casa df.gov.br/go.gov.br, e `nome` montado por nós (TCU atos, LexML sem título, Google com
+      a URL) parece título da fonte.
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).
       ✅ Tags `v1.0` (`eb91277`) e **`v1.0.1`** (`e2cd56a`, ponto de retorno funcional) criadas e empurradas em 22/09 (D-C10.1).
 
 ## Fase 2 — as features (plano ainda não escrito)
 
-- [ ] **F1** procedência (`catalogada` / `web-aberta`)
+- [ ] **F1** procedência (`catalogada` / `web-aberta`) — ➕ revisão final da frente 2: a aba Normativos não tem a coluna;
+      título das abas usa só a 1ª keyword no modo manual.
 - [ ] **F2** vinculação (`obrigatorio` / `aplicavel` / `contexto`)
 - [ ] **F3** pré-marcação com motivo + as **duas** travas anti-ancoragem
 - [ ] **F4** selo "já tenho" por sha256
@@ -161,6 +168,13 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       - (T9 r1) URL solta (`http://…`) no texto da fonte vira link clicável no card (autolink do GFM, não se desliga por
         escape); o texto visível fica literal. 📝 sugestão do coder: quebrar o nó de texto com `<span></span>` depois de `http`/`www`.
       - (T9 r2) "Ementa completa" com `_md_texto` troca quebras de linha por espaço (muda o layout, não o texto).
+      - (revisão final) TCU com os dois endpoints caídos: o aviso por fonte mostra só o motivo dos acórdãos (spec N6).
+      - (revisão final) snippets do Google com palavras coladas ("doturismoem") — contra "texto literal"; investigar ddgs.
+      - (revisão final) Relevancia int/float variando entre exportações; Numero/Data vazios em vez de "—".
+      - (revisão final) deriva do retry LexML × Google (guarda B2 só no LexML; helper `aplicar_retry` em `base.py`);
+        `e_indisponivel(s)` em `models.py`; e os menores de `revisoes/final-manutencao.md`.
+      - (revisão final, testes alto) golden que passe pelos searchers: payload real congelado de TCU/LexML → parse real →
+        hash de `KeywordStatus`/`NormativoResult` (hoje o golden são 14 `NormativoResult` à mão).
       - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
         validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.

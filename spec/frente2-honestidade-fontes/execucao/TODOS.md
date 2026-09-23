@@ -36,7 +36,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] `/checkpoint` fase 4 (23/09)
 
 ## Revisão final (várias perspectivas)
-- [ ] reviewers do estado final despachados ▶ — 5, só leitura, sobre `master` `d4cab80`; cada veredito em
+- [x] reviewers do estado final despachados ✅ (5 vereditos em `revisoes/final-{spec,seguranca,testes,manutencao,ux}.md`) — 5, só leitura, sobre `master` `d4cab80`; cada veredito em
       `revisoes/final-<slug>.md` quando chega (arquivo existe = terminou). Perspectivas e slugs:
       `spec` (code-reviewer: conformidade ponta a ponta com a spec §3/§4 V1–V11/§7) ·
       `seguranca` (security-auditor: redação de segredos, injeção em planilha/Markdown/HTML, SSRF) ·
@@ -45,7 +45,9 @@ related: [CONTEXTO.md, INSIGHTS.md]
       `ux` (ui-expert: app real com Playwright na porta 8531, prints em `tests/evidencia/final-ui/` no repo principal).
       Sessão nova com algum faltando: despachar só o que não tem arquivo, com a perspectiva acima e o brief 3 de `BRIEFS.md`
       sobre o diff `1c063ea..d4cab80`.
-- [ ] achados triados e aplicados por coder
+- [x] achados triados — `revisoes/final-triagem.md` (📝 critério meu: entra o que é segurança ou afirmação falsa)
+- [ ] **FIX-FONTES** (`../bn-fix-fontes`, porta 8541; F-N2 F-M2 F-N4 F-N5 F-UX3 F-UX2 F-SSRF F-MT1 F-MT3 F-MT503 F-T1) — impl ▶ · teste · review · fix · doc · merge
+- [ ] **FIX-SAÍDA** (`../bn-fix-saida`, porta 8551; S-SEC S-N1 S-UX1+N3 S-N8 S-N9 S-MT2) — impl ▶ · teste · review · fix · doc · merge
 
 ## Fase 5 — Fechamento
 - [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — **antes** da T10
