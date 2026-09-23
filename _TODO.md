@@ -70,7 +70,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 
 - [x] **Frente 1 · rede de proteção** — ✅ T3 `4f36080` · T1 `d054d5b` · T2 `e18dd4b` (22/09). Baseline atual:
       `BASELINE` em `tools/run_all_tests.py` (**única casa do número**; não restatar aqui).
-- [ ] **Frente 2 · honestidade das fontes** — ▶ **em execução por agentes** (fase 1/T1 fechada em 23/09; status em `execucao/TODOS.md`).
+- [ ] **Frente 2 · honestidade das fontes** — ▶ **em execução por agentes** (fases e status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`).
       Spec: `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md`.
       Plano **v4** (3 rodadas adversariais, tudo dobrado no corpo — não há seção de emendas a consultar):
       `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, 10 tasks, TDD, BASELINE previsto

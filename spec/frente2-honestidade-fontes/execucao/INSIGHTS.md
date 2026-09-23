@@ -52,11 +52,11 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   (TCU com retries, presumido — medir na T3). A expectativa do plano ("deve cair com o cache da T2") estava errada.
 - Coder corrigiu 4 docstrings/comentários que a mudança tornava falsos (regra verify-stale-docs) e manteve 2 textos
   que o bloco do plano derrubava. Pendência: nota de P3 do Step 11(b) (`test_lexml_cql_injection_sanitization` faz rede)
-  — o `_TODO.md` é do orquestrador: entra na T10.
+  — o `_TODO.md` é do orquestrador: ✅ lançada no `_TODO.md` P3 em 23/09.
 
 - (T6/T2, 23/09) **Agentes de teste com runner em background travam**: o testador da T6 ficou 600s sem progresso
   (runner em background com log vazio, provável concorrência com o e2e); retomado via SendMessage, refez em foreground
-  com `timeout 590`. A duração relatada de dois agentes (~9,8 h) e um tempo de suíte de 35.280s indicam **suspensão da
+  com `timeout 590` (⚠ curto demais: o brief passou a `timeout 900`). A duração relatada de dois agentes (~9,8 h) e um tempo de suíte de 35.280s indicam **suspensão da
   máquina** durante a noite — `time.monotonic` no Windows avança na suspensão. Regra: brief de teste pede runner em
   foreground com `timeout`, e duração de suíte absurda = conferir relógio antes de suspeitar do código.
 
@@ -76,7 +76,7 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
 - **O gargalo do `test_searchers` NÃO é retry, é PAGINAÇÃO:** 1 busca TCU ao vivo = 128s, ~114s baixando 26 páginas de
   acórdãos (rate-limit 1,5–2s + ~2,5s/requisição); os 3 retries do 500 custam ~13s. A suíte faz 2 buscas TCU (uma com
   `max_results=0`, que baixa tudo mesmo assim). 📝 Ideias do coder, não validadas: sair cedo com `max_results<=0`;
-  cache de páginas por processo. Possível P3. Estranheza: 520 itens contra teto 500 (MAX_PAGES×PAGE_SIZE) → testador.
+  cache de páginas por processo. Possível P3. Estranheza: 520 itens contra teto 500 (MAX_PAGES×PAGE_SIZE) → testador. ✅ Explicado e corrigido no review (I2: a API devolve 40 itens por página de 20; dedup por `key` → 500 exatos, medido na T4).
 - Perda declarada (código do plano): 503 deixou de ter linha de log própria; o fato vive no docstring e no detalhe.
 
 ## T7 · `_merge` (trilha B, fechada 23/09)
@@ -109,3 +109,9 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
 - `git merge origin/master` na branch da trilha: **sem conflito** (master só tinha docs de orquestração); runner 246 +
   golden OK no commit de merge; `master` avançou por fast-forward para `9e259ca`. A trilha A vai ter conflito esperado no
   `BASELINE` de `tools/run_all_tests.py` quando fizer o mesmo.
+
+## Dogfood da fase 3 (23/09)
+
+- Lições de MÁQUINA (`sed -i` convertendo CRLF→LF sem aplicar; suspensão inflando `time.monotonic`) foram para
+  `~/.claude/ENVIRONMENT.md` na hora — tinham ficado paradas "para a T10", contra a regra environment-lessons-go-global.
+- Achado adiado "→ T9" (escape HTML duplo) não estava nos itens carregados: agora está, e a regra de adiamento também.
