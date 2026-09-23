@@ -67,3 +67,29 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
 - (T6 fechada) Review pegou **rótulo desonesto herdado**: `NaN`/`Infinity`/`true` vindos do modelo saíam como nota do
   modelo (NaN → 1,0, a nota máxima) — o defeito só virou visível porque a T6 passou a ROTULAR a origem. +1 teste além do
   plano (`test_llm_phase3` 64). Padrão: **dar nome à procedência revela lixo que antes era só um número.**
+
+## T3 · TCU falhas (trilha A, em andamento)
+
+- Impl: ver-falhar 9 failed + 1 xfailed (como previsto, com o +1 da T2 a suíte coleta 27); depois 26 + 1 xfail.
+- **Ao vivo o TCU agora é honesto:** `error http_5xx parcial=True`, detalhe "Acórdãos: ok (520 itens, **327 sem sumário**
+  — nesses só o título casa); Atos: http_5xx …" — o fato medido na rodada 2 (sumário nulo) virou texto na tela.
+- **O gargalo do `test_searchers` NÃO é retry, é PAGINAÇÃO:** 1 busca TCU ao vivo = 128s, ~114s baixando 26 páginas de
+  acórdãos (rate-limit 1,5–2s + ~2,5s/requisição); os 3 retries do 500 custam ~13s. A suíte faz 2 buscas TCU (uma com
+  `max_results=0`, que baixa tudo mesmo assim). 📝 Ideias do coder, não validadas: sair cedo com `max_results<=0`;
+  cache de páginas por processo. Possível P3. Estranheza: 520 itens contra teto 500 (MAX_PAGES×PAGE_SIZE) → testador.
+- Perda declarada (código do plano): 503 deixou de ter linha de log própria; o fato vive no docstring e no detalhe.
+
+## T7 · `_merge` (trilha B, fechada 23/09)
+
+- Ciclo limpo: testador sem defeito (sondagem exaustiva de 12.288 combinações), reviewer "nada a corrigir". Invariante
+  declarado: o dedup roda antes da pontuação no app, então a origem mesclada é sempre `padrao_fonte` hoje.
+
+## T8 · planilha (trilha B, em andamento)
+
+- Recongelamento como o plano manda: `comparar` → só "planilha divergiu" (nenhum "dedup divergiu") → `congelar` →
+  `comparar` 2× OK, mesmo sha; `dedup_esperado.json` fora do diff.
+- **Previsão M12 do plano estava desatualizada:** com só 3a+3c aplicados deram `11 failed` com composição diferente da
+  prevista ("1 + 10") — os 3 testes de contagem já tinham sido atualizados para 11 colunas e falham juntos. Total igual,
+  explicação diferente.
+- Coder restaurou 2 frases do docstring de `_sha_planilha` que o bloco do plano derrubava (o porquê de hashear
+  células, e que `load_workbook` é a mesma técnica dos testes) — regra docs-move-with-code em ação.

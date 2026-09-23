@@ -19,18 +19,18 @@ related: [CONTEXTO.md, INSIGHTS.md]
 
 ## Fase 2 — Fontes honestas (trilha A)
 - [x] **T2** LexML — impl ✅ `8f5ccfc` (16 · runner 238 verde · golden OK) · teste ✅ APROVADO (sondas + ao vivo + e2e: "2 erros" LexML; `revisoes/T2.md`) · review ✅ 1 importante + 1 menor a corrigir (2 adiados → `_TODO` P3) · fix ✅ `407e341` (+1 teste → 17; runner 239) · doc ✅ `3be5d85` · push ✅ · review · fix · doc
-- [ ] **T3** TCU falhas — impl ▶ · teste · review · fix · doc
+- [ ] **T3** TCU falhas — impl ✅ `f044a3c` (26+1 xfail · runner 248 · golden OK) · teste ✅ APROVADO (40 sondas; e2e "4 erros", TCU não é mais "sem resultado"; 4 achados no código do plano → `revisoes/T3.md`) · review ✅ 2 importantes + 1 menor a corrigir (+3 testes → 29) · fix ▶ · review · fix · doc
 - [ ] **T4** TCU esquema real — impl · teste · review · fix · doc
 - [ ] **T5** Google — impl · teste · review · fix · doc
 - [ ] merge trilha A → `master` · `/checkpoint` fase 2
 
 ## Fase 3 — Procedência da nota (trilha B)
 - [x] **T6** origem da nota — impl ✅ `7d8f1ce` (54/53/1 → 63/63 · runner 232 verde · golden OK) · teste ✅ APROVADO (`revisoes/T6.md`) · review ✅ corrigir bool/NaN/Inf (+1 teste → 64); `ementa None` → frente 5 · fix ✅ `6594cd8` (64; runner 233) · doc ✅ `272f83a` · push ✅ · review · fix · doc
-- [ ] **T7** `_merge` — impl ▶ · teste · review · fix · doc
+- [x] **T7** `_merge` — impl ✅ `7d5e69b` (61 · runner 236 · golden OK, `tests/golden/` intocado) · teste ✅ APROVADO (12.288 combinações; `revisoes/T7.md`) · review ✅ nada a corrigir · fix n/a · doc ✅ `c68bd79` · review · fix · doc
 - [ ] (fase 3 fecha no merge da trilha B, depois da T8 — ver Fase 4)
 
 ## Fase 4 — Saída honesta
-- [ ] **T8** planilha (trilha B; recongela golden) — impl · teste · review · fix · doc
+- [ ] **T8** planilha (trilha B; recongela golden) — impl ✅ `6178f9d` (71 · runner 246 · golden recongelado: só planilha divergiu, dedup intacto) · teste ▶ · review · fix · doc
 - [ ] merge trilha B → `master` (BASELINE unido conferido) · `/checkpoint` fase 3
 - [ ] **T9** tela + V11 (`master`) — impl · teste · review · fix · doc
 - [ ] `/checkpoint` fase 4

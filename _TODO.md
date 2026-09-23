@@ -152,6 +152,10 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       - (T2 M2) LexML: WAF/HTML num URL já cacheado (`_sru_url`) não entra em `_urls_mortos` nem tenta fallback.
       - (T2 obs. 2) keyword que sanitiza para vazio nunca é enviada mas sai `empty` — tratar em `search()`.
       - (T2 obs. 3) keywords além de `MAX_RETRIES` ou cortadas no retry ficam sem nota no detalhe.
+      - (T3) TCU: `ChunkedEncodingError`/`ContentDecodingError` viram `erro_interno` sem retry (é erro da fonte).
+      - (T3) TCU: status `nao_consultada`/`erro_interno` por keyword sem `parcial` nem o resumo dos endpoints.
+      - (T3) TCU: `max_results<=0` ainda baixa todas as páginas (≈128s por busca; metade do tempo do `test_searchers`).
+      - (T3 d) `redigir`: o regex `[^&\s]+` come `;`/`,` depois do segredo → `[^&\s;,)'"]+` + teste.
       - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
         validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
