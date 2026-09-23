@@ -160,21 +160,22 @@ class FonteIndisponivel(Exception):
     KeywordStatus). O detalhe passa por models.redigir() JA AQUI, porque os
     searchers logam `str(e)` antes de qualquer KeywordStatus existir: sem isso
     a URL com a chave do CSE ia inteira para o log (rodada 2).
+
+    Valores validos: models.MOTIVOS menos "" ("" = nao se aplica, ok/empty —
+    nao e causa de indisponibilidade). Lido de models A CADA construcao, sem
+    copia local: ate a revisao final (23/09, manut. 1) havia aqui um
+    `_CONHECIDOS` duplicado, e um motivo novo acrescentado so em MOTIVOS
+    virava erro_interno em silencio.
     """
 
-    _CONHECIDOS = {
-        "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503", "timeout",
-        "conexao", "resposta_ilegivel", "endpoint_inexistente", "nao_consultada", "erro_interno",
-    }
-
     def __init__(self, motivo: str, detalhe: str = "") -> None:
-        if motivo not in self._CONHECIDOS:
+        import models  # models nao importa searchers: sem ciclo
+        if motivo == "" or motivo not in models.MOTIVOS:
             detalhe = f"motivo desconhecido {motivo!r}: {detalhe}"
             motivo = "erro_interno"
-        from models import redigir  # models nao importa searchers: sem ciclo
         super().__init__(motivo)
         self.motivo = motivo
-        self.detalhe = redigir(detalhe)
+        self.detalhe = models.redigir(detalhe)
 
     def __str__(self) -> str:  # dinamico: quem edita .detalhe depois nao deixa str() velho
         return f"{self.motivo}: {self.detalhe}" if self.detalhe else self.motivo

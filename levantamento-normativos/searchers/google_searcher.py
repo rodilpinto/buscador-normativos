@@ -15,7 +15,7 @@ import logging
 import os
 import socket
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -109,6 +109,12 @@ DOMAIN_ORG_MAP = {
 MAX_GOOGLE_KEYWORDS = 5
 RESULTS_PER_QUERY = 10
 PAGE_FETCH_TIMEOUT = 10
+# _fetch_page_metadata (revisao final de seguranca, 23/09): redirects seguidos a
+# mao, com _is_safe_url a cada salto, e teto de bytes lidos da pagina
+MAX_PAGE_REDIRECTS = 3
+MAX_PAGE_BYTES = 512 * 1024
+PAGE_READ_CHUNK = 16 * 1024
+_REDIRECT_STATUS = frozenset({301, 302, 303, 307, 308})
 CSE_API_URL = "https://www.googleapis.com/customsearch/v1"
 CSE_TIMEOUT = 15
 
@@ -285,10 +291,16 @@ class GoogleSearcher(BaseSearcher):
 
             # Detect possible blocking (scraping mode only)
             if _BACKEND == "scraping" and len(search_results) == 0:
-                consecutive_zeros = sum(
-                    1 for s in self.keyword_statuses
-                    if s.source == self.SOURCE_ID and s.result_count == 0
-                )
+                # Revisao final (manut. 3, 23/09): conta so as RESPOSTAS com 0
+                # resultado imediatamente anteriores, sem interrupcao. Antes somava
+                # todo status com result_count 0 — inclusive erro e keyword longe
+                # na lista — e o detalhe afirmava "seguidas" sem que fossem.
+                consecutive_zeros = 0
+                for s in reversed(self.keyword_statuses):
+                    zero_respondido = s.result_count == 0 and (s.status == "empty" or s.motivo == "bloqueio_waf")
+                    if not zero_respondido:
+                        break
+                    consecutive_zeros += 1
                 if consecutive_zeros >= 2:
                     logger.warning(
                         f"Google scraping: {consecutive_zeros + 1} consecutive zeros. "
@@ -308,50 +320,11 @@ class GoogleSearcher(BaseSearcher):
                     ))
                     continue
 
-            kw_count = 0
-            for sr in search_results:
-                if len(results) >= max_results:
-                    break
-
-                url = sr.get("url", "")
-                if not url:
-                    continue
-
-                normalized_url = self._normalize_url(url)
-                if normalized_url in seen_urls:
-                    continue
-                seen_urls.add(normalized_url)
-
-                # Use title/snippet from search results when available
-                title = sr.get("title", "")
-                description = sr.get("snippet", "")
-
-                # If search results didn't include metadata, fetch from page
-                if not title or not description:
-                    fetched_title, fetched_desc = self._fetch_page_metadata(url)
-                    title = title or fetched_title
-                    description = description or fetched_desc
-
-                org = self._extract_org(url)
-
-                results.append(NormativoResult(
-                    nome=title if title else url,
-                    tipo="Framework/Padrao",
-                    numero="",
-                    data=None,
-                    orgao_emissor=org,
-                    ementa=description,
-                    link=url,
-                    source="google",
-                    found_by=keyword,
-                    relevancia=0.3,
-                    raw_data={"url": url, "title": title, "description": description},
-                ))
-                kw_count += 1
-
+            kw_count, cortado = self._coletar(search_results, keyword, seen_urls, results, max_results)
             self.keyword_statuses.append(KeywordStatus(
                 keyword=keyword, source=self.SOURCE_ID, result_count=kw_count,
                 status="ok" if kw_count > 0 else "empty",
+                parcial=cortado, detalhe=self._detalhe_corte(max_results) if cortado else "",
             ))
 
             if idx < total_steps - 1:
@@ -386,35 +359,11 @@ class GoogleSearcher(BaseSearcher):
                             api_still_down = True
                         else:
                             recuperado = f"recuperado no retry após {kws.motivo}"   # ANTES de zerar o motivo
-                            kw_count = 0
-                            for sr in search_results:
-                                if len(results) >= max_results:
-                                    break
-                                url = sr.get("url", "")
-                                if not url:
-                                    continue
-                                normalized_url = self._normalize_url(url)
-                                if normalized_url in seen_urls:
-                                    continue
-                                seen_urls.add(normalized_url)
-                                title = sr.get("title", "")
-                                description = sr.get("snippet", "")
-                                if not title or not description:
-                                    ft, fd = self._fetch_page_metadata(url)
-                                    title = title or ft
-                                    description = description or fd
-                                org = self._extract_org(url)
-                                results.append(NormativoResult(
-                                    nome=title if title else url,
-                                    tipo="Framework/Padrao", numero="", data=None,
-                                    orgao_emissor=org, ementa=description, link=url,
-                                    source="google", found_by=keyword, relevancia=0.3,
-                                    raw_data={"url": url, "title": title, "description": description},
-                                ))
-                                kw_count += 1
+                            kw_count, cortado = self._coletar(search_results, keyword, seen_urls, results, max_results)
                             kws.status = "ok" if kw_count > 0 else "empty"
                             kws.error_message, kws.motivo = "", ""
-                            kws.detalhe = recuperado
+                            kws.parcial = cortado
+                            kws.detalhe = f"{recuperado}; {self._detalhe_corte(max_results)}" if cortado else recuperado
                             kws.result_count = kw_count
                         break
 
@@ -443,6 +392,69 @@ class GoogleSearcher(BaseSearcher):
     # Helpers
     # ------------------------------------------------------------------
 
+    def _coletar(self, search_results: list[dict], keyword: str, seen_urls: set[str],
+                 results: list[NormativoResult], max_results: int) -> tuple[int, bool]:
+        """Acrescenta a `results` os resultados de UMA keyword (dedup por URL
+        normalizada em `seen_urls`); devolve (quantos entraram, cortado).
+
+        cortado=True quando max_results encheu com URL NOVA ainda sobrando —
+        a keyword em curso foi cortada e o status sai parcial (revisao final da
+        frente 2, F-N5; antes era `break` silencioso e "ok N"). URL repetida
+        sobrando nao conta: nao entraria de qualquer jeito.
+
+        Um so laco para a passada principal e para o retry: antes eram duas
+        copias do mesmo corpo, e a do retry ja tinha perdido os comentarios.
+        """
+        kw_count = 0
+        for i, sr in enumerate(search_results):
+            if len(results) >= max_results:
+                cortado = any(
+                    r.get("url") and self._normalize_url(r["url"]) not in seen_urls
+                    for r in search_results[i:]
+                )
+                return kw_count, cortado
+
+            url = sr.get("url", "")
+            if not url:
+                continue
+
+            normalized_url = self._normalize_url(url)
+            if normalized_url in seen_urls:
+                continue
+            seen_urls.add(normalized_url)
+
+            # Use title/snippet from search results when available
+            title = sr.get("title", "")
+            description = sr.get("snippet", "")
+
+            # If search results didn't include metadata, fetch from page
+            if not title or not description:
+                fetched_title, fetched_desc = self._fetch_page_metadata(url)
+                title = title or fetched_title
+                description = description or fetched_desc
+
+            org = self._extract_org(url)
+
+            results.append(NormativoResult(
+                nome=title if title else url,
+                tipo="Framework/Padrao",
+                numero="",
+                data=None,
+                orgao_emissor=org,
+                ementa=description,
+                link=url,
+                source="google",
+                found_by=keyword,
+                relevancia=0.3,
+                raw_data={"url": url, "title": title, "description": description},
+            ))
+            kw_count += 1
+        return kw_count, False
+
+    @staticmethod
+    def _detalhe_corte(max_results: int) -> str:
+        return f"cortado em max_results={max_results}: havia mais resultados para esta palavra-chave"
+
     @staticmethod
     def _is_safe_url(url: str) -> bool:
         """Validate that a URL is safe to fetch (SSRF protection)."""
@@ -466,7 +478,20 @@ class GoogleSearcher(BaseSearcher):
         return True
 
     def _fetch_page_metadata(self, url: str) -> tuple[str, str]:
-        """Fetch title and meta description from a URL."""
+        """Fetch title and meta description from a URL.
+
+        SSRF (revisao final de seguranca, 23/09): o redirect NAO e seguido pelo
+        requests (allow_redirects=False) — cada `Location` e resolvido contra a
+        URL atual e passa de novo por _is_safe_url antes de ser pedido, ate
+        MAX_PAGE_REDIRECTS saltos. Antes o host era validado uma vez e o
+        requests seguia sozinho um 302 para 169.254.169.254 ou 127.0.0.1.
+        O corpo e lido em stream e cortado em MAX_PAGE_BYTES (antes,
+        response.content lia a pagina inteira, de qualquer tamanho).
+
+        Risco residual conhecido (📝 nao tratado aqui): DNS rebinding entre o
+        getaddrinfo de _is_safe_url e o do requests — fixar o IP quebraria o SNI
+        do TLS; o conserto de verdade e um adapter que valide o IP conectado.
+        """
         if not self._is_safe_url(url):
             logger.warning("Skipping unsafe URL: %s", redigir(url))
             return "", ""
@@ -477,15 +502,39 @@ class GoogleSearcher(BaseSearcher):
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
         }
+        atual = url
+        for salto in range(MAX_PAGE_REDIRECTS + 1):
+            try:
+                response = requests.get(atual, headers=headers, timeout=PAGE_FETCH_TIMEOUT,
+                                        allow_redirects=False, stream=True)
+            except requests.exceptions.RequestException as e:
+                # redigir: URL e excecao crua do requests podem trazer segredo na query (frente 2)
+                logger.debug(f"Failed to fetch metadata from {redigir(atual)}: {redigir(str(e))}")
+                return "", ""
+            if response.status_code not in _REDIRECT_STATUS:
+                break
+            location = response.headers.get("Location") or ""
+            response.close()
+            if not location:
+                return "", ""
+            proximo = urljoin(atual, location)
+            if salto == MAX_PAGE_REDIRECTS:
+                logger.debug(f"Too many redirects fetching metadata from {redigir(url)}")
+                return "", ""
+            if not self._is_safe_url(proximo):
+                logger.warning("Blocked unsafe redirect: %s -> %s", redigir(atual), redigir(proximo))
+                return "", ""
+            atual = proximo
         try:
-            response = requests.get(url, headers=headers, timeout=PAGE_FETCH_TIMEOUT)
             response.raise_for_status()
+            conteudo = self._ler_limitado(response)
         except requests.exceptions.RequestException as e:
-            # redigir: URL e excecao crua do requests podem trazer segredo na query (frente 2)
-            logger.debug(f"Failed to fetch metadata from {redigir(url)}: {redigir(str(e))}")
+            logger.debug(f"Failed to fetch metadata from {redigir(atual)}: {redigir(str(e))}")
             return "", ""
+        finally:
+            response.close()
         try:
-            soup = BeautifulSoup(response.content, "html.parser")
+            soup = BeautifulSoup(conteudo, "html.parser")
         except Exception:
             return "", ""
 
@@ -504,6 +553,21 @@ class GoogleSearcher(BaseSearcher):
                 description = body.get_text(separator=" ", strip=True)[:300].strip()
 
         return title, description
+
+    @staticmethod
+    def _ler_limitado(response) -> bytes:
+        """Le o corpo em pedacos e para ao passar de MAX_PAGE_BYTES (o titulo e a
+        meta description ficam no comeco; o resto so custaria memoria)."""
+        pedacos: list[bytes] = []
+        lidos = 0
+        for pedaco in response.iter_content(chunk_size=PAGE_READ_CHUNK):
+            if not pedaco:
+                continue
+            pedacos.append(pedaco)
+            lidos += len(pedaco)
+            if lidos >= MAX_PAGE_BYTES:
+                break
+        return b"".join(pedacos)[:MAX_PAGE_BYTES]
 
     def _extract_org(self, url: str) -> str:
         """Extract organization name from URL domain."""

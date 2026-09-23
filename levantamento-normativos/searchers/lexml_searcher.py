@@ -65,6 +65,11 @@ URN_TIPO_MAP = {
     "ato": "Ato",
 }
 
+def _nome_local(tag: str) -> str:
+    """'{http://www.loc.gov/zing/srw/}diagnostics' -> 'diagnostics'."""
+    return tag.rsplit("}", 1)[-1] if isinstance(tag, str) else ""
+
+
 # Records per SRU page request
 RECORDS_PER_PAGE = 20
 
@@ -90,9 +95,24 @@ class LexMLSearcher(BaseSearcher):
         # parse falhar, o detalhe precisa dela para ser reproduzivel com curl
         # (review da T2, I1: 200 application/json virava resposta_ilegivel sem URL).
         self._ultima_url: str = ""
+        # F-N5: a ultima keyword parou em max_results com registros sobrando
+        # (escrito por _search_keyword, zerado por _search_keyword_safe)
+        self._cortado: bool = False
 
     def source_name(self) -> str:
         return "LexML Brasil"
+
+    def _parcial_e_detalhe(self, erro_pag: Optional[FonteIndisponivel], max_results: int,
+                           prefixo: str = "") -> tuple[bool, str]:
+        """(parcial, detalhe) de uma keyword que respondeu: paginacao
+        interrompida (H5) e/ou corte por max_results (F-N5), na ordem, depois
+        de um prefixo opcional ("recuperado no retry apos ...")."""
+        partes = [prefixo] if prefixo else []
+        if erro_pag is not None:
+            partes.append(erro_pag.detalhe)
+        if self._cortado:
+            partes.append(f"cortado em max_results={max_results}: a fonte tinha mais registros para esta palavra-chave")
+        return (erro_pag is not None or self._cortado), "; ".join(partes)
 
     def search(
         self,
@@ -116,6 +136,11 @@ class LexMLSearcher(BaseSearcher):
         False and the detalhe says "retry pulado"). Keywords never sent because
         max_results was reached get motivo="nao_consultada". A later page that
         fails makes the status parcial=True, with page and motivo in detalhe.
+        The keyword IN COURSE when max_results is reached, with records left
+        over, is also parcial=True ("cortado em max_results=N"; revisao final
+        F-N5). A well-formed XML that is not a searchRetrieveResponse, or an
+        SRU diagnostics without records, is resposta_ilegivel (F-N2); a WAF/HTML
+        answer from the cached working URL kills that URL and tries the chain (F-M2).
 
         Args:
             keywords: Search terms to query against LexML.
@@ -159,9 +184,10 @@ class LexMLSearcher(BaseSearcher):
                 ))
                 failed_keywords.append(keyword)
             elif len(keyword_results) == 0:
+                parcial, detalhe = self._parcial_e_detalhe(erro_pag, max_results)
                 self.keyword_statuses.append(KeywordStatus(
                     keyword=keyword, source=self.SOURCE_ID, result_count=0, status="empty",
-                    parcial=erro_pag is not None, detalhe=erro_pag.detalhe if erro_pag else "",
+                    parcial=parcial, detalhe=detalhe,
                 ))
             else:
                 # Merge into results_by_id, deduplicating by ID
@@ -174,9 +200,10 @@ class LexMLSearcher(BaseSearcher):
                     else:
                         results_by_id[result.id] = result
                 new_count = len(results_by_id) - count_before
+                parcial, detalhe = self._parcial_e_detalhe(erro_pag, max_results)
                 self.keyword_statuses.append(KeywordStatus(
                     keyword=keyword, source=self.SOURCE_ID, result_count=new_count, status="ok",
-                    parcial=erro_pag is not None, detalhe=erro_pag.detalhe if erro_pag else "",
+                    parcial=parcial, detalhe=detalhe,
                 ))
 
             if idx < total_keywords - 1:
@@ -226,8 +253,7 @@ class LexMLSearcher(BaseSearcher):
                             recuperado = f"recuperado no retry após {st.motivo}"
                             st.status = "ok" if keyword_results else "empty"
                             st.error_message, st.motivo = "", ""
-                            st.parcial = erro_pag is not None
-                            st.detalhe = f"{recuperado}; {erro_pag.detalhe}" if erro_pag else recuperado
+                            st.parcial, st.detalhe = self._parcial_e_detalhe(erro_pag, max_results, prefixo=recuperado)
                             for result in keyword_results:
                                 if result.id in results_by_id:
                                     existing = results_by_id[result.id]
@@ -267,9 +293,12 @@ class LexMLSearcher(BaseSearcher):
             (results, None, None) em sucesso completo; (results, None, erro) quando
             a paginacao parou (parcial); ([], erro, None) quando a fonte nao pode
             ser consultada. Qualquer excecao imprevista vira erro_interno —
-            nunca "sem resultado".
+            nunca "sem resultado". Efeito colateral: self._cortado diz se a
+            keyword parou em max_results com registros sobrando (F-N5) — fora
+            da tupla para nao mudar o contrato de 3 posicoes (test_comprehensive).
         """
         self._erro_paginacao = None
+        self._cortado = False
         try:
             results = self._search_keyword(keyword, max_results=max_results)
             return results, None, self._erro_paginacao
@@ -354,7 +383,14 @@ class LexMLSearcher(BaseSearcher):
 
             # Check if there are more pages
             next_start = start_record + RECORDS_PER_PAGE
-            if next_start > total_count or len(records) == 0:
+            ha_mais = next_start <= total_count and len(records) > 0
+            # F-N5 (revisao final, 23/09): parar em max_results com registro
+            # sobrando (nesta pagina ou nas seguintes) e coleta PARCIAL — antes
+            # saia "ok N" como se N fosse tudo o que a fonte tinha
+            if len(all_results) > max_results or (len(all_results) >= max_results and ha_mais):
+                self._cortado = True
+                break
+            if not ha_mais:
                 break  # No more pages
 
             start_record = next_start
@@ -383,13 +419,24 @@ class LexMLSearcher(BaseSearcher):
         """
         # If we already know which URL works, use it directly
         if self._sru_url:
-            result = self._try_fetch(self._sru_url, params)
-            if result is not None:
-                return result
-            # o URL que funcionava passou a dar 404 (H1): invalida e cai na cadeia
-            self._urls_mortos[self._sru_url] = FonteIndisponivel(
-                "endpoint_inexistente", f"HTTP 404 (URL que antes funcionava nesta busca) | GET {self._sru_url}")
-            self._sru_url = None
+            cacheado = self._sru_url
+            try:
+                result = self._try_fetch(cacheado, params)
+            except FonteIndisponivel as e:
+                if e.motivo not in self._MOTIVOS_DO_URL:
+                    raise  # timeout/conexao/5xx/4xx: erro DESTA requisicao, nao do URL
+                # F-M2 (revisao final, 23/09; era T2 M2): o URL que funcionava
+                # passou a responder o desafio/HTML — e falha DO URL, como na
+                # cadeia abaixo. Antes subia direto, sem tentar os fallbacks.
+                self._matar_url(cacheado, e)
+                self._sru_url = None
+            else:
+                if result is not None:
+                    return result
+                # o URL que funcionava passou a dar 404 (H1): invalida e cai na cadeia
+                self._matar_url(cacheado, FonteIndisponivel(
+                    "endpoint_inexistente", f"HTTP 404 (URL que antes funcionava nesta busca) | GET {cacheado}"))
+                self._sru_url = None
 
         for url in (PRIMARY_SRU_URL, FALLBACK_SRU_URL, FALLBACK_SRU_URL_2):
             if url in self._urls_mortos:
@@ -397,19 +444,32 @@ class LexMLSearcher(BaseSearcher):
             try:
                 result = self._try_fetch(url, params)
             except FonteIndisponivel as e:
-                if e.motivo in ("bloqueio_waf", "resposta_ilegivel"):
+                if e.motivo in self._MOTIVOS_DO_URL:
                     # falha do URL: guarda a causa e tenta o proximo da cadeia
-                    self._urls_mortos[url] = e
-                    logger.warning(f"LexML: {url} {e.motivo}; proximo da cadeia")
+                    self._matar_url(url, e)
                     continue
                 raise  # timeout/conexao/5xx/4xx: erro DESTA requisicao, nao do URL
             if result is not None:
                 self._sru_url = url
                 return result
-            self._urls_mortos[url] = FonteIndisponivel("endpoint_inexistente", f"HTTP 404 | GET {url}")
-            logger.warning(f"LexML: {url} 404; proximo da cadeia")
+            self._matar_url(url, FonteIndisponivel("endpoint_inexistente", f"HTTP 404 | GET {url}"))
 
         raise self._causa_da_cadeia_morta()
+
+    # Falhas que condenam o URL (nao a requisicao): o proximo da cadeia e tentado.
+    # So o HTML do _exigir_sru chega aqui como resposta_ilegivel; corpo nao-HTML
+    # que nao parseia falha depois, em _parse_sru_response, sem fallback.
+    _MOTIVOS_DO_URL = ("bloqueio_waf", "resposta_ilegivel")
+
+    def _matar_url(self, url: str, causa: FonteIndisponivel) -> None:
+        """Guarda a causa da morte do URL nesta busca, JA marcada com a keyword
+        que a mediu: se o fallback responder, o except de _search_keyword nao
+        roda, e uma keyword seguinte que herdasse esta causa diria que ELA foi
+        enviada (o detalhe de _causa_da_cadeia_morta depende de `.keyword`)."""
+        if not getattr(causa, "keyword", ""):
+            causa.keyword = self._keyword_atual
+        self._urls_mortos[url] = causa
+        logger.warning(f"LexML: {url} {causa.motivo}; proximo da cadeia")
 
     _PRIORIDADE = ("bloqueio_waf", "resposta_ilegivel", "endpoint_inexistente")
 
@@ -545,6 +605,33 @@ class LexMLSearcher(BaseSearcher):
             raise FonteIndisponivel(
                 "resposta_ilegivel", f"XML SRU nao parseia: {e}; corpo: {xml_text[:120]!r}"
             ) from e
+
+        # F-N2 (revisao final, 23/09): XML BEM-FORMADO nao prova que veio
+        # resultado. `<error><message>...indisponivel</message></error>` e um SRU
+        # com <srw:diagnostics> (Query syntax error, numberOfRecords=0) viravam
+        # "Sem resultado". Comparacao pelo nome LOCAL da tag (sem namespace), para
+        # continuar permissivo com outro prefixo/namespace (M10). A URL entra
+        # depois, em _search_keyword (o parse nao a conhece).
+        if _nome_local(root.tag) != "searchRetrieveResponse":
+            raise FonteIndisponivel(
+                "resposta_ilegivel",
+                f"XML nao e searchRetrieveResponse (raiz <{_nome_local(root.tag)}>); corpo: {xml_text[:160]!r}")
+        diagnosticos = [filho for filho in root if _nome_local(filho.tag) == "diagnostics"]
+        # So SEM registros: no SRU um diagnostico pode ser nao-fatal e vir junto
+        # com resultados — descarta-los por um aviso seria a mentira oposta.
+        tem_registro = any(_nome_local(el.tag) == "record" for el in root.iter())
+        if diagnosticos and not tem_registro:
+            # O texto do diagnostico e o que a FONTE disse — vai literal (uri, message, details)
+            partes = [
+                f"{_nome_local(el.tag)}={el.text.strip()}"
+                for diag in diagnosticos for el in diag.iter()
+                if _nome_local(el.tag) in ("uri", "message", "details") and el.text and el.text.strip()
+            ]
+            raise FonteIndisponivel(
+                "resposta_ilegivel",
+                f"SRU devolveu diagnostics: {'; '.join(partes) or xml_text[:160]!r}"[:400])
+        if diagnosticos:
+            logger.warning(f"LexML: SRU com registros E diagnostics (nao-fatal?) para '{keyword}'; registros mantidos")
 
         # Total records reported by the server
         total_el = root.find("srw:numberOfRecords", NAMESPACES)
