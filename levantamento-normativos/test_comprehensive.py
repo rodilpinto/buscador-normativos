@@ -478,10 +478,12 @@ def test_tcu_map_acordao_missing_fields():
 
 
 def test_tcu_search_empty_keywords():
-    """Search with empty keywords should return empty results."""
+    """Search with empty keywords should return empty results.
+
+    Contrato de _fetch_all_pages mudou na frente 2 (2026-09-22): (itens, erro, parcial)."""
     s = TCUSearcher()
     # Mock _fetch_all_pages to return empty to avoid real API calls
-    s._fetch_all_pages = lambda url: []
+    s._fetch_all_pages = lambda url: ([], None, False)
     results = s.search([], max_results=10)
     assert results == []
 

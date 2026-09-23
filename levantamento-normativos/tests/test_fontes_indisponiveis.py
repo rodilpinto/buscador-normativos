@@ -279,3 +279,157 @@ def test_lexml_detalhe_de_erro_nao_carrega_segredo_nem_e_cortado_no_meio(monkeyp
     d = s.keyword_statuses[0].detalhe
     assert "AIzaSECRETO" not in d and "key=***" in d
     assert d.startswith("HTTP 500") and "| GET " in d and "operation=searchRetrieve" in d
+
+
+# ---------------------------------------------------------------------------
+# TCU — a fixture e o item REAL capturado em 22/09 (sem `ementa`, `numero`, `ano`)
+# ---------------------------------------------------------------------------
+
+ACORDAOS_REAIS = json.loads((FIXTURES / "tcu_acordaos_real.json").read_text(encoding="utf-8"))
+ACORDAO = ACORDAOS_REAIS[0]   # sumario fala de "TURISMO"
+
+
+def _tcu_com(monkeypatch, por_url):
+    """por_url: {trecho_da_url: callable(params) -> RespostaFake | levanta}."""
+    from searchers import tcu_searcher
+
+    chamadas: list[str] = []
+
+    def fake_get(url, params=None, timeout=None, **kw):
+        chamadas.append(url)
+        for trecho, responder in por_url.items():
+            if trecho in url:
+                r = responder(params)
+                r.url = url + "?" + urlencode(params or {})
+                return r
+        raise AssertionError(f"URL inesperada: {url}")
+
+    monkeypatch.setattr("searchers.tcu_searcher.requests.get", fake_get)
+    return tcu_searcher.TCUSearcher(), chamadas
+
+
+def _500_atos(p):
+    return RespostaFake(500, '{"url":"Erro no serviço","erro":"HttpClientErrorException: 404 Not Found"}',
+                        "application/json;charset=UTF-8")
+
+
+def test_tcu_500_num_endpoint_e_error_parcial_mesmo_com_o_outro_ok(monkeypatch):
+    s, chamadas = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(200, json_data=ACORDAOS_REAIS),
+        "recupera-atos-normativos": _500_atos,
+    })
+    resultados = s.search(["turismo"], max_results=5)
+    assert len(resultados) == 0          # T4 troca para 1: ate la _texto_do_acordao le so `ementa`, que a API nao tem
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo, st.source) == ("error", "http_5xx", "tcu")
+    assert st.parcial is True            # R2: um endpoint respondeu -> a coleta e parcial
+    assert "recupera-atos-normativos" in st.detalhe and "404 Not Found" in st.detalhe
+    assert "Acórdãos: ok (2 itens, 0 sem sumário" in st.detalhe
+    assert sum(1 for u in chamadas if "atos" in u) == 3  # 3 retries no 5xx
+
+
+def test_tcu_503_e_manutencao_com_hora_e_hipotese(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(503, "", "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(503, "", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "manutencao_503")
+    assert "HTTP 503 às " in st.detalhe and "20h" in st.detalhe and "hipótese" in st.detalhe
+
+
+def test_tcu_404_e_endpoint_inexistente_sem_retry(monkeypatch):
+    s, chamadas = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(404, "", "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(404, "", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "endpoint_inexistente"
+    assert len(chamadas) == 2                          # sem retry em 4xx
+
+
+def test_tcu_429_e_rate_limit_e_403_e_http_4xx(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(429, "", "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(403, "", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert st.motivo == "rate_limit"                  # o primeiro endpoint que caiu manda o motivo
+    assert "http_4xx" in st.detalhe and "HTTP 403" in st.detalhe
+
+
+def test_tcu_200_html_e_bloqueio_ou_ilegivel_sem_retry(monkeypatch):
+    s, chamadas = _tcu_com(monkeypatch, {
+        "recupera-acordaos": lambda p: RespostaFake(200, DESAFIO_HTML, "text/html"),
+        "recupera-atos-normativos": lambda p: RespostaFake(200, "<html>x</html>", "text/html"),
+    })
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert st.motivo == "bloqueio_waf" and "Verificação de segurança" in st.detalhe
+    assert "resposta_ilegivel" in st.detalhe
+    assert len(chamadas) == 2
+
+
+def test_tcu_timeout_e_conexao_mapeiam_motivo(monkeypatch):
+    def estoura(p):
+        raise requests.exceptions.Timeout("lento")
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": estoura, "recupera-atos-normativos": estoura})
+    s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "timeout"
+
+    def cai(p):
+        raise requests.exceptions.ConnectionError("sem rota")
+    s2, _ = _tcu_com(monkeypatch, {"recupera-acordaos": cai, "recupera-atos-normativos": cai})
+    s2.search(["x"], max_results=5)
+    assert s2.keyword_statuses[0].motivo == "conexao"
+
+
+def test_tcu_falha_na_segunda_pagina_e_parcial_com_pagina_e_motivo(monkeypatch):
+    from searchers import tcu_searcher
+    pagina_cheia = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i)) for i in range(tcu_searcher.PAGE_SIZE)]
+
+    def acordaos(p):
+        if p["inicio"] == 0:
+            return RespostaFake(200, json_data=pagina_cheia)
+        return RespostaFake(500, "boom", "text/html")
+
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": acordaos,
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=100)
+    st = s.keyword_statuses[0]
+    assert st.parcial is True
+    assert "pagina 2 (inicio=20): http_5xx" in st.detalhe
+
+
+def test_tcu_dois_endpoints_ok_sem_match_continua_empty(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=ACORDAOS_REAIS),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["assunto-que-nao-existe"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo, st.parcial) == ("empty", "", False)
+    assert st.detalhe.startswith("Acórdãos: ok (2 itens")       # R3-H5: o resumo vai SEMPRE
+
+
+def test_tcu_acordaos_sem_sumario_sao_contados_e_nao_casam(monkeypatch):
+    """R3-B1: o contador olha o CAMPO sumario; titulo esta sempre preenchido e nao conta."""
+    sem = [dict(a, sumario=None) for a in ACORDAOS_REAIS]
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=sem),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo"], max_results=5)
+    assert resultados == []
+    st = s.keyword_statuses[0]
+    assert st.status == "empty" and "2 sem sumário" in st.detalhe
+
+
+@pytest.mark.xfail(reason="so na T4 _texto_do_acordao le sumario/titulo; ate la o item nem e mapeado", strict=True)
+def test_tcu_item_que_quebra_o_mapeamento_vira_erro_interno_declarado(monkeypatch):
+    """H2: um item malformado derrubava search() inteiro; agora e erro_interno por keyword, nao sumico."""
+    quebrado = dict(ACORDAO, titulo=None, numeroAcordao=None, sumario=123)   # " ".join com int -> TypeError
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[quebrado]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "erro_interno")
+    assert "TypeError" in st.detalhe

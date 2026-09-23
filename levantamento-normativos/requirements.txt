@@ -5,3 +5,4 @@ beautifulsoup4
 google-genai
 ddgs
 googlesearch-python
+tzdata  # ZoneInfo no Windows nao tem base tz do sistema (rodada 3)

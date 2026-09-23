@@ -9,13 +9,17 @@ API documentation: https://dados-abertos.apps.tcu.gov.br/
 """
 
 import logging
+import re
 import time
+from datetime import datetime
 from typing import Optional
+from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 import requests
 
 from models import KeywordStatus, NormativoResult
-from searchers.base import BaseSearcher, ProgressCallback
+from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,7 @@ class TCUSearcher(BaseSearcher):
 
     RATE_LIMIT_DELAY = 1.5   # TCU API is more sensitive
     RATE_LIMIT_JITTER = 0.5
+    SOURCE_ID = "tcu"
 
     def source_name(self) -> str:
         return "TCU Dados Abertos"
@@ -50,6 +55,11 @@ class TCUSearcher(BaseSearcher):
         Fetches records from both endpoints, then filters client-side
         for keyword matches in the ementa field.  Tracks per-keyword
         diagnostics in ``self.keyword_statuses``.
+
+        Um endpoint que falha na primeira pagina marca status="error" para toda
+        palavra-chave (com result_count do endpoint que respondeu e parcial=True);
+        paginacao interrompida marca parcial=True; palavra-chave pulada pelo cap
+        marca nao_consultada.
 
         Args:
             keywords: Search terms.
@@ -69,72 +79,92 @@ class TCUSearcher(BaseSearcher):
             progress_callback(0, total_steps, "TCU: buscando acordaos")
 
         logger.info("TCU: fetching acordaos")
-        acordao_items, acordao_error = self._fetch_all_pages_safe(
-            f"{API_BASE_URL}{ACORDAOS_PATH}"
-        )
+        acordao_items, acordao_erro, acordao_parcial = self._fetch_all_pages_safe(f"{API_BASE_URL}{ACORDAOS_PATH}")
         logger.info(f"TCU: {len(acordao_items)} acordaos fetched, filtering by keywords")
 
         # --- Step 2: Atos Normativos ---
         if progress_callback:
             progress_callback(1, total_steps, "TCU: buscando atos normativos")
-
         logger.info("TCU: fetching atos normativos")
-        atos_items, atos_error = self._fetch_all_pages_safe(
-            f"{API_BASE_URL}{ATOS_PATH}"
-        )
+        atos_items, atos_erro, atos_parcial = self._fetch_all_pages_safe(f"{API_BASE_URL}{ATOS_PATH}")
         logger.info(f"TCU: {len(atos_items)} atos normativos fetched, filtering by keywords")
 
+        def _sem_sumario(item) -> bool:
+            # R3-B1: olha o CAMPO (titulo esta sempre preenchido e nao diz nada), e e
+            # DEFENSIVO — roda fora do try por keyword; item malformado conta como
+            # "sem sumario" aqui e vira erro_interno la dentro, nunca derruba search()
+            try:
+                return not str(item.get("sumario") or item.get("ementa") or "").strip()
+            except Exception:
+                return True
+        sem_sumario = sum(1 for i in acordao_items if _sem_sumario(i))
+
+        def _resumo(nome, itens, erro, parcial, extra=""):
+            if erro is not None and not itens:
+                return f"{nome}: {erro.motivo} em {erro.detalhe}"
+            if parcial:
+                return f"{nome}: parcial ({len(itens)} itens{extra}; {erro.detalhe})"
+            return f"{nome}: ok ({len(itens)} itens{extra})"
+
+        # R2-H5/R3: acordaos recentes chegam SEM sumario — nesses so o titulo casa;
+        # "ok (500 itens)" sugeriria 500 avaliados por texto
+        detalhe = "; ".join([
+            _resumo("Acórdãos", acordao_items, acordao_erro, acordao_parcial,
+                    f", {sem_sumario} sem sumário — nesses só o título casa" if acordao_items else ""),
+            _resumo("Atos", atos_items, atos_erro, atos_parcial),
+        ])
+        # Um endpoint que caiu na PRIMEIRA pagina torna a busca "error" mesmo que
+        # o outro tenha respondido: o usuario precisa saber que metade da fonte
+        # nao foi vista. Resultados do endpoint vivo continuam entrando — e por
+        # isso a coleta e PARCIAL (R2).
+        erro_primario = next((e for e, itens in ((acordao_erro, acordao_items), (atos_erro, atos_items))
+                              if e is not None and not itens), None)
+        parcial = acordao_parcial or atos_parcial or (erro_primario is not None and bool(acordao_items or atos_items))
+
         # Track per-keyword statuses
-        for keyword in keywords:
-            if acordao_error and atos_error:
-                # Both endpoints failed — keyword status is error
+        for idx, keyword in enumerate(keywords):
+            if len(results_by_id) >= max_results:
+                for restante in keywords[idx:]:   # M4
+                    self.keyword_statuses.append(KeywordStatus(
+                        keyword=restante, source=self.SOURCE_ID, result_count=0, status="error", motivo="nao_consultada",
+                        detalhe=f"busca parou em max_results={max_results} antes desta palavra-chave"))
+                break
+            kw_count = 0
+            try:
+                # Filter acordaos for this keyword
+                for item in acordao_items:
+                    if len(results_by_id) >= max_results:
+                        break
+                    if self._matches_keyword(self._texto_do_acordao(item), keyword):
+                        result = self._map_acordao(item, keyword)
+                        if result.id not in results_by_id:
+                            results_by_id[result.id] = result
+                            kw_count += 1
+                # Filter atos for this keyword
+                for item in atos_items:
+                    if len(results_by_id) >= max_results:
+                        break
+                    if self._matches_keyword(item.get("ementa", ""), keyword):
+                        result = self._map_ato_normativo(item, keyword)
+                        if result.id not in results_by_id:
+                            results_by_id[result.id] = result
+                            kw_count += 1
+            except Exception as e:   # H2: mapeamento que quebra nao derruba a fonte
                 self.keyword_statuses.append(KeywordStatus(
-                    keyword=keyword, source="tcu", result_count=0,
-                    status="error",
-                    error_message=f"Acórdãos: {acordao_error}; Atos: {atos_error}",
-                ))
+                    keyword=keyword, source=self.SOURCE_ID, result_count=kw_count, status="error", motivo="erro_interno",
+                    detalhe=f"{type(e).__name__}: {e}"[:200], error_message=f"{type(e).__name__}: {e}"[:200]))
                 continue
 
-            kw_count = 0
-
-            # Filter acordaos for this keyword
-            for item in acordao_items:
-                if len(results_by_id) >= max_results:
-                    break
-                ementa = item.get("ementa", "")
-                if self._matches_keyword(ementa, keyword):
-                    result = self._map_acordao(item, keyword)
-                    if result.id not in results_by_id:
-                        results_by_id[result.id] = result
-                        kw_count += 1
-
-            # Filter atos for this keyword
-            for item in atos_items:
-                if len(results_by_id) >= max_results:
-                    break
-                ementa = item.get("ementa", "")
-                if self._matches_keyword(ementa, keyword):
-                    result = self._map_ato_normativo(item, keyword)
-                    if result.id not in results_by_id:
-                        results_by_id[result.id] = result
-                        kw_count += 1
-
-            if kw_count == 0:
-                error_parts = []
-                if acordao_error:
-                    error_parts.append(f"Acórdãos: {acordao_error}")
-                if atos_error:
-                    error_parts.append(f"Atos: {atos_error}")
-                self.keyword_statuses.append(KeywordStatus(
-                    keyword=keyword, source="tcu", result_count=0,
-                    status="empty" if not error_parts else "error",
-                    error_message="; ".join(error_parts),
-                ))
+            if erro_primario is not None:
+                status, motivo = "error", erro_primario.motivo
+            elif kw_count == 0:
+                status, motivo = "empty", ""
             else:
-                self.keyword_statuses.append(KeywordStatus(
-                    keyword=keyword, source="tcu", result_count=kw_count,
-                    status="ok",
-                ))
+                status, motivo = "ok", ""
+            self.keyword_statuses.append(KeywordStatus(
+                keyword=keyword, source=self.SOURCE_ID, result_count=kw_count, status=status, motivo=motivo,
+                detalhe=detalhe,   # R3-H5: SEMPRE — "empty" com 500 acordaos sem sumario nao e "nao ha acordao"
+                error_message=detalhe if status == "error" else "", parcial=parcial))
 
         # Final callback
         if progress_callback:
@@ -146,24 +176,16 @@ class TCUSearcher(BaseSearcher):
         logger.info(f"TCU: total {len(results_by_id)} resultados unicos")
         return list(results_by_id.values())
 
+    def _texto_do_acordao(self, item: dict) -> str:
+        """Texto onde a palavra-chave e procurada. Ate a T4: `ementa` (que a API
+        real nao devolve — ver tests/fixtures/tcu_acordaos_real.json)."""
+        return item.get("ementa", "") or ""
+
     def _matches_keyword(self, text: str, keyword: str) -> bool:
         """Check if keyword appears in text, accent/case insensitive."""
         return self._normalize_text(keyword) in self._normalize_text(text)
 
-    def _fetch_all_pages_safe(self, url: str) -> tuple[list[dict], str]:
-        """Fetch all pages, returning (items, error_message).
-
-        Returns:
-            Tuple of (items_list, error_string). error_string is empty on success.
-        """
-        try:
-            items = self._fetch_all_pages(url)
-            return items, ""
-        except Exception as e:
-            logger.warning(f"TCU: error fetching {url}: {e}")
-            return [], str(e)
-
-    def _fetch_all_pages(self, url: str) -> list[dict]:
+    def _fetch_all_pages(self, url: str) -> tuple[list[dict], Optional[FonteIndisponivel], bool]:
         """Fetch all pages from a paginated TCU API endpoint.
 
         Stops at MAX_PAGES * PAGE_SIZE records to avoid excessive requests.
@@ -172,85 +194,124 @@ class TCUSearcher(BaseSearcher):
             url: Full endpoint URL.
 
         Returns:
-            List of raw JSON items. Empty list on total failure.
+            (itens, erro, parcial). Primeira pagina falhou -> ([], erro, False).
+            Pagina seguinte falhou -> (o que veio, erro, True): "achei 40, a
+            fonte caiu na pagina 3" e diferente de "achei 40". Antes, qualquer
+            falha era `break` silencioso ("return what we have").
         """
         all_items: list[dict] = []
         offset = 0
-
         for page in range(MAX_PAGES):
-            params = {
-                "inicio": offset,
-                "quantidade": PAGE_SIZE,
-            }
-
-            data = self._request_with_retry(url, params)
-            if data is None:
-                break  # API error; return what we have
-
+            params = {"inicio": offset, "quantidade": PAGE_SIZE}
+            try:
+                data = self._request_with_retry(url, params)
+            except FonteIndisponivel as e:
+                if page == 0:
+                    return [], e, False
+                e.detalhe = f"pagina {page + 1} (inicio={offset}): {e.motivo}: {e.detalhe}"
+                return all_items, e, True
             # The response may be a list directly or wrapped in an object.
             # Handle both cases.
             items = data if isinstance(data, list) else data.get("items", data.get("data", []))
             if not isinstance(items, list):
-                logger.warning(f"TCU: unexpected response format from {url}")
-                break
-
+                erro = FonteIndisponivel("resposta_ilegivel", f"formato inesperado {type(data).__name__} | GET {url}?inicio={offset}")
+                return all_items, erro, page > 0
             all_items.extend(items)
-
             # If we got fewer items than PAGE_SIZE, no more pages
             if len(items) < PAGE_SIZE:
                 break
-
             offset += PAGE_SIZE
             self._rate_limit()
+        return all_items, None, False
 
-        return all_items
+    def _fetch_all_pages_safe(self, url: str) -> tuple[list[dict], Optional[FonteIndisponivel], bool]:
+        """Como _fetch_all_pages, mas nenhuma excecao escapa: bug nosso vira
+        erro_interno declarado, nunca "sem resultado"."""
+        try:
+            return self._fetch_all_pages(url)
+        except Exception as e:
+            logger.error(f"TCU: erro interno em {url}: {e}")
+            return [], FonteIndisponivel("erro_interno", f"{type(e).__name__}: {e}"[:200]), False
 
-    def _request_with_retry(
-        self, url: str, params: dict
-    ) -> Optional[dict | list]:
-        """Send GET request with exponential backoff retry.
-
-        Handles the TCU maintenance window (503 between 20:00-21:00 BRT)
-        with a user-friendly log message.
+    def _request_with_retry(self, url: str, params: dict) -> dict | list:
+        """Send GET request with exponential backoff retry on 5xx/network.
 
         Args:
             url: Request URL.
             params: Query parameters.
 
         Returns:
-            Parsed JSON (dict or list), or None on failure.
+            Parsed JSON (dict or list).
+
+        Raises:
+            FonteIndisponivel: com o motivo pela classe do erro (H6):
+                503 -> manutencao_503 (sem retry; hora em BRT + hipotese da janela 20h-21h);
+                404 -> endpoint_inexistente, 429 -> rate_limit, outro 4xx -> http_4xx (sem retry);
+                5xx apos MAX_RETRIES -> http_5xx; timeout/conexao apos MAX_RETRIES;
+                200 que nao e JSON -> bloqueio_waf (pagina de desafio) ou resposta_ilegivel.
+            Antes devolvia None e o chamador tratava None como "fim das paginas":
+            um 500 virava "sem resultado" (medido em 22/09). Detalhe: fato
+            primeiro, URL (com query) por ultimo.
         """
+        ultimo: Optional[Exception] = None
         for attempt in range(MAX_RETRIES):
             try:
                 response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-
-                # Handle TCU maintenance window
-                if response.status_code == 503:
-                    logger.warning(
-                        "TCU API retornou 503 (indisponivel). "
-                        "A API do TCU fica indisponivel diariamente das 20h as 21h "
-                        "(horario de Brasilia). Tente novamente mais tarde."
-                    )
-                    return None
-
-                response.raise_for_status()
-                return response.json()
-
+            except requests.exceptions.Timeout as e:
+                ultimo = e
+            except requests.exceptions.ConnectionError as e:
+                ultimo = e
             except requests.exceptions.RequestException as e:
-                if attempt < MAX_RETRIES - 1:
-                    delay = 2 ** (attempt + 1)  # 2s, 4s, 8s
-                    logger.warning(
-                        f"TCU API error (attempt {attempt + 1}/{MAX_RETRIES}): {e}. "
-                        f"Retrying in {delay}s..."
-                    )
-                    time.sleep(delay)
+                raise FonteIndisponivel("erro_interno", f"{type(e).__name__}: {str(e)[:120]} | GET {url}") from e
+            else:
+                efetiva = getattr(response, "url", None) or url
+                sc = response.status_code
+                if sc == 503:
+                    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))   # naive em servidor UTC erraria a janela (R2)
+                    janela = "dentro" if 20 <= agora.hour < 21 else "fora"
+                    raise FonteIndisponivel("manutencao_503",
+                        f"HTTP 503 às {agora:%d/%m %H:%M} BRT ({janela} da janela de manutenção conhecida, 20h-21h); "
+                        f"hipótese, não fato | GET {efetiva}")
+                if sc == 404:
+                    raise FonteIndisponivel("endpoint_inexistente", f"HTTP 404 | GET {efetiva}")
+                if sc == 429:
+                    raise FonteIndisponivel("rate_limit", f"HTTP 429 | GET {efetiva}")
+                if 400 <= sc < 500:
+                    raise FonteIndisponivel("http_4xx", f"HTTP {sc} | GET {efetiva}")
+                if sc >= 500:
+                    ultimo = requests.HTTPError(f"{sc}", response=response)
                 else:
-                    logger.error(
-                        f"TCU API failed after {MAX_RETRIES} attempts: {e}"
-                    )
-                    return None
+                    return self._exigir_json(response, efetiva)
+            if attempt < MAX_RETRIES - 1:
+                delay = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                logger.warning(f"TCU API error (attempt {attempt + 1}/{MAX_RETRIES}): {ultimo}. Retrying in {delay}s...")
+                time.sleep(delay)
+        logger.error(f"TCU API failed after {MAX_RETRIES} attempts: {ultimo}")
+        if isinstance(ultimo, requests.exceptions.Timeout):   # ANTES de ConnectionError: ConnectTimeout herda dos dois
+            raise FonteIndisponivel("timeout", f"sem resposta em {REQUEST_TIMEOUT}s x {MAX_RETRIES} | GET {url}?{urlencode(params)}")
+        if isinstance(ultimo, requests.exceptions.ConnectionError):
+            raise FonteIndisponivel("conexao", f"conexao recusada/sem rota ({str(ultimo)[:120]}) | GET {url}?{urlencode(params)}")
+        resp = getattr(ultimo, "response", None)
+        corpo = (getattr(resp, "text", "") or "")[:160]
+        raise FonteIndisponivel("http_5xx",
+            f"HTTP {getattr(resp, 'status_code', '?')} em {MAX_RETRIES} tentativas; corpo: {corpo!r} | GET {getattr(resp, 'url', url)}")
 
-        return None
+    def _exigir_json(self, response, url: str):
+        """200 que nao e JSON e falha declarada, nao 'sem resultado' (H6)."""
+        try:
+            return response.json()
+        except ValueError as e:   # requests.JSONDecodeError e ValueError
+            corpo = (response.text or "").lstrip("\ufeff \t\r\n")
+            ct = (response.headers.get("Content-Type") or "").lower()
+            titulo = re.search(r"<title>([^<]*)</title>", corpo)
+            fato = f"HTTP 200 {ct or 'sem content-type'} nao e JSON"
+            if titulo:
+                fato += f"; título: {titulo.group(1).strip()}"
+            detalhe = f"{fato}; corpo: {corpo[:120]!r} | GET {url}"
+            texto = corpo.lower()
+            if "verificação de segurança" in texto or "verificacao de seguranca" in texto or "challenge" in texto:
+                raise FonteIndisponivel("bloqueio_waf", detalhe) from e
+            raise FonteIndisponivel("resposta_ilegivel", detalhe) from e
 
     def _map_acordao(self, item: dict, found_by: str) -> NormativoResult:
         """Map a raw acordao JSON item to a NormativoResult.
