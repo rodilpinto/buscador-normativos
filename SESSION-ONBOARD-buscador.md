@@ -106,8 +106,8 @@ perspectivas, depois a T10. Briefs prontos em `execucao/BRIEFS.md`.
 
 **Trabalho em voo no checkpoint da fase 2 (23/09):** coder da **T9** implementando em `../bn-t9` (branch `frente2/t9`,
 criada de `master` `3e1f279`). O passo exato está em `execucao/TODOS.md`; vereditos em `execucao/revisoes/T{N}.md`;
-item carregado para a T9 (escape HTML duplo) em `execucao/CONTEXTO.md`. **Onde o resultado cai:** commits na branch da trilha (`git -C ../bn-trilha-a log
---oneline master..` / idem `bn-trilha-b`). **Se a sessão morreu com eles no meio:** `git -C ../bn-trilha-X status`
+item carregado para a T9 (escape HTML duplo) em `execucao/CONTEXTO.md`. **Onde o resultado cai:** commits na branch do worktree da vez (`git worktree list`; `git -C <worktree> log
+--oneline master..`). **Se a sessão morreu com ele no meio:** `git -C <worktree> status`
 — árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
 estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2
 (teste). Worktrees criados com `git worktree add -b frente2/trilha-X ../bn-trilha-X master`.

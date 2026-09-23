@@ -43,9 +43,9 @@ que não existe: a pasta é `spec/frente2-honestidade-fontes/`.
 
 - A e B só colidem em `tools/run_all_tests.py` (dict `BASELINE`, chaves diferentes) — verificado por agente
   independente em 22/09. O merge resolve. Totais do runner: os do plano para **T2–T5** são só da trilha A e valem
-  (com o **+4** dos testes além do plano); os de **T6–T8** (269/272/282) pressupõem a trilha A e **não** valem na trilha B
+  (com os testes além do plano: **+8** ao fim da T5); os de **T6–T8** (269/272/282) pressupõem a trilha A e **não** valem na trilha B
   isolada — lá vale o número **da suíte** que a task mexe. Em `master` depois do merge da A: some os `BASELINE`
-  (📝 conta minha, 23/09: 279 com a T4; 287 com a T5 = 282 do plano + 1 na llm + 4 na suíte nova).
+  (medido no merge da trilha A, 23/09: **291** = 13+64+98+71+45; esperado depois da T9: **292**, com o +1 do `test_phase4`).
 - Fases × trilhas: Fase 1 = T1 · Fase 2 = trilha A · Fase 3 = T6+T7 · Fase 4 = T8 + T9 · Fase 5 = T10.
 - **Merge: cada trilha entra em `master` INTEIRA, uma vez, quando a última task dela fecha o ciclo** (sem merge
   parcial, sem rebase no meio): trilha A depois da T5 → `/checkpoint` **fase 2**; trilha B depois da T8 →
@@ -73,9 +73,11 @@ Status por task: **`TODOS.md` (SSOT desta execução)**. Aprendizados: `INSIGHTS
 > Regra: todo achado adiado "→ Tn" (para uma task posterior desta frente) entra AQUI no momento do adiamento;
 > adiado para fora da frente → `_TODO.md` P3 ou a frente-alvo.
 
-- **T5 (Google):** logs com exceção crua (`logger.*(f"...{e}")`) vazam a chave do CSE, que vai na query — exigir
+- ✅ **T5 (Google)** — feito em `5dad3c7`/`e70d9f6`: logs com exceção crua (`logger.*(f"...{e}")`) vazam a chave do CSE, que vai na query — exigir
   `redigir(str(e))` (herdado do review da T2, obs. 4).
 - **T9 (tela):** escape HTML **duplo** no relatório — `html.escape` dentro de crases/`st.markdown` mostra `&#x27;`,
   `&quot;`, `&lt;!DOCTYPE` na tela (`app.py:876`, visto no e2e da T2 e da T3); o código do plano para a T9 usa o mesmo
   padrão (`html_module.escape` dentro de `st.markdown`). O coder e o reviewer da T9 têm de conferir no e2e que nenhuma
   entidade aparece escapada, e que o detalhe longo não estoura a largura (T2 obs. 4).
+- **T9 (teste/review):** o check do V11 "cards == N do cabeçalho" conta DEPOIS do dedup — **não enxerga fusão fuzzy**
+  (🔴 D-C17): verde ali não prova que nenhum acórdão sumiu. O testador registra isso junto do veredito.

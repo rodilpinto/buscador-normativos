@@ -1777,7 +1777,8 @@ git push origin master
 > **colidia**: 1ª e 2ª Câmara numeram em séries próprias e se reúnem no mesmo dia → mesmo `id`, e o segundo acórdão sumia
 > (212 colisões de id e ~1.175 fusões no dedup `tipo_numero`, medidos em 3.200 acórdãos reais). O executado é
 > `numero ← f"{numeroAcordao}/{anoAcordao}-TCU-{colegiado}"` quando há colegiado (forma de citação do TCU, campos literais);
-> o assert do Step 1 (`r.numero == …`) e o bloco `_map_acordao` do Step 3 abaixo foram ajustados de acordo. Registro:
+> no CÓDIGO executado, o assert do Step 1 (`r.numero == …`) e o bloco `_map_acordao` do Step 3 foram ajustados de
+> acordo — os blocos abaixo NÃO foram editados e mostram a forma original. Registro:
 > `spec/frente2-honestidade-fontes/execucao/revisoes/T4.md` e a nota "Complemento de 23/09" na spec §3.7. O texto abaixo
 > fica como estava (histórico do plano).
 

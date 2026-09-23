@@ -20,11 +20,13 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
   (`deduplicator.py:251-270`, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
   distintos, **26 somem fundidos em outros** (ex.: "ACÓRDÃO 2344/2026 ATA 33/2026 - PLENÁRIO" fundido no 2225/2026 — os dois
   sumários começam "TOMADA DE CONTAS ESPECIAL. FRAUDE NA CONCESSÃO DE BENEFÍCIOS PREVIDENCIÁRIOS…"). Repro:
-  `scratchpad/fuzzy.py` do testador (fora do repo — 📝 reproduzir com a fixture real se a decisão for consertar).
+  `scratchpad/fuzzy.py` do testador — ⚠ **fora do repo, efêmero**: se a decisão for consertar, o primeiro passo do coder é
+  capturar ao vivo os dois acórdãos que se fundem (ex. 2344/2026 e 2225/2026 do Plenário) como fixture real.
   Antes da T4 isso não acontecia porque a ementa do acórdão vinha vazia (a fonte era cega).
 - **Por que é decisão sua:** a spec da frente 2 (§3.7) e o plano fixam **"sem mudar como ele deduplica"** e
   `dedup_esperado.json` **nunca muda nesta frente**. Consertar o fuzzy é mudar o dedup.
-- **Trava:** nada da execução — a T4 segue, e as demais tasks não dependem disso. Mas enquanto não se decide, uma busca
+- **Trava:** nada da execução (T4 já fechada; nenhuma task depende disso). ⚠ **Se a escolha for `a'` ou `c` "nesta
+  frente", o conserto tem de entrar ANTES da T10** (a T10 fecha a frente) — vira uma task extra no `execucao/TODOS.md`. Mas enquanto não se decide, uma busca
   com ≤ 1.000 itens pode **perder acórdãos em silêncio** (o oposto do que a frente promete).
 
 | Opção | Ganha | Perde / risco |

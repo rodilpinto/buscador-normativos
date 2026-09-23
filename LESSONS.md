@@ -269,5 +269,7 @@ tocada exige varredura própria, por vizinhança (o pacote, a pasta), não por d
   Registradas por este projeto: (1) o endpoint LLM `10.10.111.125:1234` só responde de dentro da
   rede da Câmara, com a regra do `timeout` em tupla; (2) criar repositório no GitHub exige o `gh`
   CLI — o token do Credential Manager que faz o `push` não autoriza a chamada de API.
+  (3) `sed -i` do Git Bash em arquivo CRLF converte para LF e pode não aplicar a edição; (4) duração absurda de suíte ou
+  de agente = a máquina suspendeu (`time.monotonic` avança na suspensão) — as duas registradas em 23/09.
 - Bloqueios que dependem do humano: `BLOCKED-ON-RODRIGO.md`.
 - Decisões: `_DECISOES-PENDENTES.md` e `decisions/DECISIONS-LOG.md`.
