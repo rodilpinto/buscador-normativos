@@ -158,6 +158,9 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       - (T3) TCU: status `nao_consultada`/`erro_interno` por keyword sem `parcial` nem o resumo dos endpoints.
       - (T3) TCU: `max_results<=0` ainda baixa todas as páginas (≈128s por busca; metade do tempo do `test_searchers`).
       - (T3 d) `redigir`: o regex `[^&\s]+` come `;`/`,` depois do segredo → `[^&\s;,)'"]+` + teste.
+      - (T9 r1) URL solta (`http://…`) no texto da fonte vira link clicável no card (autolink do GFM, não se desliga por
+        escape); o texto visível fica literal. 📝 sugestão do coder: quebrar o nó de texto com `<span></span>` depois de `http`/`www`.
+      - (T9 r2) "Ementa completa" com `_md_texto` troca quebras de linha por espaço (muda o layout, não o texto).
       - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
         validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
