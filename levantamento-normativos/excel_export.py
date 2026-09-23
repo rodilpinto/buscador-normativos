@@ -6,6 +6,8 @@ Generates a formatted workbook with:
 - Data rows with per-column formatting (hyperlinks, percentages, wrapping)
 - Freeze panes so headers remain visible when scrolling
 - Landscape print layout fit to page width
+- A second sheet, 'Diagnostico da busca', always present: one row per
+  (source, keyword) status of the search (see _write_diagnostico_sheet)
 
 The returned BytesIO buffer is ready for direct use with
 ``st.download_button(data=buffer)``.
@@ -16,6 +18,7 @@ from __future__ import annotations
 import logging
 import re
 from io import BytesIO
+from typing import Optional
 
 from openpyxl import Workbook
 
@@ -29,7 +32,7 @@ from openpyxl.styles import (
 )
 from openpyxl.utils import get_column_letter
 
-from models import NormativoResult
+from models import KeywordStatus, NormativoResult, redigir, rotulo_status
 
 # ---------------------------------------------------------------------------
 # Style constants
@@ -84,6 +87,23 @@ COLUMNS = [
     ("Categoria/Tema", 25, "categoria"),
     ("Situacao", 15, "situacao"),
     ("Relevancia", 12, "relevancia"),
+    ("Origem da nota", 16, "relevancia_origem"),  # ⚠ test_phase4.py fixa len(COLUMNS); mudar aqui = mudar la no mesmo commit
+]
+
+# Rotulos em portugues para a planilha (o vocabulario tecnico vive em models.py)
+ORIGEM_LABEL = {
+    "modelo": "Modelo (IA)",
+    "heuristica": "Heurística (palavras-chave)",
+    "fallback_erro": "Fallback (erro do modelo)",
+    "padrao_fonte": "Padrão da fonte",
+}
+STATUS_LABEL = rotulo_status          # UNICO lugar: models.rotulo_status (R2-B6)
+VAZIO = "—"                            # celula vazia le como None no round-trip do openpyxl; o traco diz
+                                       # "campo considerado, sem valor" (B6)
+DIAGNOSTICO_SHEET = "Diagnostico da busca"
+DIAGNOSTICO_COLUMNS = [
+    ("Fonte", 12), ("Palavra-chave", 28), ("Status", 14), ("Motivo", 20),
+    ("Detalhe", 90), ("Resultados", 11), ("Parcial", 9), ("Retentado", 10),
 ]
 
 # Maximum ementa length in Excel cells. Longer values are truncated to
@@ -191,6 +211,7 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
     - Ementa truncation and text wrapping
     - Hyperlink creation for the Link column
     - Percentage formatting and conditional fill for Relevancia
+    - Origem da nota em portugues (ORIGEM_LABEL)
 
     Args:
         ws: Active worksheet.
@@ -252,6 +273,11 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
             elif numeric_value >= 0.4:
                 cell.fill = RELEVANCIA_MED_FILL
 
+        elif field_name == "relevancia_origem":
+            cell.value = ORIGEM_LABEL.get(value, value)
+            cell.font = DATA_FONT
+            cell.alignment = RELEVANCIA_ALIGNMENT
+
         elif field_name == "nome":
             cell.value = value
             cell.font = NOME_FONT
@@ -267,14 +293,62 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Helper: Diagnostico sheet
+# ---------------------------------------------------------------------------
+
+
+def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordStatus]], quando: Optional[str]) -> None:
+    """Aba 'Diagnostico da busca': uma linha por (fonte, palavra-chave).
+
+    Existe SEMPRE, mesmo sem dados, para que quem abre a planilha saiba que o
+    registro e previsto. E o que diz, seis meses depois, que o LexML nao
+    respondeu naquele dia — a planilha e o artefato que sobrevive a sessao.
+    `quando` vem formatado pelo chamador (o golden passa um valor fixo).
+    """
+    ws = wb.create_sheet(DIAGNOSTICO_SHEET)
+    n = len(DIAGNOSTICO_COLUMNS)
+    ws.merge_cells(f"A1:{get_column_letter(n)}1")
+    t = ws.cell(row=1, column=1)
+    t.value = f"Diagnóstico da busca: {topic} — {quando or 'data/hora não informada'}"
+    t.font, t.alignment, t.fill = TITLE_FONT, TITLE_ALIGNMENT, TITLE_FILL
+    ws.row_dimensions[1].height = 40
+    for col, (nome, largura) in enumerate(DIAGNOSTICO_COLUMNS, start=1):
+        c = ws.cell(row=2, column=col)
+        c.value, c.font, c.fill, c.alignment, c.border = nome, HEADER_FONT, HEADER_FILL, HEADER_ALIGNMENT, THIN_BORDER
+        ws.column_dimensions[get_column_letter(col)].width = largura
+    if not diagnostico:
+        c = ws.cell(row=3, column=1)
+        c.value = "Nenhum diagnóstico registrado nesta exportação"
+        c.font = DATA_FONT
+        return
+    sim_nao = lambda b: "Sim" if b else "Não"
+    for row, s in enumerate(diagnostico, start=3):
+        # keyword e source vem do usuario/LLM: '=1+1' viraria formula (R3); redigir neutraliza
+        valores = [redigir(s.source), redigir(s.keyword), STATUS_LABEL(s), s.motivo or VAZIO,
+                   (s.detalhe or s.error_message) or VAZIO, s.result_count, sim_nao(s.parcial), sim_nao(s.retried)]
+        for col, v in enumerate(valores, start=1):
+            c = ws.cell(row=row, column=col)
+            c.value, c.font, c.border = v, DATA_FONT, THIN_BORDER
+            c.alignment = EMENTA_ALIGNMENT if col == 5 else DATA_ALIGNMENT
+    ws.freeze_panes = "A3"
+    ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(diagnostico) + 2}"
+
+
+# ---------------------------------------------------------------------------
 # Main export function
 # ---------------------------------------------------------------------------
 
 
-def generate_excel(results: list[NormativoResult], topic: str) -> BytesIO:
+def generate_excel(
+    results: list[NormativoResult],
+    topic: str,
+    diagnostico: Optional[list[KeywordStatus]] = None,
+    quando: Optional[str] = None,
+) -> BytesIO:
     """Generate a formatted Excel workbook from selected normativos.
 
-    The workbook contains a single sheet named 'Normativos' with:
+    The workbook contains two sheets: 'Normativos' (active) and 'Diagnostico da busca'.
+    'Normativos' has:
     - Row 1: merged title row showing the search topic
     - Row 2: green header row with white bold text
     - Rows 3+: data rows with formatting per column type
@@ -291,6 +365,8 @@ def generate_excel(results: list[NormativoResult], topic: str) -> BytesIO:
                  in which case a workbook with just headers is returned.
         topic: The search topic string, displayed in the title row and used
                to contextualize the workbook for stakeholders.
+        diagnostico: KeywordStatus list from the search; None or empty writes a placeholder row.
+        quando: search date/time already formatted (dd/mm/yyyy HH:MM); None writes 'não informada'.
 
     Returns:
         BytesIO buffer containing the complete .xlsx file. The buffer is
@@ -347,6 +423,13 @@ def generate_excel(results: list[NormativoResult], topic: str) -> BytesIO:
     ws.page_setup.orientation = "landscape"
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0  # 0 = as many pages as needed vertically
+
+    # ----------------------------------------------------------------
+    # Sheet 2: Diagnostico da busca (always present). redigir NAO e
+    # chamada aqui: o KeywordStatus ja redigiu detalhe/error_message.
+    # ----------------------------------------------------------------
+    _write_diagnostico_sheet(wb, topic, diagnostico, quando)
+    wb.active = 0  # garante 'Normativos' como aba ativa
 
     # ----------------------------------------------------------------
     # Write to BytesIO buffer

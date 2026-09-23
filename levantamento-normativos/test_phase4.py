@@ -418,10 +418,10 @@ class TestExcelHyperlinks:
 
 
 class TestExcelColumnCount:
-    """Verify all 10 expected columns are present."""
+    """Verify all 11 expected columns are present."""
 
-    def test_has_10_columns(self):
-        assert len(COLUMNS) == 10, f"Expected 10 column definitions, got {len(COLUMNS)}"
+    def test_has_11_columns(self):
+        assert len(COLUMNS) == 11, f"Expected 11 column definitions, got {len(COLUMNS)}"
 
     def test_header_row_has_10_columns(self):
         results = _make_sample_results(1)
@@ -430,24 +430,25 @@ class TestExcelColumnCount:
         ws = wb.active
 
         headers = []
-        for col in range(1, 11):
+        for col in range(1, 12):
             val = ws.cell(row=2, column=col).value
             if val:
                 headers.append(val)
 
-        assert len(headers) == 10, f"Expected 10 headers, got {len(headers)}: {headers}"
+        assert len(headers) == 11, f"Expected 11 headers, got {len(headers)}: {headers}"
 
     def test_expected_header_names(self):
         expected = [
             "Nome do Normativo", "Tipo", "Numero", "Data", "Orgao Emissor",
             "Ementa", "Link", "Categoria/Tema", "Situacao", "Relevancia",
+            "Origem da nota",
         ]
         results = _make_sample_results(1)
         buf = generate_excel(results, "test")
         wb = _load_workbook_from_buffer(buf)
         ws = wb.active
 
-        actual = [ws.cell(row=2, column=c).value for c in range(1, 11)]
+        actual = [ws.cell(row=2, column=c).value for c in range(1, 12)]
         assert actual == expected, f"Header mismatch: {actual}"
 
 
@@ -699,6 +700,79 @@ class TestMergeOrigem:
         b = _make_result(source="google", relevancia=0.5); b.relevancia_origem = "fallback_erro"
         _merge(a, b)
         assert a.relevancia_origem == "modelo"
+
+
+from models import KeywordStatus as _KS, rotulo_status
+from excel_export import ORIGEM_LABEL, VAZIO, DIAGNOSTICO_SHEET
+
+
+class TestExcelHonestidade:
+    def test_origem_em_portugues_na_coluna_11(self):
+        r = _make_result(relevancia=0.85); r.relevancia_origem = "heuristica"
+        ws = _load_workbook_from_buffer(generate_excel([r], "t")).active
+        assert ws.cell(row=2, column=11).value == "Origem da nota"
+        assert ws.cell(row=3, column=11).value == "Heurística (palavras-chave)"
+
+    def test_default_padrao_fonte(self):
+        ws = _load_workbook_from_buffer(generate_excel([_make_result()], "t")).active
+        assert ws.cell(row=3, column=11).value == "Padrão da fonte"
+
+    def test_aba_diagnostico_sempre_existe_e_normativos_continua_ativa(self):
+        wb = _load_workbook_from_buffer(generate_excel([_make_result()], "t"))
+        assert wb.sheetnames == ["Normativos", DIAGNOSTICO_SHEET]
+        assert wb.active.title == "Normativos"
+        assert wb[DIAGNOSTICO_SHEET].cell(row=3, column=1).value == "Nenhum diagnóstico registrado nesta exportação"
+
+    def test_aba_diagnostico_lista_vazia_igual_a_none(self):
+        a = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=None))[DIAGNOSTICO_SHEET]
+        b = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=[]))[DIAGNOSTICO_SHEET]
+        assert a.cell(row=3, column=1).value == b.cell(row=3, column=1).value
+
+    def test_aba_diagnostico_uma_linha_por_status_com_traco_no_vazio(self):
+        diag = [
+            _KS(keyword="lgpd", source="lexml", status="error", motivo="bloqueio_waf",
+                detalhe="HTTP 200 text/html; título: x | GET http://x", error_message="bloqueio"),
+            _KS(keyword="lgpd", source="tcu", status="ok", result_count=4, parcial=True,
+                detalhe="pagina 2 (inicio=20): http_5xx: HTTP 500 | GET http://y"),
+            _KS(keyword="lgpd", source="google", status="empty"),
+            _KS(keyword="outra", source="lexml", status="error", motivo="nao_consultada",
+                detalhe="busca parou em max_results=50 antes desta palavra-chave"),
+        ]
+        wb = _load_workbook_from_buffer(generate_excel([_make_result()], "t", diagnostico=diag, quando="22/09/2026 10:00"))
+        ws = wb[DIAGNOSTICO_SHEET]
+        assert "22/09/2026 10:00" in ws.cell(row=1, column=1).value
+        assert [ws.cell(row=2, column=c).value for c in range(1, 9)] == [
+            "Fonte", "Palavra-chave", "Status", "Motivo", "Detalhe", "Resultados", "Parcial", "Retentado"]
+        linhas = [[ws.cell(row=r, column=c).value for c in range(1, 9)] for r in range(3, 7)]
+        assert linhas[0] == ["lexml", "lgpd", "Indisponível", "bloqueio_waf", "HTTP 200 text/html; título: x | GET http://x", 0, "Não", "Não"]
+        assert linhas[1] == ["tcu", "lgpd", "OK", VAZIO, "pagina 2 (inicio=20): http_5xx: HTTP 500 | GET http://y", 4, "Sim", "Não"]
+        assert linhas[2] == ["google", "lgpd", "Sem resultado", VAZIO, VAZIO, 0, "Não", "Não"]
+        assert linhas[3][2:4] == ["Não consultada", "nao_consultada"]            # R2-B6
+        assert ws.cell(row=7, column=1).value is None
+
+    def test_rotulo_da_planilha_e_o_de_models(self):
+        diag = [_KS(keyword="k", source="tcu", status="error", motivo="http_5xx")]
+        ws = _load_workbook_from_buffer(generate_excel([], "t", diagnostico=diag))[DIAGNOSTICO_SHEET]
+        assert ws.cell(row=3, column=3).value == rotulo_status(diag[0]) == "Indisponível"
+
+    def test_sem_quando_o_titulo_diz_nao_informada(self):
+        ws = _load_workbook_from_buffer(generate_excel([], "t"))[DIAGNOSTICO_SHEET]
+        assert "data/hora não informada" in ws.cell(row=1, column=1).value      # R2-B5: informadA
+
+    def test_detalhe_longo_cabe_na_celula_inteiro(self):
+        longo = "HTTP 500; " + "x" * 1500 + " | GET http://z"
+        diag = [_KS(keyword="k", source="lexml", status="error", motivo="http_5xx", detalhe=longo)]
+        ws = _load_workbook_from_buffer(generate_excel([], "t", diagnostico=diag))[DIAGNOSTICO_SHEET]
+        assert ws.cell(row=3, column=5).value == longo                          # R2-B1: nada cortado
+
+
+class TestRotulosSincronizados:
+    def test_origem_label_cobre_o_vocabulario(self):
+        assert set(ORIGEM_LABEL) == ORIGENS_RELEVANCIA
+
+    def test_status_label_vem_de_models(self):
+        from excel_export import STATUS_LABEL
+        assert STATUS_LABEL is rotulo_status   # unico lugar (R2-B6)
 
 
 # ===========================================================================

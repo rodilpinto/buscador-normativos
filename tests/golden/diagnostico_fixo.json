@@ -1,0 +1,12 @@
+[
+  {"keyword": "protecao de dados", "source": "lexml", "result_count": 0, "status": "error",
+   "error_message": "bloqueio_waf", "motivo": "bloqueio_waf",
+   "detalhe": "HTTP 200 text/html; título: Verificação de segurança — Senado Federal; corpo: '<!DOCTYPE html>' | GET https://www.lexml.gov.br/busca/SRU?operation=searchRetrieve&query=x | cadeia: busca/SRU: bloqueio_waf (HTTP 200); sru/SRU: endpoint_inexistente (HTTP 404); srw/SRU: endpoint_inexistente (HTTP 404) | retry pulado: os 3 URLs já falharam nesta busca"},
+  {"keyword": "protecao de dados", "source": "tcu", "result_count": 4, "status": "ok", "parcial": true,
+   "detalhe": "pagina 2 (inicio=20): http_5xx: HTTP 500 em 3 tentativas; corpo: '' | GET https://dados-abertos.apps.tcu.gov.br/api/acordao/recupera-acordaos?inicio=20"},
+  {"keyword": "LGPD", "source": "google", "result_count": 0, "status": "empty"},
+  {"keyword": "governanca", "source": "lexml", "result_count": 0, "status": "error", "motivo": "nao_consultada",
+   "detalhe": "busca parou em max_results=50 antes desta palavra-chave"},
+  {"keyword": "LGPD", "source": "tcu", "result_count": 0, "status": "error", "motivo": "timeout",
+   "retried": true, "error_message": "Retry failed: timeout: sem resposta em 15s x 3 | GET https://dados-abertos.apps.tcu.gov.br/api/acordao/recupera-acordaos?inicio=0"}
+]
