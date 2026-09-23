@@ -12,6 +12,7 @@ Rodar de dentro de levantamento-normativos/:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -689,3 +690,394 @@ def test_cse_falha_nao_vaza_a_chave_no_log(monkeypatch, caplog):
     assert "key=***" in st.detalhe                                   # a chave estava la e foi redigida
     assert segredo not in caplog.text
     assert all(segredo not in k.detalhe + k.error_message for k in s.keyword_statuses)
+
+
+
+# ===========================================================================
+# Revisao final da frente 2 — trilha FIX-FONTES (23/09). Um bloco por achado
+# de execucao/revisoes/final-triagem.md; cada teste foi visto FALHAR antes do conserto.
+# ===========================================================================
+
+# --- F-N2: XML bem-formado que nao e resultado SRU nao pode virar "Sem resultado" ---
+
+# 📝 Escrito a mao (nao ha captura real: o LexML esta atras do WAF desde 22/09). Forma do
+# diagnostico SRU 1.1 (namespace diag = http://www.loc.gov/zing/srw/diagnostic/).
+SRU_DIAGNOSTICO = (
+    '<?xml version="1.0" encoding="UTF-8"?>'
+    '<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/"'
+    ' xmlns:diag="http://www.loc.gov/zing/srw/diagnostic/">'
+    '<srw:version>1.1</srw:version><srw:numberOfRecords>0</srw:numberOfRecords>'
+    '<srw:diagnostics><diag:diagnostic><diag:uri>info:srw/diagnostic/1/10</diag:uri>'
+    '<diag:details>dc.description any</diag:details>'
+    '<diag:message>Query syntax error</diag:message></diag:diagnostic></srw:diagnostics>'
+    '</srw:searchRetrieveResponse>'
+)
+SRU_ZERO = re.sub(r"<srw:records>.*</srw:records>", "", SRU_VALIDO, flags=re.S).replace(
+    "<srw:numberOfRecords>1</srw:numberOfRecords>", "<srw:numberOfRecords>0</srw:numberOfRecords>")
+
+
+def test_lexml_xml_que_nao_e_searchRetrieveResponse_e_resposta_ilegivel(monkeypatch):
+    """F-N2 (spec N2): `<error><message>...</message></error>` com 200 virava `empty`."""
+    corpo = '<?xml version="1.0"?><error><message>Servico indisponivel</message></error>'
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, corpo, "application/xml"))
+    assert s.search(["x"], max_results=5) == []
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "resposta_ilegivel")
+    assert "searchRetrieveResponse" in st.detalhe and "<error>" in st.detalhe
+    assert "Servico indisponivel" in st.detalhe                     # o que a fonte disse, literal
+    assert "| GET " in st.detalhe and "operation=searchRetrieve" in st.detalhe
+
+
+def test_lexml_sru_com_diagnostics_e_resposta_ilegivel_com_a_mensagem(monkeypatch):
+    """F-N2: SRU com `<srw:diagnostics>` (Query syntax error, numberOfRecords=0) virava `empty`."""
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_DIAGNOSTICO, "application/xml"))
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "resposta_ilegivel")
+    assert "Query syntax error" in st.detalhe and "info:srw/diagnostic/1/10" in st.detalhe
+    assert st.detalhe.rstrip().split(" | GET ")[-1].startswith("https://")   # URL por ultimo (R2-B1)
+
+
+def test_lexml_sru_valido_com_zero_registros_continua_empty(monkeypatch):
+    """F-N2, o outro lado: SRU legitimo sem registro E "consultei e nao achei"."""
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_ZERO, "application/xml"))
+    assert s.search(["x"], max_results=5) == []
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo, st.parcial) == ("empty", "", False)
+
+
+# --- F-M2: WAF no _sru_url cacheado entra em _urls_mortos e a cadeia e tentada ---
+
+def test_lexml_waf_no_url_cacheado_mata_o_url_e_tenta_a_cadeia(monkeypatch):
+    """F-M2 (T2 M2, subido pela revisao final): antes o desafio no URL que funcionava
+    subia direto como bloqueio_waf, sem tentar os fallbacks."""
+    from searchers import lexml_searcher
+    outra_lei = SRU_VALIDO.replace("2021-04-01;14133", "1993-06-21;8666")
+    vez = {"primario": 0}
+
+    def responder(u, p):
+        if u == lexml_searcher.PRIMARY_SRU_URL:
+            vez["primario"] += 1
+            if vez["primario"] == 1:
+                return RespostaFake(200, SRU_VALIDO)
+            return RespostaFake(200, DESAFIO_HTML, "text/html; charset=UTF-8")
+        return RespostaFake(200, outra_lei)
+
+    s, chamadas = _lexml_com(monkeypatch, responder)
+    resultados = s.search(["a", "b", "c"], max_results=10)
+    assert [st.status for st in s.keyword_statuses] == ["ok", "ok", "ok"]
+    assert len(resultados) == 2
+    assert s._urls_mortos[lexml_searcher.PRIMARY_SRU_URL].motivo == "bloqueio_waf"
+    assert s._sru_url == lexml_searcher.FALLBACK_SRU_URL
+    assert chamadas.count(lexml_searcher.PRIMARY_SRU_URL) == 2       # "c" nao volta ao primario morto
+
+
+# --- F-N4: keyword que casa acordao ja trazido por outra sai ok e acumula found_by ---
+
+def test_tcu_keyword_que_casa_acordao_ja_trazido_e_ok_e_acumula_found_by(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[ACORDAO]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["turismo", "monitoramento"], max_results=10)
+    assert len(resultados) == 1
+    assert resultados[0].found_by == "turismo, monitoramento"
+    st1, st2 = s.keyword_statuses
+    assert (st1.status, st1.result_count) == ("ok", 1)
+    assert (st2.status, st2.motivo, st2.result_count) == ("ok", "", 0)   # result_count = NOVOS, como o LexML
+    assert "1 já trazido por palavra-chave anterior" in st2.detalhe
+
+
+# --- F-N5: a keyword EM CURSO cortada por max_results sai parcial ---
+
+def test_lexml_keyword_cortada_por_max_results_e_parcial(monkeypatch):
+    pagina_de_50 = SRU_VALIDO.replace("<srw:numberOfRecords>1</srw:numberOfRecords>",
+                                      "<srw:numberOfRecords>50</srw:numberOfRecords>")
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, pagina_de_50))
+    s.search(["a", "b"], max_results=1)
+    st, seguinte = s.keyword_statuses
+    assert (st.status, st.parcial) == ("ok", True)
+    assert "cortado em max_results=1" in st.detalhe
+    assert (seguinte.motivo, seguinte.parcial) == ("nao_consultada", False)
+
+    # a fonte tinha exatamente o que coube: nada foi cortado
+    s2, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO))
+    s2.search(["a"], max_results=1)
+    assert (s2.keyword_statuses[0].parcial, s2.keyword_statuses[0].detalhe) == (False, "")
+
+
+def test_tcu_keyword_cortada_por_max_results_e_parcial(monkeypatch):
+    tres = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i)) for i in range(3)]
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=tres),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    assert len(s.search(["turismo", "x"], max_results=2)) == 2
+    st, seguinte = s.keyword_statuses
+    assert (st.status, st.parcial) == ("ok", True)
+    assert "cortado em max_results=2" in st.detalhe
+    assert (seguinte.motivo, seguinte.parcial) == ("nao_consultada", False)
+
+    s2, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=tres[:2]),
+                                   "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s2.search(["turismo"], max_results=2)
+    assert s2.keyword_statuses[0].parcial is False and "cortado" not in s2.keyword_statuses[0].detalhe
+
+
+def test_google_keyword_cortada_por_max_results_e_parcial(monkeypatch):
+    def tres(q):
+        return [{"href": f"https://www.gov.br/{q}/{i}", "title": f"Guia {i}", "body": "texto"} for i in range(3)]
+
+    s = _ddg_com(monkeypatch, tres)
+    assert len(s.search(["a", "b"], max_results=2)) == 2
+    st, seguinte = s.keyword_statuses
+    assert (st.status, st.result_count, st.parcial) == ("ok", 2, True)
+    assert "cortado em max_results=2" in st.detalhe
+    assert (seguinte.motivo, seguinte.parcial) == ("nao_consultada", False)
+
+    s2 = _ddg_com(monkeypatch, lambda q: tres(q)[:2])
+    s2.search(["a"], max_results=2)
+    assert (s2.keyword_statuses[0].parcial, s2.keyword_statuses[0].detalhe) == (False, "")
+
+
+# --- F-UX3: janela de cobertura do TCU no detalhe ---
+
+def test_tcu_detalhe_diz_a_janela_de_cobertura_dos_acordaos(monkeypatch):
+    """F-UX3 (ux 3): "500 itens" nao dizia que era ~1 semana de acordaos."""
+    datas = ["16/09/2026", "10/09/2026", "12/09/2026"]
+    itens = [dict(ACORDAO, key=f"A-{i}", numeroAcordao=str(i), dataSessao=d) for i, d in enumerate(datas)]
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=itens),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=10)
+    d = s.keyword_statuses[0].detalhe
+    assert "os 3 acórdãos mais recentes, de 10/09/2026 a 16/09/2026" in d
+    assert d.startswith("Acórdãos: ok (3 itens, 0 sem sumário")      # o texto que ja existia fica
+
+
+# --- F-MT503: o conselho que o log antigo dava volta ao detalhe ---
+
+def _tcu_503_as(monkeypatch, hora: int):
+    from datetime import datetime as _dt
+    from searchers import tcu_searcher
+
+    class Relogio(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return _dt(2026, 9, 23, hora, 30, tzinfo=tz)
+
+    monkeypatch.setattr(tcu_searcher, "datetime", Relogio)
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(503, "", "text/html"),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(503, "", "text/html")})
+    s.search(["x"], max_results=5)
+    return s.keyword_statuses[0].detalhe
+
+
+def test_tcu_503_dentro_da_janela_aconselha_tentar_depois_das_21h(monkeypatch):
+    dentro = _tcu_503_as(monkeypatch, 20)
+    assert "dentro da janela" in dentro and "tente de novo após 21h BRT" in dentro
+    fora = _tcu_503_as(monkeypatch, 15)
+    assert "fora da janela" in fora and "tente de novo" not in fora
+
+
+# --- F-MT1: FonteIndisponivel valida contra models.MOTIVOS (sem copia) ---
+
+def test_fonte_indisponivel_aceita_todo_motivo_de_models_motivos(monkeypatch):
+    """F-MT1: a copia `_CONHECIDOS` deixava um motivo novo so em MOTIVOS virar erro_interno em silencio."""
+    import models
+    from searchers.base import FonteIndisponivel
+    for m in models.MOTIVOS - {""}:
+        assert FonteIndisponivel(m, "d").motivo == m
+    assert FonteIndisponivel("", "d").motivo == "erro_interno"            # "" = nao se aplica: nao e causa
+    assert FonteIndisponivel("inventado", "d").motivo == "erro_interno"
+    monkeypatch.setattr(models, "MOTIVOS", models.MOTIVOS | {"motivo_novo"})
+    assert FonteIndisponivel("motivo_novo", "d").motivo == "motivo_novo"  # uma so fonte da verdade
+
+
+# --- F-MT3: o bloqueio_waf inferido do scraping so diz "seguidas" se forem seguidas ---
+
+def test_google_scraping_bloqueio_conta_zeros_realmente_seguidos(monkeypatch):
+    from searchers import google_searcher
+    from searchers.base import FonteIndisponivel
+    monkeypatch.setattr(google_searcher, "_BACKEND", "scraping")
+
+    def resultados(self, keyword):
+        if keyword == "b":
+            return [], FonteIndisponivel("erro_interno", "googlesearch: RuntimeError: x")
+        return [], None
+
+    monkeypatch.setattr(google_searcher.GoogleSearcher, "_search_urls", resultados)
+    s = google_searcher.GoogleSearcher()
+    s.search(["a", "b", "c", "d", "e"], max_results=10)
+    motivos = [st.motivo for st in s.keyword_statuses]
+    # antes: "c" saia bloqueio_waf "0 resultados em 3 palavras-chave seguidas" contando o ERRO de "b"
+    assert motivos == ["", "erro_interno", "", "", "bloqueio_waf"]
+    assert "0 resultados em 3 palavras-chave seguidas" in s.keyword_statuses[4].detalhe
+
+
+# --- F-SSRF: _fetch_page_metadata sem redirect automatico e com teto de bytes ---
+
+class PaginaFake:
+    """O minimo de requests.Response (stream=True) que _fetch_page_metadata toca."""
+
+    def __init__(self, status=200, location="", corpo=b"", pedacos=None):
+        self.status_code = status
+        self.headers = CaseInsensitiveDict({"Location": location} if location else {"content-type": "text/html"})
+        self._pedacos = pedacos if pedacos is not None else [corpo]
+        self.lidos = 0
+        self.fechada = False
+
+    def iter_content(self, chunk_size=1):
+        for p in self._pedacos:
+            self.lidos += len(p)
+            yield p
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(str(self.status_code), response=self)
+
+    def close(self):
+        self.fechada = True
+
+
+def _web_com(monkeypatch, rotas: dict, dns: dict | None = None):
+    """rotas: {url: PaginaFake}. Emula o requests: SEM allow_redirects=False, o dublê
+    segue o Location sozinho (e registra o salto) — como o requests.get de verdade faz."""
+    import socket
+    from searchers import google_searcher
+
+    dns = dns or {}
+    chamadas: list[tuple[str, dict]] = []
+
+    def fake_getaddrinfo(host, *a, **k):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (dns.get(host, "93.184.216.34"), 0))]
+
+    def fake_get(url, **kw):
+        chamadas.append((url, kw))
+        r = rotas[url]
+        if kw.get("allow_redirects", True) and 300 <= r.status_code < 400:
+            from urllib.parse import urljoin
+            return fake_get(urljoin(url, r.headers["Location"]), **kw)
+        return r
+
+    monkeypatch.setattr(google_searcher.socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr("searchers.google_searcher.requests.get", fake_get)
+    return google_searcher.GoogleSearcher(), chamadas
+
+
+HTML_GUIA = b"<html><head><title>Guia</title><meta name='description' content='desc'></head><body>"
+
+
+def test_fetch_metadata_nao_segue_redirect_para_metadados_nem_para_ip_privado(monkeypatch):
+    """F-SSRF (seg. alto): o host era validado uma vez e o requests seguia o redirect sozinho."""
+    s, chamadas = _web_com(monkeypatch, {
+        "https://www.gov.br/a": PaginaFake(302, location="http://169.254.169.254/latest/meta-data/"),
+        "http://169.254.169.254/latest/meta-data/": PaginaFake(corpo=b"<title>SEGREDO</title>"),
+    })
+    assert s._fetch_page_metadata("https://www.gov.br/a") == ("", "")
+    assert [u for u, _ in chamadas] == ["https://www.gov.br/a"]
+
+    s2, chamadas2 = _web_com(monkeypatch, {
+        "https://www.gov.br/b": PaginaFake(301, location="http://interno.exemplo/x"),
+        "http://interno.exemplo/x": PaginaFake(corpo=b"<title>SEGREDO</title>"),
+    }, dns={"interno.exemplo": "10.0.0.5"})
+    assert s2._fetch_page_metadata("https://www.gov.br/b") == ("", "")
+    assert [u for u, _ in chamadas2] == ["https://www.gov.br/b"]
+
+
+def test_fetch_metadata_segue_redirect_seguro_salto_a_salto_e_com_limite(monkeypatch):
+    from searchers import google_searcher
+    s, chamadas = _web_com(monkeypatch, {
+        "https://www.gov.br/a": PaginaFake(301, location="/b"),
+        "https://www.gov.br/b": PaginaFake(corpo=HTML_GUIA + b"</body></html>"),
+    })
+    assert s._fetch_page_metadata("https://www.gov.br/a") == ("Guia", "desc")
+    assert [u for u, _ in chamadas] == ["https://www.gov.br/a", "https://www.gov.br/b"]
+    assert all(kw.get("allow_redirects") is False and kw.get("stream") is True for _, kw in chamadas)
+
+    s2, chamadas2 = _web_com(monkeypatch, {"https://www.gov.br/loop": PaginaFake(302, location="/loop")})
+    assert s2._fetch_page_metadata("https://www.gov.br/loop") == ("", "")
+    assert len(chamadas2) == google_searcher.MAX_PAGE_REDIRECTS + 1
+
+
+def test_fetch_metadata_corta_corpo_grande(monkeypatch):
+    """F-SSRF (seg. baixo): response.content lia o corpo inteiro, sem limite."""
+    from searchers import google_searcher
+    pagina = PaginaFake(pedacos=[HTML_GUIA] + [b"x" * 65536] * 64)   # ~4 MiB
+    s, _ = _web_com(monkeypatch, {"https://www.gov.br/grande": pagina})
+    assert s._fetch_page_metadata("https://www.gov.br/grande") == ("Guia", "desc")
+    assert pagina.lidos <= google_searcher.MAX_PAGE_BYTES + 65536
+    assert pagina.fechada is True
+
+
+# ===========================================================================
+# Review da FIX-FONTES (23/09, execucao/revisoes/fix-fontes.md): 3 importantes + 1 menor.
+# Cada teste visto FALHAR antes do conserto.
+# ===========================================================================
+
+# --- Importante 1: _is_safe_url checa TODOS os enderecos e so aceita IP global ---
+
+def _dns_fixo(monkeypatch, enderecos: list[str]):
+    import socket
+    from searchers import google_searcher
+
+    def fake_getaddrinfo(host, *a, **k):
+        return [((socket.AF_INET6 if ":" in ip else socket.AF_INET), socket.SOCK_STREAM, 6, "", (ip, 0))
+                for ip in enderecos]
+
+    monkeypatch.setattr(google_searcher.socket, "getaddrinfo", fake_getaddrinfo)
+    return google_searcher.GoogleSearcher._is_safe_url
+
+
+def test_is_safe_url_bloqueia_se_qualquer_endereco_resolvido_for_interno(monkeypatch):
+    """Antes so o 1o endereco do getaddrinfo era olhado: [publico, 127.0.0.1] passava."""
+    assert _dns_fixo(monkeypatch, ["8.8.8.8", "127.0.0.1"])("https://exemplo.gov.br/x") is False
+    assert _dns_fixo(monkeypatch, ["8.8.8.8"])("https://exemplo.gov.br/x") is True   # publico continua aceito
+
+
+def test_is_safe_url_bloqueia_faixas_nao_globais_e_multicast(monkeypatch):
+    """100.64/10 (CGNAT) nao e private/loopback/link-local e passava; 224.0.0.1 e is_global
+    no Python 3.13 — por isso o is_multicast explicito."""
+    for ip in ("100.64.0.1", "224.0.0.1", "::ffff:127.0.0.1", "0.0.0.0", "fc00::1"):
+        assert _dns_fixo(monkeypatch, [ip])("https://exemplo.gov.br/x") is False, ip
+
+
+# --- Importante 2: found_by compara keyword INTEIRA, nao substring ---
+
+def test_tcu_found_by_acumula_keyword_que_e_substring_de_outra(monkeypatch):
+    item = dict(ACORDAO, sumario="IRREGULARIDADES EM LICITACAO.")
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[item]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["licitacao", "licita"], max_results=10)
+    assert resultados[0].found_by == "licitacao, licita"   # antes: "licita" in "licitacao" -> nunca entrava
+
+
+def test_lexml_found_by_acumula_keyword_que_e_substring_de_outra(monkeypatch):
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, SRU_VALIDO))
+    resultados = s.search(["licitacao", "licita"], max_results=10)
+    assert resultados[0].found_by == "licitacao, licita"
+
+
+# --- Importante 3: keyword do Google so com duplicatas e ok, e nao alimenta o "bloqueio" ---
+
+def test_google_keyword_so_com_duplicatas_e_ok_e_nao_dispara_bloqueio(monkeypatch):
+    from searchers import google_searcher
+    monkeypatch.setattr(google_searcher, "_BACKEND", "scraping")
+    mesma = [{"url": "https://www.gov.br/guia", "title": "Guia", "snippet": "texto"}]
+
+    def resultados(self, keyword):
+        return ([] if keyword == "d" else list(mesma)), None
+
+    monkeypatch.setattr(google_searcher.GoogleSearcher, "_search_urls", resultados)
+    s = google_searcher.GoogleSearcher()
+    achados = s.search(["a", "b", "c", "d"], max_results=10)
+    sts = s.keyword_statuses
+    assert [(st.status, st.motivo, st.result_count) for st in sts] == [
+        ("ok", "", 1), ("ok", "", 0), ("ok", "", 0), ("empty", "", 0)]   # antes: b, c empty e d bloqueio_waf
+    assert "1 já trazido por palavra-chave anterior" in sts[1].detalhe
+    assert len(achados) == 1 and achados[0].found_by == "a, b, c"
+
+
+# --- Menor 4: janela do TCU no singular ---
+
+def test_tcu_janela_de_cobertura_no_singular(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=[ACORDAO]),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    s.search(["turismo"], max_results=10)
+    d = s.keyword_statuses[0].detalhe
+    assert "o único acórdão trazido, de 16/09/2026" in d and "os 1 acórdãos" not in d

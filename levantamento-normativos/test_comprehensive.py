@@ -384,13 +384,39 @@ def test_lexml_search_empty_keywords():
 def test_lexml_cql_injection_sanitization():
     """Keywords with quotes should be sanitized.
 
-    Contrato mudou na frente 2: (results, erro_fatal, erro_paginacao)."""
+    Contrato mudou na frente 2: (results, erro_fatal, erro_paginacao).
+
+    Revisao final da frente 2 (F-T1, testes alto): este teste batia na rede real
+    e so conferia "nao quebrou" — ficava verde sem testar o caso (LexML atras do
+    WAF) ou vermelho com a fonte fora do ar. Agora requests.get e dublado e o
+    teste afirma a CQL que de fato seria ENVIADA: sem as aspas nem a barra
+    invertida da keyword, que fechariam a string CQL e injetariam clausulas.
+    """
+    sru_vazio = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">'
+        '<srw:numberOfRecords>0</srw:numberOfRecords></srw:searchRetrieveResponse>'
+    )
+    enviados = []
+
+    def fake_get(url, params=None, timeout=None, **kw):
+        enviados.append(dict(params or {}))
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"Content-Type": "application/xml"}
+        resp.text = sru_vazio
+        resp.url = url
+        return resp
+
     searcher = LexMLSearcher()
-    # This tests _search_keyword_safe - the CQL query should not break
-    # We just verify it doesn't crash with injection-like input
-    results, erro, _pag = searcher._search_keyword_safe('"; DROP TABLE laws --', max_results=5)
-    # Should not crash, just return empty or valid results (with possible error)
-    assert isinstance(results, list)
+    with patch("searchers.lexml_searcher.requests.get", fake_get):
+        results, erro, _pag = searcher._search_keyword_safe('"; DROP TABLE laws \\--', max_results=5)
+    assert (results, erro, _pag) == ([], None, None)
+    assert len(enviados) == 1
+    kw = "; DROP TABLE laws --"   # aspas e barra invertida removidas
+    assert enviados[0]["query"] == (
+        f'dc.description any "{kw}" OR dc.subject any "{kw}" OR dc.title any "{kw}"'
+    ), enviados[0]["query"]
 
 
 for name, func in [

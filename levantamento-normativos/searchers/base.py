@@ -85,6 +85,21 @@ class BaseSearcher(ABC):
         time.sleep(delay)
 
     @staticmethod
+    def _acumular_found_by(result, keyword: str) -> None:
+        """Acrescenta `keyword` ao found_by do resultado se ela ainda nao esta la.
+
+        Compara com as keywords INTEIRAS ja gravadas (found_by e "k1, k2, ..."),
+        nao por substring: `keyword not in found_by` deixava "licita" de fora
+        depois de "licitacao" (review da FIX-FONTES, 23/09). Unico lugar da
+        regra — LexML (passada e retry), TCU e Google usam este helper.
+        Limite conhecido: keyword que contenha virgula e comparada em pedacos
+        (pode repetir-se no found_by; nunca some).
+        """
+        ja = [parte.strip() for parte in (result.found_by or "").split(",")]
+        if keyword.strip() not in ja:
+            result.found_by = f"{result.found_by}, {keyword}" if result.found_by else keyword
+
+    @staticmethod
     def _normalize_text(text: str) -> str:
         """Normalize text for comparison.
 
@@ -160,21 +175,22 @@ class FonteIndisponivel(Exception):
     KeywordStatus). O detalhe passa por models.redigir() JA AQUI, porque os
     searchers logam `str(e)` antes de qualquer KeywordStatus existir: sem isso
     a URL com a chave do CSE ia inteira para o log (rodada 2).
+
+    Valores validos: models.MOTIVOS menos "" ("" = nao se aplica, ok/empty —
+    nao e causa de indisponibilidade). Lido de models A CADA construcao, sem
+    copia local: ate a revisao final (23/09, manut. 1) havia aqui um
+    `_CONHECIDOS` duplicado, e um motivo novo acrescentado so em MOTIVOS
+    virava erro_interno em silencio.
     """
 
-    _CONHECIDOS = {
-        "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503", "timeout",
-        "conexao", "resposta_ilegivel", "endpoint_inexistente", "nao_consultada", "erro_interno",
-    }
-
     def __init__(self, motivo: str, detalhe: str = "") -> None:
-        if motivo not in self._CONHECIDOS:
+        import models  # models nao importa searchers: sem ciclo
+        if motivo == "" or motivo not in models.MOTIVOS:
             detalhe = f"motivo desconhecido {motivo!r}: {detalhe}"
             motivo = "erro_interno"
-        from models import redigir  # models nao importa searchers: sem ciclo
         super().__init__(motivo)
         self.motivo = motivo
-        self.detalhe = redigir(detalhe)
+        self.detalhe = models.redigir(detalhe)
 
     def __str__(self) -> str:  # dinamico: quem edita .detalhe depois nao deixa str() velho
         return f"{self.motivo}: {self.detalhe}" if self.detalhe else self.motivo

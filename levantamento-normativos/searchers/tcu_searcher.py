@@ -62,6 +62,11 @@ class TCUSearcher(BaseSearcher):
         paginacao interrompida marca parcial=True; palavra-chave pulada pelo cap
         marca nao_consultada.
 
+        Revisao final (23/09): a keyword que so casa itens ja trazidos por outra
+        sai ok (result_count = novos) e entra no found_by deles (F-N4); a keyword
+        em curso cortada por max_results sai parcial=True (F-N5); o detalhe diz a
+        janela de datas dos acordaos trazidos (F-UX3).
+
         Args:
             keywords: Search terms.
             max_results: Maximum total results.
@@ -111,7 +116,8 @@ class TCUSearcher(BaseSearcher):
         # "ok (500 itens)" sugeriria 500 avaliados por texto
         detalhe = "; ".join([
             _resumo("Acórdãos", acordao_items, acordao_erro, acordao_parcial,
-                    f", {sem_sumario} sem sumário — nesses só o título casa" if acordao_items else ""),
+                    f", {sem_sumario} sem sumário — nesses só o título casa{self._janela_de_cobertura(acordao_items)}"
+                    if acordao_items else ""),
             _resumo("Atos", atos_items, atos_erro, atos_parcial),
         ])
         # Um endpoint que caiu na PRIMEIRA pagina torna a busca "error" mesmo que
@@ -130,42 +136,65 @@ class TCUSearcher(BaseSearcher):
                         keyword=restante, source=self.SOURCE_ID, result_count=0, status="error", motivo="nao_consultada",
                         detalhe=f"busca parou em max_results={max_results} antes desta palavra-chave"))
                 break
-            kw_count = 0
+            # F-N4 (revisao final, 23/09): casamentos e ids NOVOS sao contados em
+            # separado. Antes so os novos contavam: a keyword 2 que casava um
+            # acordao ja trazido pela 1 saia "empty" ("consultei e nao achei" —
+            # falso) e o found_by nunca a acumulava. Agora e como o LexML:
+            # status pelo casamento, result_count = novos, found_by acumula.
+            kw_novos = 0      # ids que esta keyword acrescentou
+            kw_repetidos = 0  # casaram, mas ja tinham vindo por keyword anterior
+            cortado = False   # F-N5: parou em max_results com casamento novo sobrando
+            ids_desta_kw: set[str] = set()
             try:
-                # Filter acordaos for this keyword
-                for item in acordao_items:
+                # Filter acordaos (sumario + titulo) and then atos (ementa) for this
+                # keyword — one list, same order as before, so the cap cuts in the same place
+                candidatos = [(item, self._texto_do_acordao, self._map_acordao) for item in acordao_items]
+                candidatos += [(item, lambda i: i.get("ementa", ""), self._map_ato_normativo) for item in atos_items]
+                for item, texto_de, mapear in candidatos:
+                    if not self._matches_keyword(texto_de(item), keyword):
+                        continue
+                    result = mapear(item, keyword)
+                    if result.id in ids_desta_kw:
+                        continue   # mesmo id duas vezes NESTA keyword: nao e "de palavra-chave anterior"
+                    existente = results_by_id.get(result.id)
+                    if existente is not None:
+                        kw_repetidos += 1
+                        self._acumular_found_by(existente, keyword)   # mesma regra do LexML (keyword inteira)
+                        continue
                     if len(results_by_id) >= max_results:
+                        # Antes: `break` silencioso e "ok N". Repetido nao ocupa
+                        # vaga (acima), so um casamento NOVO sem lugar corta.
+                        # Limite conhecido (review da FIX-FONTES, menor 5): depois
+                        # deste break os itens seguintes nao sao olhados, entao um
+                        # casamento REPETIDO que viesse depois nao acumula esta
+                        # keyword no found_by — o status ja sai parcial e diz o corte.
+                        cortado = True
                         break
-                    if self._matches_keyword(self._texto_do_acordao(item), keyword):
-                        result = self._map_acordao(item, keyword)
-                        if result.id not in results_by_id:
-                            results_by_id[result.id] = result
-                            kw_count += 1
-                # Filter atos for this keyword
-                for item in atos_items:
-                    if len(results_by_id) >= max_results:
-                        break
-                    if self._matches_keyword(item.get("ementa", ""), keyword):
-                        result = self._map_ato_normativo(item, keyword)
-                        if result.id not in results_by_id:
-                            results_by_id[result.id] = result
-                            kw_count += 1
+                    results_by_id[result.id] = result
+                    ids_desta_kw.add(result.id)
+                    kw_novos += 1
             except Exception as e:   # H2: mapeamento que quebra nao derruba a fonte
                 self.keyword_statuses.append(KeywordStatus(
-                    keyword=keyword, source=self.SOURCE_ID, result_count=kw_count, status="error", motivo="erro_interno",
+                    keyword=keyword, source=self.SOURCE_ID, result_count=kw_novos, status="error", motivo="erro_interno",
                     detalhe=f"{type(e).__name__}: {e}"[:200], error_message=f"{type(e).__name__}: {e}"[:200]))
                 continue
 
             if erro_primario is not None:
                 status, motivo = "error", erro_primario.motivo
-            elif kw_count == 0:
+            elif kw_novos + kw_repetidos == 0:
                 status, motivo = "empty", ""
             else:
                 status, motivo = "ok", ""
+            detalhe_kw = detalhe   # R3-H5: SEMPRE — "empty" com 500 acordaos sem sumario nao e "nao ha acordao"
+            if kw_repetidos:
+                detalhe_kw += (f"; {kw_repetidos} já trazido por palavra-chave anterior" if kw_repetidos == 1
+                               else f"; {kw_repetidos} já trazidos por palavra-chave anterior")
+            if cortado:
+                detalhe_kw += f"; cortado em max_results={max_results}: havia mais itens que casam esta palavra-chave"
             self.keyword_statuses.append(KeywordStatus(
-                keyword=keyword, source=self.SOURCE_ID, result_count=kw_count, status=status, motivo=motivo,
-                detalhe=detalhe,   # R3-H5: SEMPRE — "empty" com 500 acordaos sem sumario nao e "nao ha acordao"
-                error_message=detalhe if status == "error" else "", parcial=parcial))
+                keyword=keyword, source=self.SOURCE_ID, result_count=kw_novos, status=status, motivo=motivo,
+                detalhe=detalhe_kw,
+                error_message=detalhe_kw if status == "error" else "", parcial=parcial or cortado))
 
         # Final callback
         if progress_callback:
@@ -176,6 +205,35 @@ class TCUSearcher(BaseSearcher):
 
         logger.info(f"TCU: total {len(results_by_id)} resultados unicos")
         return list(results_by_id.values())
+
+    def _janela_de_cobertura(self, itens: list) -> str:
+        """"; os N acórdãos mais recentes, de dd/mm/aaaa a dd/mm/aaaa" (com 1 item:
+        "; o único acórdão trazido, de dd/mm/aaaa").
+
+        Revisao final (ux 3, 23/09): a API nao filtra por palavra-chave, so
+        pagina; com MAX_PAGES os 500 acordaos trazidos cobriam ~1 semana (todos
+        de 16/09/2026) e "500 itens" nao dizia isso. As datas sao o min/max do
+        `dataSessao` dos itens trazidos, como a API os escreve (so o formato e
+        normalizado por _safe_date_format); item sem data legivel e contado a
+        parte, nunca vira data inventada. "mais recentes" e a ordem em que a API
+        devolve (medido em 22-23/09), nao um filtro nosso.
+        """
+        datas = []
+        for item in itens:
+            try:
+                bruto = item.get("dataSessao") or item.get("dataAta") or ""
+                datas.append(datetime.strptime(self._safe_date_format(str(bruto)), "%d/%m/%Y"))
+            except Exception:   # defensivo como _sem_sumario: roda fora do try por keyword
+                continue
+        # Review da FIX-FONTES (menor 4): nada de "os 1 acórdãos mais recentes"
+        if len(itens) == 1:
+            return (f"; o único acórdão trazido, de {datas[0]:%d/%m/%Y}" if datas
+                    else "; o único acórdão trazido não tem dataSessao legível")
+        if not datas:
+            return f"; nenhum dos {len(itens)} acórdãos tem dataSessao legível"
+        sem_data = len(itens) - len(datas)
+        janela = f"; os {len(itens)} acórdãos mais recentes, de {min(datas):%d/%m/%Y} a {max(datas):%d/%m/%Y}"
+        return janela + (f" ({sem_data} sem dataSessao legível)" if sem_data else "")
 
     def _texto_do_acordao(self, item: dict) -> str:
         """Onde a palavra-chave e procurada: sumario + titulo (esquema real da
@@ -306,10 +364,13 @@ class TCUSearcher(BaseSearcher):
                 sc = response.status_code
                 if sc == 503:
                     agora = datetime.now(ZoneInfo("America/Sao_Paulo"))   # naive em servidor UTC erraria a janela (R2)
-                    janela = "dentro" if 20 <= agora.hour < 21 else "fora"
+                    dentro = 20 <= agora.hour < 21
+                    # Revisao final (manut., perda parcial): o log antigo dizia "Tente
+                    # novamente mais tarde." — o conselho volta, so quando cabe
+                    conselho = "; tente de novo após 21h BRT" if dentro else ""
                     raise FonteIndisponivel("manutencao_503",
-                        f"HTTP 503 às {agora:%d/%m %H:%M} BRT ({janela} da janela de manutenção conhecida, 20h-21h); "
-                        f"hipótese, não fato | GET {efetiva}")
+                        f"HTTP 503 às {agora:%d/%m %H:%M} BRT ({'dentro' if dentro else 'fora'} da janela de manutenção "
+                        f"conhecida, 20h-21h); hipótese, não fato{conselho} | GET {efetiva}")
                 if sc == 404:
                     raise FonteIndisponivel("endpoint_inexistente", f"HTTP 404 | GET {efetiva}")
                 if sc == 429:

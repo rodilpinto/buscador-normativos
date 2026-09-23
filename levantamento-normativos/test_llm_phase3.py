@@ -176,6 +176,11 @@ try:
            _keyword_relevance(["abc", "def"], "abc def") == 1.0)
     record("Case insensitive matching",
            _keyword_relevance(["ABC"], "abc test") == 1.0)
+    # Revisao final da frente 2 (F-UX2, ux 2): a ementa real "IRREGULARIDADES EM
+    # LICITAÇÃO" dava 0% para "licitacao" — o filtro de busca tira acento, a nota nao tirava.
+    record("Accent insensitive matching (both directions)",
+           _keyword_relevance(["licitacao"], "IRREGULARIDADES EM LICITAÇÃO") > 0
+           and _keyword_relevance(["licitação"], "irregularidades em licitacao") > 0)
 except Exception as e:
     record("_keyword_relevance edge cases", False, str(e))
 
