@@ -21,8 +21,8 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] **T2** LexML — impl ✅ `8f5ccfc` (16 · runner 238 verde · golden OK) · teste ✅ APROVADO (sondas + ao vivo + e2e: "2 erros" LexML; `revisoes/T2.md`) · review ✅ 1 importante + 1 menor a corrigir (2 adiados → `_TODO` P3) · fix ✅ `407e341` (+1 teste → 17; runner 239) · doc ✅ `3be5d85` · push ✅ · review · fix · doc
 - [x] **T3** TCU falhas — impl ✅ `f044a3c` (26+1 xfail · runner 248 · golden OK) · teste ✅ APROVADO (40 sondas; e2e "4 erros", TCU não é mais "sem resultado"; 4 achados no código do plano → `revisoes/T3.md`) · review ✅ 2 importantes + 1 menor a corrigir (+3 testes → 29) · fix ✅ `e8d59a4` (runner 251) · doc ✅ `dfa6f6f` · push ✅ · review · fix · doc
 - [x] **T4** TCU esquema real — impl ✅ `e960497` (33 · runner 255 · golden OK; ao vivo "turismo" 0 → 1 acórdão literal) · teste ❌ REPROVADO (1ª×2ª Câmara colidem no id: 212 colisões em 3.200 ao vivo; `revisoes/T4.md`) · fix ✅ `bdd89a1` (`numero` com colegiado, forma de citação do TCU; 35; runner 257; 3.200 keys = 3.200 ids) · re-teste ✅ APROVADO (fuzzy funde acórdãos distintos → 🔴 D-C17, decisão do Rodrigo) · review ✅ (4 menores aplicados) · fix ✅ `38a110d` (36; runner 258) · doc ✅ `3751b2a` · push ✅ · review · fix · doc
-- [ ] **T5** Google — impl ✅ `5dad3c7` (45 · runner 267 · golden OK; chave do CSE fora dos logs) · teste ✅ APROVADO (26 sondas; nota da spec §5 devida — omissão do plano; `revisoes/T5.md`) · review ✅ 1 importante (teste do log não falhava — mutante) + spec §5 + detalhe do bloqueio · fix ▶ · review · fix · doc
-- [ ] merge trilha A → `master` · `/checkpoint` fase 2
+- [x] **T5** Google — impl ✅ `5dad3c7` (45 · runner 267 · golden OK; chave do CSE fora dos logs) · teste ✅ APROVADO (26 sondas; nota da spec §5 devida — omissão do plano; `revisoes/T5.md`) · review ✅ 1 importante (teste do log não falhava — mutante) + spec §5 + detalhe do bloqueio · fix ✅ `e70d9f6` (mutante prova o teste do log) · doc ✅ `a0fc6c6` · review · fix · doc
+- [x] merge trilha A → `master` ✅ `08d9d8c` (conflito só no `BASELINE`, dois lados mantidos; runner 291 + golden OK no merge; ff) · [ ] `/checkpoint` fase 2 ▶
 
 ## Fase 3 — Procedência da nota (trilha B)
 - [x] **T6** origem da nota — impl ✅ `7d8f1ce` (54/53/1 → 63/63 · runner 232 verde · golden OK) · teste ✅ APROVADO (`revisoes/T6.md`) · review ✅ corrigir bool/NaN/Inf (+1 teste → 64); `ementa None` → frente 5 · fix ✅ `6594cd8` (64; runner 233) · doc ✅ `272f83a` · push ✅ · review · fix · doc
@@ -32,7 +32,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
 ## Fase 4 — Saída honesta
 - [x] **T8** planilha (trilha B; recongela golden) — impl ✅ `6178f9d` (71 · runner 246 · golden recongelado: só planilha divergiu, dedup intacto) · teste ✅ APROVADO (recongelamento re-derivado: sem a coluna nova reproduz o sha pré-T8; `revisoes/T8.md`) · review ✅ 3 menores de comentário · fix ✅ `04b2947` · doc ✅ `6eaf590` · review · fix · doc
 - [x] merge trilha B → `master` ✅ `9e259ca` (merge de master na trilha sem conflito; runner 246 + golden OK no merge; ff de master) · [x] `/checkpoint` fase 3 (23/09)
-- [ ] **T9** tela + V11 (`master`) — impl · teste · review · fix · doc
+- [ ] **T9** tela + V11 (worktree `../bn-t9`, branch `frente2/t9`, porta 8501) — impl ▶ · teste · review · fix · doc
 - [ ] `/checkpoint` fase 4
 
 ## Revisão final (várias perspectivas)

@@ -127,3 +127,17 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
 - (T4 fechada) Conserto: `numero` na forma de citação do TCU com o colegiado literal → 3.200 keys = 3.200 ids = 3.200
   após dedup. Efeito colateral honesto: com a ementa real, o fuzzy do dedup passou a fundir acórdãos distintos → 🔴 D-C17.
   O plano foi anotado (não reescrito) e as tasks regeneradas pelo `tools/split_frente2.py`.
+
+## T5 · Google (trilha A, fechada 23/09)
+
+- Review pegou **um teste de segurança que não podia falhar**: o ramo `conexao` truncava a mensagem em 120 chars e o
+  segredo nunca chegava ao detalhe; um **mutante** (`redigir` = identidade) passava. Reescrito e provado com o mutante.
+  Lição: **teste de "não vaza segredo" só vale se for demonstrado falhando sem a proteção.**
+- A nota da emenda à spec §5 estava no rótulo da T5 e em nenhum step — omissão do plano, feita no commit de review.
+
+## Merge da trilha A (23/09) — fase 2 fechada
+
+- `git merge origin/master` na trilha: conflito **só** no `BASELINE` (previsto pelo dogfood com `git merge-tree`), dois
+  lados mantidos; runner **291** (13+64+98+71+45) + golden OK no merge; `master` por fast-forward em `08d9d8c`.
+- A T9 roda num worktree próprio (`../bn-t9`) para o checkpoint da fase 2 poder commitar em `master` ao mesmo tempo sem
+  dividir o índice do git.
