@@ -1,12 +1,12 @@
 ---
 task: 10
 fase: "Fase 5 — Fechamento"
-plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 2869-2873)
+plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 2877-2881)
 reference: spec/frente2-honestidade-fontes/reference/global-constraints.md
 depends_on: [T9]
 ---
 
-> Extraído **verbatim** do plano v4 (linhas 2869-2873). **O plano segue fonte de verdade**:
+> Extraído **verbatim** do plano v4 (linhas 2877-2881). **O plano segue fonte de verdade**:
 > divergência entre o plano e esta cópia → o plano ganha. Status em `../execucao/TODOS.md` — **não marque
 > os checkboxes aqui**. Antes de começar, ler `../reference/global-constraints.md` (Global
 > Constraints, Estrutura de arquivos, BASELINE por task). Ordem e dependências: `../00-overview.md`.

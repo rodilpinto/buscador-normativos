@@ -33,8 +33,16 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 | **b** Registrar e consertar depois (frente própria, com golden) | respeita o escopo da frente 2 | a perda silenciosa fica no ar até lá; o relatório não avisa |
 | **c** Consertar depois, mas nesta frente **declarar** a fusão (ex.: o merge anota `found_by`/um contador de fundidos no diagnóstico) | nada some sem registro; dedup igual | é código novo fora do plano; a fusão errada continua acontecendo |
 
-📝 **Recomendação minha:** `a`, se o golden não mudar (o caso fuzzy do golden é de itens sem `numero` — a conferir antes);
-senão `c`. É exatamente a classe de defeito que a frente existe para matar.
+✅ **Conferido pelo reviewer da T4 (23/09), rodando `deduplicate` sobre `tests/golden/entrada_fixa.json`:** a opção `a`
+como escrita **MUDA o golden** — a única fusão fuzzy do golden (razão 0,99) é uma Instrução Normativa `"1"` com uma
+Portaria `"750"` (tipo e `numero` diferentes); com `a`, 14→11 vira 14→12 e o gate perde o único caso fuzzy.
+➕ **Opção `a'` (do reviewer):** o fuzzy não funde dois itens de **mesmo `tipo`, ambos com `numero` não vazio e
+diferente**. Bloqueia as 26/900 fusões de acórdãos e **mantém o golden** (o caso do golden tem `tipo` diferente).
+Continua sendo mudança no dedup → decisão sua.
+
+📝 **Recomendação minha (revista):** `a'`, nesta frente, com o golden conferido intacto e um teste com os dois acórdãos
+reais que se fundiam; se preferir não mexer no dedup agora, `c`. É exatamente a classe de defeito que a frente existe
+para matar.
 
 **Decisão tomada:** _(pendente)_
 
