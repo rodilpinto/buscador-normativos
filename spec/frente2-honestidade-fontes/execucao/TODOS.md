@@ -10,11 +10,11 @@ related: [CONTEXTO.md, INSIGHTS.md]
 
 ## Preparação
 - [x] Arquivos de contexto, todos e insights criados
-- [ ] Worktrees das trilhas A e B criadas (depois da T1)
+- [x] Worktrees das trilhas A e B criadas (`../bn-trilha-a`, `../bn-trilha-b`, 23/09)
 
 ## Fase 1 — Fundação (trilha 0, `master`)
 - [x] **T1** vocabulário — impl ✅ `da543be` (58 · runner 222 verde · golden OK) · teste ✅ APROVADO (47 sondas + e2e Playwright até Passo 5 + Excel baixado) · review ✅ nada a corrigir (4 menores → 📝 hardening, INSIGHTS) · fix — n/a · doc ✅ `ed50b6b`
-- [ ] `/checkpoint` fase 1
+- [x] `/checkpoint` fase 1 (23/09; dogfood no commit seguinte)
 
 ## Fase 2 — Fontes honestas (trilha A)
 - [ ] **T2** LexML — impl · teste · review · fix · doc

@@ -2,6 +2,18 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] checkpoint | frente 2, fase 1 fechada; trilhas A e B em voo
+
+Rodrigo pediu (22/09, noite) a execução do plano inteiro **por agentes**: o orquestrador não escreve código;
+por task, coder implementa → coder testa (+ e2e Playwright) → code-reviewer → o coder aplica e documenta;
+`/checkpoint` a cada fase; trilhas paralelas onde não há dependência. Arquivos da execução em
+`spec/frente2-honestidade-fontes/execucao/` (CONTEXTO, TODOS = SSOT de status, INSIGHTS, BRIEFS).
+**T1 fechada no ciclo inteiro:** impl `da543be` (contagens exatamente as do plano), testador APROVADO (sondas extras +
+e2e até o Passo 5 + Excel baixado), reviewer "nada a corrigir" (4 menores viraram 📝 hardening em INSIGHTS), doc
+`ed50b6b` em `implementacao/01-*.md`. Trilhas: A (T2→T5) em `../bn-trilha-a`, B (T6→T8) em `../bn-trilha-b`, branches
+`frente2/trilha-*`. O e2e da T1 fotografou a UI v1.0 dizendo "0 erros" com o LexML bloqueado — a mentira da frente.
+Snapshot de memória **não** escrito: a regra `memory-write-policy` exige autorização do Rodrigo.
+
 ## [2026-09-22] split | plano v4 da frente 2 cortado em 10 arquivos de task, 5 fases
 
 Pedido do Rodrigo (D-C16). O plano tem **2.882 linhas**; o subagente de cada task passa a ler o arquivo da task

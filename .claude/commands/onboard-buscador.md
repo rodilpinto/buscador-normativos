@@ -17,6 +17,10 @@ com o onboard, siga com ela após o resumo; senão, NÃO comece nada até ele da
 ⚠ A §3 tem os achados críticos que custam caro se forem redescobertos — **não pule**.
 ⚠ A §4 tem o ponto de restauração, com a mensagem literal da tag e o comando de checkout.
 
+**Se a §2/§6 disser que uma frente está EM EXECUÇÃO:** ler em seguida `spec/<frente>/execucao/CONTEXTO.md`
+(objetivo, regras de papel, trilhas) e `execucao/TODOS.md` (status por task — SSOT da execução; o `_TODO.md`
+aponta para ele). Conferir o trabalho em voo com `git worktree list` e `git -C <worktree> log --oneline master..`.
+
 ### Passo 2 — Ledgers
 - `_TODO.md` — status por task. **Só aqui.**
 - `_DECISOES-PENDENTES.md` — decisões abertas. Procure **🔴, 🟡 e ⛔** (a legenda está no topo do

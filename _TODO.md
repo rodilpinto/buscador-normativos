@@ -1,6 +1,6 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-09-22
+last_audit: 2026-09-23
 related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -9,7 +9,8 @@ related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SES
 > **Frente ativa: frente 2** — conteúdo das tasks em `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`
 > (tudo dobrado no corpo; ordem = numeração). O plano de 16/09 só volta na v2.0 (T4/T7/T8) e aí valem
 > as três seções de emendas dele (precedência **C > B > A > corpo**, marcadores `⛔` no corpo).
-> **Status**: aqui, e só aqui.
+> **Status**: aqui, e só aqui — **exceto a frente 2 em execução**, cujo status por task vive em
+> `spec/frente2-honestidade-fontes/execucao/TODOS.md` (SSOT da execução, 22/09).
 
 ## ⛔ Superado — o plano de 16 tasks NÃO vale mais
 
@@ -69,15 +70,15 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 
 - [x] **Frente 1 · rede de proteção** — ✅ T3 `4f36080` · T1 `d054d5b` · T2 `e18dd4b` (22/09). Baseline atual:
       `BASELINE` em `tools/run_all_tests.py` (**única casa do número**; não restatar aqui).
-- [ ] **Frente 2 · honestidade das fontes** — 🟡 **spec e plano prontos, zero código.**
+- [ ] **Frente 2 · honestidade das fontes** — ▶ **em execução por agentes** (fase 1/T1 fechada em 23/09; status em `execucao/TODOS.md`).
       Spec: `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md`.
       Plano **v4** (3 rodadas adversariais, tudo dobrado no corpo — não há seção de emendas a consultar):
       `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, 10 tasks, TDD, BASELINE previsto
-      por task na tabela do próprio plano. ⚠ Ordem de execução = numeração (T1…T10). Executar em **sessão
-      nova**, subagente por task (`superpowers:subagent-driven-development`), runner + golden como gate.
+      por task na tabela do próprio plano. ⚠ Ordem = numeração no plano; na execução, trilhas A (T2–T5) e B (T6–T8) em
+      paralelo depois da T1, por decisão do Rodrigo de 22/09 (D-C16). Runner + golden como gate.
       ✅ **Split em arquivos por task (22/09, D-C16):** `spec/frente2-honestidade-fontes/` — `00-overview.md`
       (5 fases, grafo de dependências, protocolo por task), `tasks/01..10` (verbatim + "Depende de" + critérios de
-      aceite derivados do plano), `reference/`. O plano segue fonte de verdade; status só aqui.
+      aceite derivados do plano), `reference/`. O plano segue fonte de verdade.
       ▶ **Em execução desde 22/09.** Status por task da frente 2: **`spec/frente2-honestidade-fontes/execucao/TODOS.md`**
       (SSOT da execução — aqui não se marca mais nada da frente 2). Contexto/regras: `execucao/CONTEXTO.md`.
 - [ ] **Frente 5 · LM local** — T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
