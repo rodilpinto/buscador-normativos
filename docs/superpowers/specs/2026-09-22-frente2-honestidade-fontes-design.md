@@ -73,7 +73,8 @@ Muda o **significado** de `error`: passa a ser **"a fonte não pôde ser consult
 Campos novos, todos com default para não quebrar construtores existentes:
 
 ```python
-motivo: str = ""        # "" | bloqueio_waf | http_5xx | manutencao_503 | timeout | conexao | resposta_ilegivel
+motivo: str = ""        # "" | bloqueio_waf | http_5xx | http_4xx | rate_limit | manutencao_503 | timeout
+                        # | conexao | resposta_ilegivel | endpoint_inexistente | nao_consultada | erro_interno
 detalhe: str = ""       # URL, HTTP status, content-type, primeiros 120 chars do corpo — o que
                         # um humano precisa para reproduzir com curl
 parcial: bool = False   # status == "ok", mas a paginação parou por erro: "achei 40, a fonte
@@ -83,6 +84,8 @@ parcial: bool = False   # status == "ok", mas a paginação parou por erro: "ach
 `motivo` é string com valores fechados (não `Enum`) para caber na planilha e no JSON sem
 conversão; o conjunto vive numa constante `MOTIVOS` em `models.py`, e um teste afirma que todo
 `motivo` gravado está nela.
+
+> ⚠ Emendado em 22/09 (plano v3, T1): endpoint_inexistente, erro_interno, http_4xx, rate_limit, nao_consultada; redigir() em toda atribuição de detalhe/error_message; rotulo_status() é o único rótulo humano; parcial pode acompanhar ok, empty e (TCU, um endpoint vivo) error.
 
 ### 3.2 LexML (`searchers/lexml_searcher.py`)
 

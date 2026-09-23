@@ -12,6 +12,7 @@ as duas formas num unico resultado, e compara cada suite com a linha de base
 """
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -52,7 +53,7 @@ BASELINE = {
     "test_searchers.py": 13,
     "test_llm_phase3.py": 53,
     "test_comprehensive.py": 98,
-    "test_phase4.py": 41,
+    "test_phase4.py": 58,
 }
 
 
@@ -65,8 +66,14 @@ def _rodar(cmd: list[str]) -> tuple[int, str, float]:
     ser investigado.
     """
     inicio = time.monotonic()
+    # 'roda sem LLM' so e garantido se o runner nao herdar a chave (rodada 2: test_comprehensive achou GEMINI_API_KEY no ambiente e levou 429 do Gemini)
+    # ⚠ st.secrets VENCE a variavel vazia: se existir
+    # levantamento-normativos/.streamlit/secrets.toml (hoje so ha o .example),
+    # as suites achariam a chave ali e chamariam o LLM de verdade. O conserto
+    # de codigo e da frente 5 (plano frente 2, Global Constraints).
     proc = subprocess.run(
-        cmd, cwd=APP, capture_output=True, text=True, encoding="utf-8", errors="replace"
+        cmd, cwd=APP, env={**os.environ, "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""},
+        capture_output=True, text=True, encoding="utf-8", errors="replace"
     )
     return proc.returncode, proc.stdout + proc.stderr, time.monotonic() - inicio
 

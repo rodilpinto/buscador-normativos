@@ -32,6 +32,12 @@ class BaseSearcher(ABC):
     # Maximum random jitter (seconds) added to the base delay.
     RATE_LIMIT_JITTER: float = 0.5
 
+    # Identificador curto da fonte — o `source` de todo KeywordStatus e o que
+    # app.py usa quando search() levanta. Cada subclasse define o seu (T2/T3/T5).
+    # Antes, app.py mapeava por nome de exibicao com fallback "google", e uma
+    # fonte nova que levantasse viraria "web aberta" (rodada 2).
+    SOURCE_ID: str = ""
+
     @abstractmethod
     def search(
         self,
@@ -140,3 +146,35 @@ class BaseSearcher(ABC):
             return f"01/01/{date_str.strip()}"
 
         return date_str
+
+
+class FonteIndisponivel(Exception):
+    """A fonte NAO pode ser consultada — distinto de "consultei e nao achei".
+
+    Nasce no searcher (bloqueio, 5xx, timeout, corpo ilegivel) e sobe ate o
+    KeywordStatus como status="error" + motivo + detalhe. Antes, um HTML de
+    desafio com HTTP 200 virava lista vazia e a UI dizia "0 erros" (22/09).
+
+    Um motivo desconhecido aqui vira erro_interno com o valor original no
+    detalhe — barulho, nunca crash da fonte inteira (a validacao dura e a do
+    KeywordStatus). O detalhe passa por models.redigir() JA AQUI, porque os
+    searchers logam `str(e)` antes de qualquer KeywordStatus existir: sem isso
+    a URL com a chave do CSE ia inteira para o log (rodada 2).
+    """
+
+    _CONHECIDOS = {
+        "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503", "timeout",
+        "conexao", "resposta_ilegivel", "endpoint_inexistente", "nao_consultada", "erro_interno",
+    }
+
+    def __init__(self, motivo: str, detalhe: str = "") -> None:
+        if motivo not in self._CONHECIDOS:
+            detalhe = f"motivo desconhecido {motivo!r}: {detalhe}"
+            motivo = "erro_interno"
+        from models import redigir  # models nao importa searchers: sem ciclo
+        super().__init__(motivo)
+        self.motivo = motivo
+        self.detalhe = redigir(detalhe)
+
+    def __str__(self) -> str:  # dinamico: quem edita .detalhe depois nao deixa str() velho
+        return f"{self.motivo}: {self.detalhe}" if self.detalhe else self.motivo

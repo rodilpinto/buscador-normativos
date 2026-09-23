@@ -573,6 +573,112 @@ class TestExcelFreezePanes:
 
 
 # ===========================================================================
+#  FRENTE 2 — VOCABULARIO DE HONESTIDADE (spec 2026-09-22 §3.1, plano v2 T1)
+# ===========================================================================
+
+from models import (KeywordStatus, MOTIVOS, ORIGENS_RELEVANCIA, redigir,
+                    statuses_para_falha_total)
+
+
+class TestVocabularioHonestidade:
+    def test_motivos_fechados(self):
+        assert MOTIVOS == frozenset({
+            "", "bloqueio_waf", "http_5xx", "http_4xx", "rate_limit", "manutencao_503",
+            "timeout", "conexao", "resposta_ilegivel", "endpoint_inexistente",
+            "nao_consultada", "erro_interno",
+        })
+
+    def test_origens_fechadas(self):
+        assert ORIGENS_RELEVANCIA == frozenset({"modelo", "heuristica", "fallback_erro", "padrao_fonte"})
+
+    def test_keyword_status_construtor_antigo_continua_valido(self):
+        s = KeywordStatus(keyword="lgpd", source="lexml", result_count=0, status="empty")
+        assert (s.motivo, s.detalhe, s.parcial) == ("", "", False)
+
+    def test_keyword_status_aceita_motivo_valido(self):
+        s = KeywordStatus(keyword="lgpd", source="lexml", status="error",
+                          motivo="bloqueio_waf", detalhe="HTTP 200 text/html")
+        assert s.motivo == "bloqueio_waf"
+
+    def test_keyword_status_rejeita_motivo_inventado(self):
+        with pytest.raises(ValueError, match="motivo"):
+            KeywordStatus(keyword="lgpd", source="lexml", status="error", motivo="waf")
+
+    def test_keyword_status_redige_detalhe_e_error_message(self):
+        s = KeywordStatus(keyword="k", source="google", status="error", motivo="http_4xx",
+                          detalhe="GET https://g/api?key=AIzaSECRET&cx=abc&q=x -> 403",
+                          error_message="500 for url: https://g/x?key=AIzaSECRET")
+        assert "AIzaSECRET" not in s.detalhe and "key=***" in s.detalhe
+        assert "AIzaSECRET" not in s.error_message
+
+    def test_keyword_status_redige_tambem_na_mutacao_pos_construcao(self):
+        """R2-H1: os retries mutam error_message/detalhe depois do construtor."""
+        s = KeywordStatus(keyword="k", source="google", status="error", motivo="http_5xx")
+        s.error_message = "Retry failed: 500 for url: https://g/x?key=AIzaSECRET"
+        s.detalhe = "GET https://g/x?cx=SEGREDO -> 500"
+        assert "AIzaSECRET" not in s.error_message and "SEGREDO" not in s.detalhe
+
+    def test_normativo_origem_default_e_padrao_fonte(self):
+        assert _make_result().relevancia_origem == "padrao_fonte"
+
+    def test_normativo_rejeita_origem_inventada(self):
+        with pytest.raises(ValueError, match="relevancia_origem"):
+            NormativoResult(nome="x", tipo="Lei", numero="1", data=None, orgao_emissor="",
+                            ementa="", link="", source="lexml", found_by="k",
+                            relevancia_origem="ia")
+
+    def test_fonte_indisponivel_motivo_desconhecido_vira_erro_interno_e_str_dinamico(self):
+        from searchers.base import FonteIndisponivel
+        e = FonteIndisponivel("http5xx", "GET x -> 500")
+        assert (e.motivo, "http5xx" in e.detalhe) == ("erro_interno", True)
+        e.detalhe = "novo"
+        assert str(e) == "erro_interno: novo"
+
+
+class TestRedigir:
+    def test_redige_segredos_em_query_e_bearer(self):
+        assert redigir("u?key=ABC&cx=DEF&api_key=GHI&token=JKL&access_token=MNO&client_secret=PQR&q=x") == \
+            "u?key=***&cx=***&api_key=***&token=***&access_token=***&client_secret=***&q=x"
+        assert redigir("Authorization: Bearer eyJabc.def") == "Authorization: Bearer ***"
+
+    def test_remove_controle_e_corta_no_meio_com_marcador(self):
+        assert redigir("a\x00b\x07c\n") == "abc\n"
+        assert len(redigir("x" * 1500)) == 1500
+        cortado = redigir("A" * 1990 + " | GET https://fonte/x | retry pulado")
+        assert len(cortado) <= 2000 and "[…cortado" in cortado          # R3: sufixo (URL, 'retry pulado') sobrevive
+        assert cortado.startswith("AAAA") and cortado.endswith("| retry pulado")
+
+    def test_neutraliza_so_formula(self):
+        assert redigir('=HYPERLINK("http://evil","clique")').startswith("'=")
+        assert redigir("-1") == "-1" and redigir("+1") == "+1" and redigir("@x") == "@x"   # openpyxl so trata '=' como formula
+
+    def test_texto_normal_intacto(self):
+        assert redigir("GET https://x/y?q=lgpd -> 200 text/html") == "GET https://x/y?q=lgpd -> 200 text/html"
+
+
+class TestRotuloStatus:
+    def test_rotulos(self):
+        from models import rotulo_status
+        mk = lambda **k: KeywordStatus(keyword="k", source="lexml", **k)
+        assert rotulo_status(mk(status="ok")) == "OK"
+        assert rotulo_status(mk(status="empty")) == "Sem resultado"
+        assert rotulo_status(mk(status="error", motivo="bloqueio_waf")) == "Indisponível"
+        assert rotulo_status(mk(status="error", motivo="nao_consultada")) == "Não consultada"   # R2-B6
+
+
+class TestStatusesParaFalhaTotal:
+    def test_um_status_por_keyword(self):
+        sts = statuses_para_falha_total("tcu", ["a", "b"], AttributeError("'int' object has no attribute 'strip'"))
+        assert [s.keyword for s in sts] == ["a", "b"]
+        assert all((s.source, s.status, s.motivo) == ("tcu", "error", "erro_interno") for s in sts)
+        assert "AttributeError" in sts[0].detalhe and "strip" in sts[0].detalhe
+
+    def test_lista_vazia_de_keywords_da_um_status_generico(self):
+        sts = statuses_para_falha_total("lexml", [], RuntimeError("x"))
+        assert len(sts) == 1 and sts[0].keyword == "(todas)"
+
+
+# ===========================================================================
 #  Run via pytest or direct execution
 # ===========================================================================
 
