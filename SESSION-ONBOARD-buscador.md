@@ -108,7 +108,7 @@ perspectivas, depois a T10. Briefs prontos em `execucao/BRIEFS.md`.
 conformidade com a spec; segurança; qualidade dos testes e gates (com mutação); manutenibilidade + preservação de docs;
 UX do app real (Playwright, porta 8531). **Onde cai:** o orquestrador grava cada veredito em
 `execucao/revisoes/final-<perspectiva>.md`. **Se a sessão morreu antes:** despachar de novo os que não têm arquivo (os
-prompts seguem o brief 3 de `BRIEFS.md` + a perspectiva; custo: ~5 agentes). **Onde o resultado cai:** commits na branch do worktree da vez (`git worktree list`; `git -C <worktree> log
+perspectivas, slugs e o que cada um faz estão na linha "reviewers do estado final" de `execucao/TODOS.md`; custo: ~5 agentes). **Onde o resultado cai:** commits na branch do worktree da vez (`git worktree list`; `git -C <worktree> log
 --oneline master..`). **Se a sessão morreu com ele no meio:** `git -C <worktree> status`
 — árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
 estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2

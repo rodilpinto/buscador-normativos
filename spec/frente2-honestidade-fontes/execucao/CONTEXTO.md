@@ -45,7 +45,7 @@ que não existe: a pasta é `spec/frente2-honestidade-fontes/`.
   independente em 22/09. O merge resolve. Totais do runner: os do plano para **T2–T5** são só da trilha A e valem
   (com os testes além do plano: **+8** ao fim da T5); os de **T6–T8** (269/272/282) pressupõem a trilha A e **não** valem na trilha B
   isolada — lá vale o número **da suíte** que a task mexe. Em `master` depois do merge da A: some os `BASELINE`
-  (medido no merge da trilha A, 23/09: **291** = 13+64+98+71+45; esperado depois da T9: **292**, com o +1 do `test_phase4`).
+  (medido no merge da trilha A, 23/09: **291** = 13+64+98+71+45; depois da T9, **medido: 296** — o plano previa +1 no `test_phase4`, a execução pôs +5).
 - Fases × trilhas: Fase 1 = T1 · Fase 2 = trilha A · Fase 3 = T6+T7 · Fase 4 = T8 + T9 · Fase 5 = T10.
 - **Merge: cada trilha entra em `master` INTEIRA, uma vez, quando a última task dela fecha o ciclo** (sem merge
   parcial, sem rebase no meio): trilha A depois da T5 → `/checkpoint` **fase 2**; trilha B depois da T8 →

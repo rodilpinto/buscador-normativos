@@ -1,6 +1,6 @@
 # T9 · Tela: pontuar sempre, relatório por motivo, avisos por fonte, origem no card/preview, fonte que levanta não some — registro de implementação
 
-> Task: `../tasks/09-tela-honesta.md` (plano v4, linhas 2640-2873; o plano é a fonte de verdade).
+> Task: `../tasks/09-tela-honesta.md` (plano v4, linhas 2641-2874 depois da anotação da T4 no plano; o plano é a fonte de verdade).
 > Worktree `bn-t9`, branch `frente2/t9` (criada de master `3e1f279`), 23/09/2026.
 > Commits: **`49d19e1`** `feat(frente2): a tela classifica por motivo, avisa por fonte e mostra a origem da nota` ·
 > **`0370a21`** `fix(frente2): review da T9 — texto da fonte literal no card (_md_html); aviso da web aberta honesto`.

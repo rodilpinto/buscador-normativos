@@ -31,7 +31,7 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   saída de `redigir` emendaria o plano e poderia mexer no hash do golden da T8. 📝 **Candidatos a hardening (não
   validados)** para uma task própria com teste: (1) marcador conta `len(texto) - 2*metade`; (2) guarda para
   `limite < len(marca)`; (3) validar `motivo` também em `__setattr__`; (4) redigir `key%3D…` e `"key": "…"` (frente 5).
-  Ir para `_TODO.md` P3 na T10.
+  ✅ Lançados no `_TODO.md` P3 em 23/09.
 
 ## T6 · origem da nota (trilha B, fechada 23/09)
 

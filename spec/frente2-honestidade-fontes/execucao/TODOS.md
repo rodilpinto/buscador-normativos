@@ -36,13 +36,25 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] `/checkpoint` fase 4 (23/09)
 
 ## Revisão final (várias perspectivas)
-- [ ] reviewers do estado final despachados ▶ (5 perspectivas, sobre `master` `d4cab80`; vereditos em `revisoes/final-*.md`)
+- [ ] reviewers do estado final despachados ▶ — 5, só leitura, sobre `master` `d4cab80`; cada veredito em
+      `revisoes/final-<slug>.md` quando chega (arquivo existe = terminou). Perspectivas e slugs:
+      `spec` (code-reviewer: conformidade ponta a ponta com a spec §3/§4 V1–V11/§7) ·
+      `seguranca` (security-auditor: redação de segredos, injeção em planilha/Markdown/HTML, SSRF) ·
+      `testes` (qa-test-engineer: gates + **teste de mutação** da lógica de honestidade numa cópia) ·
+      `manutencao` (code-reviewer: arquitetura, deriva entre searchers, preservação de docs em `1c063ea..d4cab80`) ·
+      `ux` (ui-expert: app real com Playwright na porta 8531, prints em `tests/evidencia/final-ui/` no repo principal).
+      Sessão nova com algum faltando: despachar só o que não tem arquivo, com a perspectiva acima e o brief 3 de `BRIEFS.md`
+      sobre o diff `1c063ea..d4cab80`.
 - [ ] achados triados e aplicados por coder
 
 ## Fase 5 — Fechamento
 - [ ] (se o Rodrigo escolher `a'` ou `c` na 🔴 D-C17) task extra do dedup fuzzy — **antes** da T10
 - [ ] **T10** fechar a frente — critérios §7, duráveis, LESSONS · e limpar os worktrees: `git worktree list`; para cada
-      `../bn-*`, conferir `git -C <wt> status --short` (só `tests/evidencia/` — screenshots **e** `.xlsx` exportados, não
-      versionados de propósito; os vereditos que citam essa evidência já estão em `revisoes/`), então `git worktree remove
-      --force <wt>` e `git branch -d frente2/<b>` (já em `master`); `git push origin --delete frente2/<b>` só com ok do Rodrigo
+      `../bn-*`: (1) inventariar `ls <wt>/tests/evidencia/` (⚠ em `bn-t9` ela é **ignorada**, não untracked — `git status`
+      não mostra; os PNG/`.xlsx` são citados pelos `implementacao/*.md`); (2) **preservar** copiando para o repo principal:
+      `mkdir -p tests/evidencia/<wt> && cp -r <wt>/tests/evidencia/. tests/evidencia/<wt>/` (ignorado lá também — fica local);
+      (3) `git -C <wt> status --short` sem nada além disso; (4) `git worktree remove --force <wt>`; (5) `git branch -d
+      frente2/<b>` (já em `master`); (6) remotos: só `frente2/trilha-a` e `frente2/trilha-b` existem em `origin`
+      (`git ls-remote origin 'refs/heads/frente2/*'`) — `git push origin --delete` só com ok do Rodrigo. A T10 também lista
+      a evidência do próprio repo principal (`tests/evidencia/`, inclui `final-ui/`).
 - [ ] `/checkpoint` fase 5
