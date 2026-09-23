@@ -1,0 +1,34 @@
+[
+  {
+    "key": "ACORDAO-COMPLETO-2775715",
+    "tipo": "ACÓRDÃO DE RELAÇÃO",
+    "anoAcordao": "2026",
+    "titulo": "ACÓRDÃO DE RELAÇÃO 4318/2026 ATA 25/2026 - PRIMEIRA CÂMARA",
+    "numeroAcordao": "4318",
+    "numeroAta": "25/2026",
+    "colegiado": "Primeira Câmara",
+    "dataSessao": "04/08/2026",
+    "relator": "BENJAMIN ZYMLER",
+    "situacao": "OFICIALIZADO",
+    "sumario": null,
+    "urlArquivo": "https://contas.tcu.gov.br/sisdoc/ObterDocumentoSisdoc?codVersao=editavel&codArqCatalogado=33453395",
+    "urlArquivoPdf": "https://contas.tcu.gov.br/sisdoc/ObterDocumentoSisdoc?codArqCatalogado=33453395",
+    "urlAcordao": "https://contas.tcu.gov.br/pesquisaJurisprudencia/#/detalhamento/11/*/KEY:%22ACORDAO-COMPLETO-2775715%22/DTRELEVANCIA%2520desc%252C%2520NUMACORDAOINT%2520desc/false/1/false"
+  },
+  {
+    "key": "ACORDAO-COMPLETO-2775566",
+    "tipo": "ACÓRDÃO DE RELAÇÃO",
+    "anoAcordao": "2026",
+    "titulo": "ACÓRDÃO DE RELAÇÃO 4318/2026 ATA 25/2026 - SEGUNDA CÂMARA",
+    "numeroAcordao": "4318",
+    "numeroAta": "25/2026",
+    "colegiado": "Segunda Câmara",
+    "dataSessao": "04/08/2026",
+    "relator": "MARCOS BEMQUERER",
+    "situacao": "OFICIALIZADO",
+    "sumario": null,
+    "urlArquivo": "https://contas.tcu.gov.br/sisdoc/ObterDocumentoSisdoc?codVersao=editavel&codArqCatalogado=33445206",
+    "urlArquivoPdf": "https://contas.tcu.gov.br/sisdoc/ObterDocumentoSisdoc?codArqCatalogado=33445206",
+    "urlAcordao": "https://contas.tcu.gov.br/pesquisaJurisprudencia/#/detalhamento/11/*/KEY:%22ACORDAO-COMPLETO-2775566%22/DTRELEVANCIA%2520desc%252C%2520NUMACORDAOINT%2520desc/false/1/false"
+  }
+]

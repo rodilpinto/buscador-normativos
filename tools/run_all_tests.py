@@ -56,7 +56,7 @@ BASELINE = {
     "test_llm_phase3.py": 53,
     "test_comprehensive.py": 98,
     "test_phase4.py": 58,
-    "tests/test_fontes_indisponiveis.py": 33,   # T2: 16 + 1 da review; T3: +9 + 3 da review; T4: +3 e o xfail vira passed
+    "tests/test_fontes_indisponiveis.py": 35,   # T2: 16 + 1 da review; T3: +9 + 3 da review; T4: +3, o xfail vira passed, +2 do tester (colegiados)
 }
 
 

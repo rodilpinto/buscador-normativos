@@ -215,12 +215,14 @@ frente 5.
 ### 3.7 O que NÃO muda
 
 > ⚠ Emendado em 22/09 (plano v3, T4): o mapeamento do acórdão do TCU MUDA — a API real não devolve as chaves que o código lia. Ver a fixture real. Limite medido: sumário vazio nos acórdãos recentes.
+> ⚠ Complemento de 23/09 (T4, achados do tester): (1) o **filtro** do TCU também muda — acórdãos casam em `sumario` + `titulo` (fallback `ementa`); atos continuam em `ementa`. (2) O `numero` do acórdão passa a levar o colegiado (`N/AAAA-TCU-<colegiado>`): Plenário, 1ª e 2ª Câmara numeram em séries próprias e colidiam no `id` e no dedup `tipo_numero` (212 colisões em 3.200 ao vivo) — a fórmula do `id` e a estratégia do dedup **não** mudam. (3) `requirements.txt` **mudou** nesta frente: a T3 acrescentou `tzdata` (ver o bullet abaixo).
 
 - Nenhum searcher muda **o que** busca (CQL, endpoints, filtros, mapeamento de campos).
 - `deduplicate` não muda estratégia, ordem nem critério; `dedup_esperado.json` é o gate.
 - `score_relevance` não muda assinatura nem os 53 testes que a cobrem.
 - Nada de rede em teste novo: respostas enlatadas (fixtures).
 - `.streamlit/`, `requirements.txt`, `pyproject` (não existe ainda; T4 é v2.0).
+  ⚠ 23/09: `requirements.txt` **mudou** na T3 da frente 2 (`tzdata`, para `ZoneInfo("America/Sao_Paulo")` no Windows) — o bullet acima ficou superado nesse ponto; `.streamlit/` e `pyproject` continuam intocados.
 
 ---
 

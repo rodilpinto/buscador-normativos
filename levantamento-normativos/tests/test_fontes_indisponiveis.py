@@ -492,7 +492,8 @@ def test_tcu_acordao_real_mapeia_titulo_numero_ano_sumario_link_situacao():
     from searchers.tcu_searcher import TCUSearcher
     r = TCUSearcher()._map_acordao(ACORDAO, "turismo")
     assert r.nome == ACORDAO["titulo"]
-    assert r.numero == f'{ACORDAO["numeroAcordao"]}/{ACORDAO["anoAcordao"]}'
+    # T4 (tester): o colegiado entra no numero — as Camaras numeram em series proprias
+    assert r.numero == f'{ACORDAO["numeroAcordao"]}/{ACORDAO["anoAcordao"]}-TCU-{ACORDAO["colegiado"]}'
     assert r.data == ACORDAO["dataSessao"]
     assert r.ementa == ACORDAO["sumario"]          # literal, sem parafrase
     assert r.link == ACORDAO["urlAcordao"]
@@ -517,3 +518,29 @@ def test_tcu_pagina_cheia_com_numeros_distintos_da_page_size_resultados(monkeypa
     resultados = s.search(["turismo"], max_results=100)
     assert len(resultados) == tcu_searcher.PAGE_SIZE
     assert len({r.id for r in resultados}) == tcu_searcher.PAGE_SIZE
+
+
+# --- T4, defeito do tester (ALEM do plano): colegiados numeram em series proprias ---
+# Dois acordaos REAIS capturados ao vivo em 23/09 (tester da T4): mesmo numero, ano e
+# dataSessao, 1a x 2a Camara. Com numero = "N/AAAA" colidiam no id e o 2o SUMIA em
+# search(); o dedup (tipo_numero) os fundiria mesmo com ids distintos.
+COLEGIADOS_REAIS = json.loads((FIXTURES / "tcu_acordaos_colegiados_real.json").read_text(encoding="utf-8"))
+
+
+def test_tcu_acordaos_de_colegiados_diferentes_com_mesmo_numero_sobrevivem_ao_search(monkeypatch):
+    s, _ = _tcu_com(monkeypatch, {"recupera-acordaos": lambda p: RespostaFake(200, json_data=COLEGIADOS_REAIS),
+                                  "recupera-atos-normativos": lambda p: RespostaFake(200, json_data=[])})
+    resultados = s.search(["acórdão de relação"], max_results=50)
+    assert sorted(r.nome for r in resultados) == sorted(a["titulo"] for a in COLEGIADOS_REAIS)
+    assert len({r.id for r in resultados}) == 2
+
+
+def test_tcu_acordaos_de_colegiados_diferentes_sobrevivem_ao_dedup_e_a_mesma_copia_funde():
+    from deduplicator import deduplicate
+    from searchers.tcu_searcher import TCUSearcher
+    s = TCUSearcher()
+    a, b = (s._map_acordao(x, "k") for x in COLEGIADOS_REAIS)
+    copia_de_a = s._map_acordao(dict(COLEGIADOS_REAIS[0]), "outra")
+    saida = deduplicate([a, b, copia_de_a])
+    assert sorted(r.nome for r in saida) == sorted(x["titulo"] for x in COLEGIADOS_REAIS)
+    assert next(r for r in saida if r.nome == a.nome).found_by == "k, outra"   # a copia fundiu

@@ -442,7 +442,9 @@ def test_tcu_map_acordao():
     }
     result = s._map_acordao(item, "segurança")
     assert result.tipo == "Acordao TCU"
-    assert result.numero == "1234/2023"
+    # frente 2, T4 (tester): o colegiado entra no numero — Plenario, 1a e 2a Camara
+    # numeram em series proprias; sem ele o id e o dedup fundiam acordaos distintos
+    assert result.numero == "1234/2023-TCU-Plenário"
     assert result.source == "tcu"
     assert "1234" in result.nome
     assert "2023" in result.nome

@@ -191,7 +191,10 @@ class TCUSearcher(BaseSearcher):
     def _fetch_all_pages(self, url: str) -> tuple[list[dict], Optional[FonteIndisponivel], bool]:
         """Fetch all pages from a paginated TCU API endpoint.
 
-        Stops at MAX_PAGES * PAGE_SIZE records to avoid excessive requests.
+        Stops after MAX_PAGES pages to avoid excessive requests. The API can
+        send more than `quantidade` items per page (measured: 40 for 20), so
+        the total may pass MAX_PAGES * PAGE_SIZE before dedup; items are
+        deduplicated by `key` since frente 2 T3 (review I2).
 
         Args:
             url: Full endpoint URL.
@@ -350,8 +353,18 @@ class TCUSearcher(BaseSearcher):
         """Map a raw acordao JSON item (esquema real de 22/09) to a NormativoResult.
 
         Campos literais da API, sem parafrase: titulo -> nome, sumario -> ementa,
-        numeroAcordao/anoAcordao -> numero, dataSessao -> data, urlAcordao -> link,
-        situacao -> situacao. Chaves antigas (numero/ano/ementa) aceitas como fallback.
+        numeroAcordao/anoAcordao/colegiado -> numero, dataSessao -> data,
+        urlAcordao -> link, situacao -> situacao. Chaves antigas
+        (numero/ano/ementa) aceitas como fallback.
+
+        numero = "N/AAAA-TCU-<colegiado literal>" quando ha colegiado (forma da
+        citacao do TCU, "Acordao 1.765/2023-TCU-Plenario", com o colegiado como a
+        API o escreve). Motivo (tester da T4, 23/09): Plenario, 1a e 2a Camara
+        numeram em series PROPRIAS e se reunem no mesmo dia — com "N/AAAA" o id
+        (tipo|numero|data) colidia (3.200 keys ao vivo -> 2.988 ids) e search()
+        descartava o 2o em silencio; o dedup (tipo, numero) fundiria ate os de
+        datas diferentes (so 2.025 pares numero/ano distintos). Medido nas 3.200:
+        (numero, ano, colegiado) e unico por key. Sem colegiado: "N/AAAA".
 
         Args:
             item: Raw API response item.
@@ -368,7 +381,7 @@ class TCUSearcher(BaseSearcher):
         return NormativoResult(
             nome=item.get("titulo") or f"Acordao {numero}/{ano} - TCU - {colegiado}",
             tipo="Acordao TCU",
-            numero=f"{numero}/{ano}",
+            numero=f"{numero}/{ano}-TCU-{colegiado}" if colegiado else f"{numero}/{ano}",
             data=date_str,
             orgao_emissor=f"TCU - {colegiado}",
             ementa=item.get("sumario") or item.get("ementa", "") or "",
