@@ -3,13 +3,13 @@ title: Frente 2 — Honestidade das fontes — mapa de execução (split)
 plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (v4)
 spec: docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md
 reference: spec/frente2-honestidade-fontes/reference/global-constraints.md
-last_updated: 2026-09-22
+last_updated: 2026-09-23
 ---
 
 # Mapa de execução: 10 tasks, 5 fases
 
 > O **plano** segue fonte de verdade do *conteúdo* de cada task. Este arquivo é fonte de verdade
-> do *ordenamento*. O **status** por task vive no `_TODO.md`, e só lá.
+> do *ordenamento*. O **status** por task vive em `execucao/TODOS.md` (SSOT da execução, 22/09).
 > Os arquivos em `tasks/` são cópia **verbatim** do plano (cada um com um header de dependências e
 > critérios de aceite derivados do próprio plano), para o agente de build carregar ~100–800 linhas
 > em vez de 2.882. Split pedido pelo Rodrigo em 2026-09-22 (decisão D-C16).
@@ -53,13 +53,14 @@ T1 vocabulário ─┬─► T2 LexML ─► T3 TCU ─► T4 TCU esquema ─►
   vem depois delas para as contagens previstas valerem.
 - **T8 depende da T7 só na contagem** (`test_phase4`: 61 → 71).
 
-## Ordem de execução: sequencial, T1 → T10
+## Ordem de execução: o plano manda T1 → T10; a execução usa trilhas (seção abaixo)
 
 ✅ **Documentado no plano:** "ordem de execução = numeração". As 3 rodadas adversariais aplicaram as
 tasks **nessa ordem** num worktree e rodaram os testes; as contagens "Expected" de cada task
 pressupõem essa ordem.
 
-Protocolo por task (plano, Global Constraints; state file §5):
+Protocolo por task do plano (Global Constraints; state file §5). ⚠ Na execução de 22/09 em diante vale o
+ciclo de agentes de `execucao/CONTEXTO.md` (coder → testador + e2e → reviewer → coder aplica e documenta):
 
 1. Despachar **um subagente** com o arquivo da task + `reference/global-constraints.md`
    (`superpowers:subagent-driven-development`: implementador → revisão de conformidade com a spec →
@@ -68,11 +69,11 @@ Protocolo por task (plano, Global Constraints; state file §5):
 3. Gate: `python tools/run_all_tests.py` TUDO VERDE (+ `BASELINE` atualizado no mesmo commit) **e**
    `python tools/golden_master.py comparar` OK (exceto T8, que recongela no mesmo commit) **e** os 2
    comandos de auditoria de documentação lidos inteiros.
-4. Commit + **push** em `master` (D-C7). A nuvem segue a branch `deploy`, congelada em `v1.0.1` —
+4. Commit + **push** em `master` (D-C7) — na execução por trilhas: push da **branch da trilha**; `master` só no merge. A nuvem segue a branch `deploy`, congelada em `v1.0.1` —
    ⛔ **não avançar `deploy`** durante a frente; só no marco, com ok do Rodrigo.
-5. Marcar a task no `_TODO.md`, e só então a próxima.
+5. Marcar a task em `execucao/TODOS.md`, e só então a próxima.
 
-### 📝 Proposta minha (não validada): duas trilhas paralelas depois da T1
+### Duas trilhas paralelas depois da T1 — ✅ adotada pelo Rodrigo em 22/09 (era 📝 proposta minha)
 
 Verificado lendo o bloco "Files" de cada task: depois da T1, as trilhas
 **A = T2 → T3 → T4 → T5** (searchers, `test_comprehensive.py`, suíte nova, `requirements.txt`, `models.py` —
@@ -86,7 +87,8 @@ só a docstring de `situacao`, na T4 —, spec) e
   o golden recongelado na T8 (trilha B) roda enquanto a trilha A mexe nos searchers (o golden não os
   exercita, mas o `comparar` da trilha A passa a depender do merge da B); e nenhuma rodada
   adversarial validou essa ordem.
-- **Recomendação:** sequencial, como o plano manda. A proposta só vale se o tempo de parede apertar.
+- **Recomendação original:** sequencial. ✅ **Decisão do Rodrigo (22/09):** executar por trilhas — ver
+  `execucao/CONTEXTO.md` (portas, worktrees, como os totais do runner passam a ser lidos).
 
 ## Referências
 

@@ -1,7 +1,7 @@
 ---
 title: "Decisões abertas — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-22
+last_updated: 2026-09-23
 related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -99,11 +99,11 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 > versão como um ponto de retorno e seguir para as próximas versões"* → **tags nos marcos funcionais**, não por task.
 > Criadas e empurradas: `v1.0` (`eb91277`) e `v1.0.1` (`e2cd56a`). 📝 Leitura minha da frase; corrigir se não for isso.
 
-- **Onde aparece:** 22/09, pergunta minha ao registrar a D-C10; **não respondida**.
+- **Onde aparece:** 22/09, pergunta minha ao registrar a D-C10; respondida na prática no mesmo dia (ver o topo).
 - **Trava:** nada. 📝 Recomendação: só nos marcos — o push por task (D-C7) + golden + runner já dão o
   rastro; tag por task é ruído. Se `a` (marcos): criar `v1.0` já (aponta `eb91277`).
 
-**Decisão tomada:** _(pendente)_
+**Decisão tomada:** tags só nos marcos funcionais (22/09) — ver o topo desta entrada.
 
 ---
 
@@ -122,9 +122,12 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
   [...] Carefully consider the dependencies between features."* Feito em `spec/frente2-honestidade-fontes/`: 5 fases,
   10 tasks, corte **verbatim** (script `tools/split_frente2.py`, cobertura verificada) + header com "Depende de" e
   critérios de aceite **derivados do plano**. Regra herdada do split de 10/09 (D-C9, opção `c`): **o plano segue fonte
-  de verdade**; divergência → o plano ganha; status só no `_TODO.md`. Ordem continua sequencial T1 → T10; a execução
-  em duas trilhas paralelas depois da T1 ficou como 📝 proposta minha no overview, **não** decidida.
+  de verdade**; divergência → o plano ganha. ~~Status só no `_TODO.md`. Ordem sequencial; trilhas = 📝 não decidida.~~
+  ⚠ Superado no mesmo dia pelo ➕ abaixo: status em `execucao/TODOS.md`; execução por trilhas.
   ⚠ Não fecha a D-C9: aquela é sobre o plano de 16/09 (v2.0).
+  ➕ **Execução por trilhas decidida pelo Rodrigo (22/09, noite):** *"create different tracks [...] find any phases
+  or tasks that do not have a dependency on each other"* — a proposta 📝 do overview (trilhas A = T2→T5 e B = T6→T8
+  depois da T1) passa a ser o modo de execução. Regras: `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md`.
 
 - **D-C15 · Como a frente 2 é revisada e executada.** Rodrigo, 22/09: *"2 rodadas de adversarial review e
   depois vamos parar e começar a implementação em uma nova sessão com contexto zerado."* Feito: o plano

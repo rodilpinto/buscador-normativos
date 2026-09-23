@@ -5,7 +5,8 @@ related: [CONTEXTO.md, TODOS.md]
 
 # Briefs dos agentes
 
-> Modelos que o orquestrador preenche (`{TASK}`, `{ARQ}`, `{DIR}`, `{BRANCH}`, `{PORTA}`) ao despachar.
+> Modelos que o orquestrador preenche (`{TASK}` número, `{ARQ}` arquivo da task, `{NN}`/`{slug}` = prefixo e nome
+> desse arquivo, `{DIR}`, `{BRANCH}`, `{PORTA}`) ao despachar.
 > Existem para sobreviver à compactação e para as trilhas receberem as mesmas regras.
 
 ## Regras comuns (vão em todo brief)
@@ -33,6 +34,8 @@ com feedback de teste/review e para documentar.
 Não implementa a feature; testa o que o Coder A entregou em `{DIR}`:
 1. Critérios de aceite do header da task, um por um, com comando + saída.
 2. Suítes da task + runner inteiro + golden (independentes do que o Coder A relatou).
+   Runner em **foreground** com `timeout 900 python -u tools/run_all_tests.py` (o runner leva ~9,5 min: 590s é curto demais) (em background travou uma vez, 23/09);
+   não rodar o runner e o e2e ao mesmo tempo.
 3. **E2E com Playwright** (Python, `p.chromium.launch(channel="chrome")` — navegadores do Playwright não estão
    baixados). Subir o app: em `{DIR}/levantamento-normativos/`, `python -m streamlit run app.py --server.headless true
    --server.port {PORTA}` em background; dirigir: "Inserir palavras-chave manualmente" → keywords → "Proximo >>" →
@@ -52,6 +55,9 @@ testes afirmam o que dizem. **Não editar.** Saída: lista priorizada (bloqueado
 e a correção sugerida; "nada a corrigir" se for o caso.
 
 ## 4 · Coder A — aplicar review e documentar (SendMessage ao mesmo Coder A)
+
+⚠ **Se o Coder A não existe mais** (sessão nova): despachar um coder novo com este brief + o arquivo
+`execucao/revisoes/T{TASK}.md` (o orquestrador grava lá o veredito do testador e do reviewer assim que chegam).
 
 Aplicar os achados aceitos (bloqueadores e importantes; menores com julgamento, justificando os rejeitados);
 re-rodar suítes da task + golden (+ runner se tocou código); commit `fix(frente2): review da T{TASK} — ...`.

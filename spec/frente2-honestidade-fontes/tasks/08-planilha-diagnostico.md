@@ -7,7 +7,7 @@ depends_on: [T1, T7]
 ---
 
 > Extraído **verbatim** do plano v4 (linhas 2381-2628). **O plano segue fonte de verdade**:
-> divergência entre o plano e esta cópia → o plano ganha. Status só no `_TODO.md` — **não marque
+> divergência entre o plano e esta cópia → o plano ganha. Status em `../execucao/TODOS.md` — **não marque
 > os checkboxes aqui**. Antes de começar, ler `../reference/global-constraints.md` (Global
 > Constraints, Estrutura de arquivos, BASELINE por task). Ordem e dependências: `../00-overview.md`.
 

@@ -20,7 +20,7 @@ que não existe: a pasta é `spec/frente2-honestidade-fontes/`.
 ## Regras de papel (pedido do Rodrigo, vinculantes)
 
 - **O orquestrador (sessão principal) NÃO escreve código.** Coordena agentes: cria worktrees/branches,
-  despacha, repassa feedback, faz merge (conflito → agente coder resolve), atualiza estes 3 arquivos.
+  despacha, repassa feedback, faz merge (conflito → agente coder resolve), atualiza os arquivos de `execucao/` (CONTEXTO, TODOS, INSIGHTS, BRIEFS, `revisoes/`).
 - **Trilhas** = tasks sem dependência entre si, em paralelo.
 - **Ciclo por task, dentro da trilha:**
   1. **Coder A** (implementador) implementa a task como o arquivo manda (TDD do plano, commit da task).
@@ -45,7 +45,13 @@ que não existe: a pasta é `spec/frente2-honestidade-fontes/`.
   independente em 22/09. O merge resolve; os totais previstos por task do plano **somam as duas trilhas** e
   deixam de valer isoladamente: em cada trilha vale o número **da suíte** que a task mexe.
 - Fases × trilhas: Fase 1 = T1 · Fase 2 = trilha A · Fase 3 = T6+T7 · Fase 4 = T8 + T9 · Fase 5 = T10.
-  Checkpoint quando a fase fecha **e está em `master`**.
+- **Merge: cada trilha entra em `master` INTEIRA, uma vez, quando a última task dela fecha o ciclo** (sem merge
+  parcial, sem rebase no meio): trilha A depois da T5 → `/checkpoint` **fase 2**; trilha B depois da T8 →
+  `/checkpoint` **fase 3** (a T8 entra junto, mas a fase 4 só fecha com a T9). Uma fase conta como fechada quando
+  **todas** as suas tasks passaram o ciclo **e estão em `master`**. A 2ª trilha a entrar faz `git merge master`
+  na própria branch antes (conflito → coder), roda runner + golden, e só então entra (fast-forward).
+- Push das branches de trilha a cada task fechada no ciclo (`git push -u origin frente2/trilha-X`) — backup,
+  não deploy.
 
 ## Gates que nunca mudam (plano, Global Constraints)
 
@@ -57,3 +63,8 @@ Push: branches de trilha em `origin/frente2/trilha-*`; `master` a cada merge/fas
 ## Estado
 
 Status por task: **`TODOS.md` (SSOT desta execução)**. Aprendizados: `INSIGHTS.md`.
+
+## Itens carregados entre tasks (o orquestrador põe no brief do reviewer da task-alvo)
+
+- **T5 (Google):** logs com exceção crua (`logger.*(f"...{e}")`) vazam a chave do CSE, que vai na query — exigir
+  `redigir(str(e))` (herdado do review da T2, obs. 4).
