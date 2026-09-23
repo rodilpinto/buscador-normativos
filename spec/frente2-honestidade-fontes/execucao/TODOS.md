@@ -56,7 +56,11 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] **T10** fechar a frente (worktree `../bn-t10`, branch `frente2/t10`) — critérios §7, duráveis, LESSONS ✅ (23/09, commit
       `docs: fecha a frente 2` na branch; os gates do fechamento (runner, golden, dedup, V11, auditoria de docs) e as saídas
       estão em `../implementacao/10-fechar-frente.md`, a casa desses números). ⚠ Só a parte do coder: merge, push, a limpeza abaixo e o `/checkpoint` são do orquestrador.
-- [ ] **T10 · limpeza (orquestrador)** — limpar os worktrees: `git worktree list`; para cada
+- [x] **T10 · limpeza (orquestrador)** ✅ 23/09: 6 worktrees removidos (`bn-trilha-a`, `bn-trilha-b`, `bn-t9`, `bn-fix-fontes`,
+      `bn-fix-saida`, `bn-t10`); evidência copiada antes para `tests/evidencia/<worktree>/` do repo principal (ignorada, local:
+      14+8+3+6+2+1 arquivos, contagem conferida); branches locais `t9`, `fix-*`, `t10` apagadas; `frente2/trilha-a` e `-b` ficam
+      (o git recusa `-d` porque o remoto delas está atrás; o conteúdo já está em `master`); **`git push origin --delete
+      frente2/trilha-a frente2/trilha-b` só com ok do Rodrigo**. Receita original: `git worktree list`; para cada
       `../bn-*`: (1) inventariar `ls <wt>/tests/evidencia/` (⚠ em `bn-t9` ela é **ignorada**, não untracked — `git status`
       não mostra; os PNG/`.xlsx` são citados pelos `implementacao/*.md`); (2) **preservar** copiando para o repo principal:
       `mkdir -p tests/evidencia/<wt> && cp -r <wt>/tests/evidencia/. tests/evidencia/<wt>/` (ignorado lá também — fica local);

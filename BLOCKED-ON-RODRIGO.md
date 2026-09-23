@@ -150,6 +150,15 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 
 ---
 
+## 🟢 B-07 · Apagar as branches remotas da execução da frente 2 (opcional)
+
+- **Aberto em:** 2026-09-23 · **Bloqueia:** nada (limpeza).
+- `origin/frente2/trilha-a` e `origin/frente2/trilha-b` foram backups das trilhas; o conteúdo está em `master` (fast-forward
+  `08d9d8c` e `9e259ca`). Se quiser limpar: `git push origin --delete frente2/trilha-a frente2/trilha-b` e depois
+  `git branch -D frente2/trilha-a frente2/trilha-b`. Deixar também não custa nada.
+
+---
+
 ## ✅ DONE
 
 - [x] **2026-09-22 · Repo A aposentado (T9).** Tag `levantamento-v1-streamlit` no remoto de B; README de
