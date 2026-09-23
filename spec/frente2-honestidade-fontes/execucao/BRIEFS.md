@@ -34,6 +34,8 @@ com feedback de teste/review e para documentar.
 Não implementa a feature; testa o que o Coder A entregou em `{DIR}`:
 1. Critérios de aceite do header da task, um por um, com comando + saída.
 2. Suítes da task + runner inteiro + golden (independentes do que o Coder A relatou).
+   Runner em **foreground** com `timeout 900 python -u tools/run_all_tests.py` (o runner leva ~9,5 min: 590s é curto demais) (em background travou uma vez, 23/09);
+   não rodar o runner e o e2e ao mesmo tempo.
 3. **E2E com Playwright** (Python, `p.chromium.launch(channel="chrome")` — navegadores do Playwright não estão
    baixados). Subir o app: em `{DIR}/levantamento-normativos/`, `python -m streamlit run app.py --server.headless true
    --server.port {PORTA}` em background; dirigir: "Inserir palavras-chave manualmente" → keywords → "Proximo >>" →

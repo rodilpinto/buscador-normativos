@@ -88,7 +88,9 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       endpoint **OpenAI-compatível** (`https://generativelanguage.googleapis.com/v1beta/openai/`, informado pelo
       Rodrigo junto com a chave `nuati.secin`) — um backend OpenAI-compatível só, trocando `base_url`+chave, poderia
       servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner. (d) a chave é lida **uma vez, no import** de
-      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (e) `_generate` engole o erro da API
+      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
+      `TypeError` em `score_relevance_com_origem` (`gemini_client.py:384`) e `categorize_results` (`:476`) — `(r.get('ementa') or '')`.
+      (e) `_generate` engole o erro da API
       (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
 - [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
@@ -144,6 +146,14 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       fórmula na aba `Normativos`; dublar `test_lexml_cql_injection_sanitization` (faz rede real); na tela, agrupar
       o detalhe do TCU por fonte (é idêntico por keyword); runner "sem LLM" de verdade — `st.secrets` vence a
       variável vazia (frente 5); reduzir os ~390s dos testes LIVE (📝 `BUSCADOR_SKIP_LIVE=1`, não decidido).
+- [ ] **Sobras achadas na EXECUÇÃO da frente 2** (testadores/reviewers; detalhe em
+      `spec/frente2-honestidade-fontes/execucao/revisoes/T*.md` e `INSIGHTS.md`):
+      - (T2, Step 11b do plano) `test_lexml_cql_injection_sanitization` em `test_comprehensive.py` faz **rede real** — dublar.
+      - (T2 M2) LexML: WAF/HTML num URL já cacheado (`_sru_url`) não entra em `_urls_mortos` nem tenta fallback.
+      - (T2 obs. 2) keyword que sanitiza para vazio nunca é enviada mas sai `empty` — tratar em `search()`.
+      - (T2 obs. 3) keywords além de `MAX_RETRIES` ou cortadas no retry ficam sem nota no detalhe.
+      - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
+        validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
       ⛔ **Bloqueado em autorização** — é auto-memória; a regra `memory-write-policy` exige que o
       Rodrigo autorize antes.

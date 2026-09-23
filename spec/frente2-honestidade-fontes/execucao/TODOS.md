@@ -18,15 +18,15 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [x] `/checkpoint` fase 1 (23/09, `a6de0af` + consertos do dogfood)
 
 ## Fase 2 — Fontes honestas (trilha A)
-- [ ] **T2** LexML — impl ▶ (23/09) · teste · review · fix · doc
-- [ ] **T3** TCU falhas — impl · teste · review · fix · doc
+- [x] **T2** LexML — impl ✅ `8f5ccfc` (16 · runner 238 verde · golden OK) · teste ✅ APROVADO (sondas + ao vivo + e2e: "2 erros" LexML; `revisoes/T2.md`) · review ✅ 1 importante + 1 menor a corrigir (2 adiados → `_TODO` P3) · fix ✅ `407e341` (+1 teste → 17; runner 239) · doc ✅ `3be5d85` · push ✅ · review · fix · doc
+- [ ] **T3** TCU falhas — impl ▶ · teste · review · fix · doc
 - [ ] **T4** TCU esquema real — impl · teste · review · fix · doc
 - [ ] **T5** Google — impl · teste · review · fix · doc
 - [ ] merge trilha A → `master` · `/checkpoint` fase 2
 
 ## Fase 3 — Procedência da nota (trilha B)
-- [ ] **T6** origem da nota — impl ▶ (23/09) · teste · review · fix · doc
-- [ ] **T7** `_merge` — impl · teste · review · fix · doc
+- [x] **T6** origem da nota — impl ✅ `7d8f1ce` (54/53/1 → 63/63 · runner 232 verde · golden OK) · teste ✅ APROVADO (`revisoes/T6.md`) · review ✅ corrigir bool/NaN/Inf (+1 teste → 64); `ementa None` → frente 5 · fix ✅ `6594cd8` (64; runner 233) · doc ✅ `272f83a` · push ✅ · review · fix · doc
+- [ ] **T7** `_merge` — impl ▶ · teste · review · fix · doc
 - [ ] (fase 3 fecha no merge da trilha B, depois da T8 — ver Fase 4)
 
 ## Fase 4 — Saída honesta

@@ -63,3 +63,8 @@ Push: branches de trilha em `origin/frente2/trilha-*`; `master` a cada merge/fas
 ## Estado
 
 Status por task: **`TODOS.md` (SSOT desta execução)**. Aprendizados: `INSIGHTS.md`.
+
+## Itens carregados entre tasks (o orquestrador põe no brief do reviewer da task-alvo)
+
+- **T5 (Google):** logs com exceção crua (`logger.*(f"...{e}")`) vazam a chave do CSE, que vai na query — exigir
+  `redigir(str(e))` (herdado do review da T2, obs. 4).
