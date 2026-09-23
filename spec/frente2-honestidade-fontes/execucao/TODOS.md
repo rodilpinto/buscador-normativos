@@ -13,7 +13,7 @@ related: [CONTEXTO.md, INSIGHTS.md]
 - [ ] Worktrees das trilhas A e B criadas (depois da T1)
 
 ## Fase 1 — Fundação (trilha 0, `master`)
-- [ ] **T1** vocabulário — impl · teste · review · fix · doc
+- [x] **T1** vocabulário — impl ✅ `da543be` (58 · runner 222 verde · golden OK) · teste ✅ APROVADO (47 sondas + e2e Playwright até Passo 5 + Excel baixado) · review ✅ nada a corrigir (4 menores → 📝 hardening, INSIGHTS) · fix — n/a · doc ✅ `ed50b6b`
 - [ ] `/checkpoint` fase 1
 
 ## Fase 2 — Fontes honestas (trilha A)
