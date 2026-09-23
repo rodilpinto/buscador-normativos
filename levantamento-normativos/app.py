@@ -15,13 +15,14 @@ import logging
 import re as _re
 from collections import Counter
 from datetime import datetime
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
 
 # A tela agrupa por MOTIVO; so a planilha rotula status (rotulo_status) — R3.
-from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, statuses_para_falha_total
+from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, redigir, statuses_para_falha_total
 from searchers import LexMLSearcher, TCUSearcher, GoogleSearcher
 from llm import gemini_client
 from llm.gemini_client import is_available as llm_available
@@ -564,7 +565,7 @@ def _execute_search(
             except Exception as e:
                 # Log the error but continue with other sources
                 logger.error(
-                    "Search error for source '%s': %s", source_name, e
+                    "Search error for source '%s': %s", source_name, redigir(str(e))
                 )
                 # H2: os statuses ja coletados antes da excecao ficam; o resto vira erro_interno por keyword
                 ja = getattr(searcher, "keyword_statuses", []) or []
@@ -891,6 +892,27 @@ def _md_codigo(texto: str) -> str:
     return f"{cerca}{pad}{texto}{pad}{cerca}"
 
 
+# Sem "&" e ";": depois do html.escape eles formam as entidades (&amp; &lt; &gt;)
+# que o navegador tem de ler; com barra ("\&amp;") a tela mostraria "&amp;".
+_MD_PONTUACAO_HTML = _MD_PONTUACAO - {"&", ";"}
+
+
+def _md_html(texto: str) -> str:
+    """Texto externo LITERAL dentro de st.markdown(..., unsafe_allow_html=True) (o card).
+
+    Ali o HTML E interpretado e o Markdown TAMBEM (review da T9, F1): so
+    html.escape deixava "R$ 1.000,00 a R$ 5.000,00" virar LaTeX (os "$"
+    sumiam), "*caput*" virar italico, "[a](http://b.c)" virar link — o texto
+    normativo mudava na tela. Primeiro html.escape (quote=False: dentro de
+    elemento, nao de atributo), depois o escape de Markdown SEM "&"/";".
+    NAO usar _md_texto depois de html.escape: escaparia em dobro ("\\&amp;").
+    Truncar o texto CRU antes de chamar (cortar depois pode partir uma entidade).
+    """
+    texto = " ".join(str(texto or "").splitlines())
+    return "".join("\\" + c if c in _MD_PONTUACAO_HTML else c
+                   for c in html_module.escape(texto, quote=False))
+
+
 def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
     """Relatorio da busca: indisponiveis, parciais, nao consultadas, sem resultado, OK.
 
@@ -999,7 +1021,13 @@ def render_step4() -> None:
 
     def _avisos_por_fonte() -> None:
         if mortas and not parciais_fonte:
-            resto = " O que aparece abaixo vem só da web aberta." if tem_web_aberta else " Nenhuma outra fonte foi consultada."
+            # Review da T9, F2: "vem só da web aberta" so quando ha o que mostrar
+            if not tem_web_aberta:
+                resto = " Nenhuma outra fonte foi consultada."
+            elif results:
+                resto = " O que aparece abaixo vem só da web aberta."
+            else:
+                resto = " A web aberta também não entregou resultado."
             st.warning(f"Nenhuma fonte catalogada ({nomes}) entregou resultado nesta busca: "
                        + "; ".join(f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas)
                        + "." + resto + " Veja o relatório da busca.")
@@ -1145,24 +1173,26 @@ def render_step4() -> None:
                 tipo_color = _get_tipo_color(item.tipo)
                 relevancia_pct = int(item.relevancia * 100)
 
-                # Escape ementa to prevent XSS from source data
-                safe_ementa = html_module.escape(item.ementa or "")
-                ementa_preview = safe_ementa[:200]
-                if len(safe_ementa) > 200:
+                # Escape ementa to prevent XSS from source data — and keep it
+                # literal (_md_html: HTML E Markdown interpretados aqui). Truncar
+                # o texto CRU antes do escape: cortar depois partia entidades.
+                ementa_crua = item.ementa or ""
+                ementa_preview = _md_html(ementa_crua[:200])
+                if len(ementa_crua) > 200:
                     ementa_preview += "..."
 
                 st.markdown(
-                    f"**{html_module.escape(item.nome)}**\n\n"
+                    f"**{_md_html(item.nome)}**\n\n"
                     f"<small style='color:#666'>"
                     f"<span style='background:{tipo_color};color:white;"
                     f"padding:2px 6px;border-radius:3px;font-size:11px'>"
-                    f"{html_module.escape(item.tipo)}</span> &middot; "
-                    f"<b>Orgao:</b> {html_module.escape(item.orgao_emissor or 'N/I')} &middot; "
-                    f"<b>Data:</b> {html_module.escape(item.data or 'N/I')} &middot; "
+                    f"{_md_html(item.tipo)}</span> &middot; "
+                    f"<b>Orgao:</b> {_md_html(item.orgao_emissor or 'N/I')} &middot; "
+                    f"<b>Data:</b> {_md_html(item.data or 'N/I')} &middot; "
                     # Origem da nota ao lado da nota (.get: lookup duro vira traceback na pagina — R3;
                     # escape: aqui o HTML e interpretado)
-                    f"<b>Relevancia:</b> {relevancia_pct}% <i>({html_module.escape(ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem))})</i> &middot; "
-                    f"<b>Fonte:</b> {html_module.escape(item.source)}"
+                    f"<b>Relevancia:</b> {relevancia_pct}% <i>({_md_html(ORIGEM_CURTA.get(item.relevancia_origem, item.relevancia_origem))})</i> &middot; "
+                    f"<b>Fonte:</b> {_md_html(item.source)}"
                     f"</small>\n\n"
                     f"<span style='color:#444'>"
                     f"{ementa_preview}"
@@ -1170,20 +1200,25 @@ def render_step4() -> None:
                     unsafe_allow_html=True,
                 )
 
-                # Detail expander — escape all external data to prevent XSS
+                # Detail expander — escape all external data to prevent XSS.
+                # Aqui o HTML NAO e interpretado (sem unsafe_allow_html): _md_texto
+                # deixa o texto da fonte literal (review da T9, F1).
                 with st.expander("Ver detalhes", expanded=False):
-                    st.markdown(f"**Ementa completa:** {html_module.escape(item.ementa or '')}")
+                    st.markdown(f"**Ementa completa:** {_md_texto(item.ementa or '')}")
                     if item.link and item.link.startswith(("https://", "http://")):
-                        safe_link = html_module.escape(item.link)
-                        st.markdown(f"**Link:** [{safe_link}]({safe_link})")
+                        # Texto do link literal; no destino, ( ) [ ] < > e espaco
+                        # percent-encoded: um ")" na URL fechava o link antes da hora.
+                        destino = quote(item.link, safe=":/?#@!$&'*+,;=%~-._")
+                        st.markdown(f"**Link:** [{_md_texto(item.link)}]({destino})")
                     else:
                         st.markdown("**Link:** N/I")
-                    st.markdown(f"**Categoria:** {html_module.escape(item.categoria or 'N/I')}")
-                    st.markdown(f"**Situacao:** {html_module.escape(item.situacao or 'N/I')}")
+                    st.markdown(f"**Categoria:** {_md_texto(item.categoria or 'N/I')}")
+                    st.markdown(f"**Situacao:** {_md_texto(item.situacao or 'N/I')}")
                     # Code span ja e literal: html.escape aqui mostrava "&#x27;" na tela (T9)
-                    st.markdown(f"**Encontrado por:** {_md_codigo(item.found_by or '')}")
+                    st.markdown(f"**Encontrado por:** "
+                                f"{_md_codigo(item.found_by) if item.found_by else 'N/I'}")
                     if item.numero:
-                        st.markdown(f"**Numero:** {html_module.escape(item.numero)}")
+                        st.markdown(f"**Numero:** {_md_texto(item.numero)}")
 
             st.divider()
 

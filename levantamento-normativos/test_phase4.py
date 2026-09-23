@@ -830,6 +830,46 @@ class TestEscapeDaTela:
                 antigo = _texto_visivel(md.render(f"`{_html.escape(texto)}`"))
                 assert antigo != texto, texto
 
+    def test_md_html_no_card_mostra_o_texto_da_fonte_literal(self):
+        # Review da T9, F1: o card usa unsafe_allow_html=True — ali o HTML E
+        # interpretado E o Markdown tambem. "R$ 1.000,00 a R$ 5.000,00" virava
+        # LaTeX (os $ sumiam), "*caput*" italico: o texto normativo mudava na tela.
+        MarkdownIt = pytest.importorskip("markdown_it").MarkdownIt
+        from app import _md_html
+        md = MarkdownIt("commonmark", {"html": True})
+        for texto in ["R$ 1.000,00 a R$ 5.000,00", "*caput*", "a &amp; b", "<b>x</b>", "d'a",
+                      "__x__ [a](http://b.c) :red[x]"] + _AMOSTRAS_TELA:
+            html_out = md.render(f"<span>{_md_html(texto)}</span>")
+            assert _texto_visivel(html_out) == texto, texto      # sem entidade dobrada (\&amp;)
+            for tag in ("<b>", "<em", "<strong", "<a ", "<img", "<code"):
+                assert tag not in html_out, (tag, texto)
+
+
+def _apptest_passo4(kw_statuses, results=()):
+    """Roda o app de verdade (AppTest, sem rede) direto no Passo 4."""
+    from streamlit.testing.v1 import AppTest
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.session_state["wizard_step"] = 4
+    at.session_state["search_done"] = True
+    at.session_state["results"] = list(results)
+    at.session_state["keyword_statuses"] = list(kw_statuses)
+    at.run()
+    assert not at.exception, at.exception
+    return at
+
+
+class TestAvisoPorFonte:
+    def test_sem_resultado_nenhum_o_aviso_nao_diz_que_veio_da_web_aberta(self):
+        # Review da T9, F2: lexml e tcu mortos, google em rate_limit, 0 resultados.
+        from models import KeywordStatus as KS
+        diag = [KS(keyword="k", source="lexml", status="error", motivo="bloqueio_waf", detalhe="d"),
+                KS(keyword="k", source="tcu", status="error", motivo="http_5xx", detalhe="d"),
+                KS(keyword="k", source="google", status="error", motivo="rate_limit", detalhe="d")]
+        avisos = " ".join(w.value for w in _apptest_passo4(diag).warning)
+        assert "Nenhuma fonte catalogada" in avisos
+        assert "vem só da web aberta" not in avisos
+        assert "A web aberta também não entregou resultado." in avisos
+
 
 # ===========================================================================
 #  Run via pytest or direct execution
