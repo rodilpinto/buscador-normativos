@@ -22,7 +22,9 @@ import pandas as pd
 import streamlit as st
 
 # A tela agrupa por MOTIVO; so a planilha rotula status (rotulo_status) — R3.
-from models import KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, redigir, statuses_para_falha_total
+# A regra de "indisponivel" e a mesma das duas: models.e_indisponivel (revisao final, UX1+N3).
+from models import (KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, e_indisponivel, redigir,
+                    statuses_para_falha_total)
 from searchers import LexMLSearcher, TCUSearcher, GoogleSearcher
 from llm import gemini_client
 from llm.gemini_client import is_available as llm_available
@@ -504,6 +506,30 @@ def _get_selected_searchers(selected_sources: list[str]) -> list:
     return searchers
 
 
+def _resumo_da_busca(n_resultados: int, kw_statuses: list[KeywordStatus]) -> tuple[str, str]:
+    """(tipo, texto) do resumo do fim da busca — o status do progresso e o topo do Passo 3.
+
+    Antes era sempre "Busca concluida - N normativos" em verde, inclusive 0 com
+    todas as fontes indisponiveis (revisao final, N9): a tela afirmava uma busca
+    feita que nao consultou nada. tipo e "success" | "warning" | "error" (o nome
+    do elemento st.* e do state do st.status). Palavra-chave nao_consultada nao
+    conta como consultada nem como indisponivel (R2-B6).
+
+    >>> _resumo_da_busca(2, [KeywordStatus(keyword="k", source="tcu", status="ok", result_count=2)])
+    ('success', 'Busca concluida - 2 normativos encontrados')
+    """
+    consultadas = [s for s in kw_statuses if s.motivo != "nao_consultada"]
+    if consultadas and all(e_indisponivel(s) for s in consultadas):
+        return "error", (f"Busca concluida sem consultar nenhuma fonte: todas as fontes selecionadas ficaram "
+                         f"indisponíveis - {n_resultados} normativos encontrados. Isso não significa que não "
+                         f"existem normativos. Veja o relatório da busca no Passo 4.")
+    if any(e_indisponivel(s) or s.parcial for s in consultadas):
+        return "warning", (f"Busca concluida com cobertura incompleta - {n_resultados} normativos encontrados; "
+                           f"uma ou mais fontes ficaram indisponíveis ou responderam só em parte. "
+                           f"Veja o relatório da busca no Passo 4.")
+    return "success", f"Busca concluida - {n_resultados} normativos encontrados"
+
+
 def _execute_search(
     keywords: list[str],
     selected_sources: list[str],
@@ -613,9 +639,11 @@ def _execute_search(
                         all_results[i].categoria = cat
 
         progress_bar.progress(1.0)
+        # N9: o rotulo do status nao diz "concluida" limpo quando nada foi consultado
+        tipo_resumo, texto_resumo = _resumo_da_busca(len(all_results), all_keyword_statuses)
         status.update(
-            label=f"Busca concluida - {len(all_results)} normativos encontrados",
-            state="complete",
+            label=texto_resumo,
+            state="error" if tipo_resumo == "error" else "complete",
         )
 
     # Store results and diagnostics, advance to Step 4
@@ -640,7 +668,10 @@ def render_step3() -> None:
     # If search already completed, show summary and allow re-search or advance
     if st.session_state.get("search_done"):
         results = st.session_state.get("results", [])
-        st.success(f"Busca concluida - {len(results)} normativos encontrados.")
+        # N9: verde so quando todas as fontes consultadas responderam por inteiro
+        tipo_resumo, texto_resumo = _resumo_da_busca(len(results), st.session_state.get("keyword_statuses", []))
+        {"success": st.success, "warning": st.warning, "error": st.error}[tipo_resumo](
+            texto_resumo + ("." if tipo_resumo == "success" else ""))
 
         col1, col2, col3 = st.columns([1, 1, 3])
         with col1:
@@ -919,8 +950,11 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
     Classifica por MOTIVO, nao so por status (R2-B6): nao_consultada tem
     status="error" no vocabulario, mas nao e "fonte indisponivel" — e uma
     palavra-chave que nao foi enviada. Os rotulos seguem o vocabulario de
-    models.rotulo_status (Indisponivel, Nao consultada...), mas a tela nao o
-    importa: agrupa por motivo; so a planilha rotula por status (R3).
+    models.rotulo_status (Indisponivel, Parcial, Nao consultada...), mas a tela
+    nao o importa: agrupa por motivo; so a planilha rotula por status (R3).
+    error+parcial (TCU: um endpoint caiu, o outro respondeu) NAO e indisponivel:
+    tem secao e metrica "Parciais" proprias (revisao final, UX1+N3) — a regra e
+    models.e_indisponivel, a mesma da planilha.
     Texto externo passa por _md_texto/_md_codigo (nao html.escape: este
     st.markdown nao interpreta HTML) e o detalhe vai em st.code com
     wrap_lines=True (nao estoura a largura).
@@ -928,38 +962,54 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
     if not kw_statuses:
         return
 
-    indisponiveis = [s for s in kw_statuses if s.status == "error" and s.motivo != "nao_consultada"]
+    indisponiveis = [s for s in kw_statuses if e_indisponivel(s)]
+    fontes_parciais = [s for s in kw_statuses if s.status == "error" and s.parcial]   # "Parcial" (UX1)
     nao_consultadas = [s for s in kw_statuses if s.motivo == "nao_consultada"]
     empty_statuses = [s for s in kw_statuses if s.status == "empty"]
     ok_statuses = [s for s in kw_statuses if s.status == "ok"]
     parciais = [s for s in kw_statuses if s.parcial and s.status != "error"]   # R3: disjunto de indisponiveis
     total = len(kw_statuses)
 
+    # As 5 contagens de status (OK, parciais, indisponiveis, sem resultado, nao consultadas) somam o total
     label = (f"Relatório da busca — {len(ok_statuses)} OK · {len(indisponiveis)} indisponíveis · "
+             f"{len(fontes_parciais)} parciais · "
              f"{len(empty_statuses)} sem resultado · {len(nao_consultadas)} não consultadas ({total} buscas)")
 
-    with st.expander(label, expanded=bool(indisponiveis or parciais)):
+    with st.expander(label, expanded=bool(indisponiveis or parciais or fontes_parciais)):
         # Summary metrics
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("Total de buscas", total)
         c2.metric("OK", len(ok_statuses))
         c3.metric("Sem resultado", len(empty_statuses))
         c4.metric("Indisponíveis", len(indisponiveis))
-        c5.metric("Não consultadas", len(nao_consultadas))
+        c5.metric("Parciais", len(fontes_parciais))
+        c6.metric("Não consultadas", len(nao_consultadas))
 
         if indisponiveis:
             st.markdown("**:red[Fontes indisponíveis (a fonte não pôde ser consultada):]**")
             for s in indisponiveis:
                 retry_badge = " (retentado)" if s.retried else ""
-                extra = f" — {s.result_count} resultado(s) do endpoint que respondeu" if s.result_count else ""
-                badge_parcial = " (parcial)" if s.parcial else ""
+                # erro_interno no meio do mapeamento guarda o que ja tinha contado (TCU H2)
+                extra = f" — {s.result_count} resultado(s) antes da falha" if s.result_count else ""
                 st.markdown(f"- :red[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*"
-                            f"{retry_badge}{badge_parcial}: {_md_codigo(s.motivo or 'erro')}{extra}")
+                            f"{retry_badge}: {_md_codigo(s.motivo or 'erro')}{extra}")
                 st.code(s.detalhe or s.error_message or "(sem detalhe)", language=None,   # M13: nao passa pelo Markdown
                         wrap_lines=True)
             st.caption("A fonte não pôde ser consultada. Isso NÃO significa que não existem normativos — "
                        "significa que esta busca não os viu. Motivo e detalhe acima; a aba "
                        "'Diagnostico da busca' da planilha registra o mesmo.")
+
+        if fontes_parciais:
+            # UX1+N3: antes caia na secao vermelha acima, com os resultados do endpoint vivo na tela
+            st.markdown("**:orange[Fontes parciais (parte da fonte respondeu, parte não pôde ser consultada):]**")
+            for s in fontes_parciais:
+                retry_badge = " (retentado)" if s.retried else ""
+                st.markdown(f"- :orange[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*{retry_badge}: "
+                            f"{s.result_count} resultado(s) do endpoint que respondeu; o outro: "
+                            f"{_md_codigo(s.motivo or 'erro')}")
+                st.code(s.detalhe or s.error_message or "(sem detalhe)", language=None, wrap_lines=True)
+            st.caption("Os resultados acima vêm só da parte da fonte que respondeu. O que estava na parte "
+                       "indisponível não foi visto por esta busca — o detalhe diz qual parte caiu.")
 
         if parciais:
             st.markdown("**:orange[Buscas parciais (a coleta não terminou):]**")
@@ -977,11 +1027,18 @@ def _render_search_diagnostics(kw_statuses: list[KeywordStatus]) -> None:
         if empty_statuses:
             st.markdown("**:orange[Palavras-chave sem resultados (nenhum normativo encontrado):]**")
             for s in empty_statuses:
-                st.markdown(f"- :orange[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*")
+                st.markdown(f"- :orange[**{_md_texto(s.keyword)}**] em *{_md_texto(s.source)}*"
+                            f"{' (coleta parcial)' if s.parcial else ''}")
                 if s.detalhe:   # R3-H5: "500 acordaos sem sumario" nao e "nao ha acordao"
                     st.code(s.detalhe, language=None, wrap_lines=True)
-            st.caption("Essas palavras-chave foram buscadas com sucesso, mas nenhum normativo "
-                       "correspondente foi encontrado na fonte. Quando há detalhe, ele diz o que a fonte entregou.")
+            if any(s.parcial for s in empty_statuses):
+                # N3: paginacao interrompida sem match nao foi "buscada com sucesso" — a fonte caiu no meio
+                st.caption("Nenhum normativo correspondente foi encontrado no que a fonte entregou. Nas marcadas "
+                           "'(coleta parcial)' a coleta não terminou: o normativo pode estar na parte não vista. "
+                           "Quando há detalhe, ele diz o que a fonte entregou.")
+            else:
+                st.caption("Essas palavras-chave foram buscadas com sucesso, mas nenhum normativo "
+                           "correspondente foi encontrado na fonte. Quando há detalhe, ele diz o que a fonte entregou.")
 
         if ok_statuses:
             st.markdown("**:green[Palavras-chave com resultados:]**")
@@ -1001,7 +1058,8 @@ def render_step4() -> None:
     # --- Avisos por fonte (H3, R2, R3-H4): calculados uma vez, exibidos depois
     # do st.header de cada ramo (antes do header ficavam acima do titulo — R3).
     catalogadas = [s for s in kw_statuses if s.source in ("lexml", "tcu")]
-    indisponiveis = [s for s in kw_statuses if s.status == "error" and s.motivo != "nao_consultada"]
+    indisponiveis = [s for s in kw_statuses if e_indisponivel(s)]   # UX1+N3: error+parcial nao entra
+    ha_parcial = any(s.parcial for s in kw_statuses)
     por_fonte = {}
     for s in catalogadas:
         f = por_fonte.setdefault(s.source, {"entregues": 0, "erros": 0, "total": 0, "motivos": set(), "parcial": False})
@@ -1015,12 +1073,20 @@ def render_step4() -> None:
     # (0 match) e atos 500 respondeu pela metade, nao "esta indisponivel"
     mortas = [f for f, v in por_fonte.items() if v["total"] and v["erros"] == v["total"]
               and v["entregues"] == 0 and not v["parcial"]]
-    parciais_fonte = [f for f, v in por_fonte.items() if v["erros"] and f not in mortas]
+    # N3: parcial SEM erro (paginacao interrompida, status ok/empty) tambem e cobertura incompleta
+    parciais_fonte = [f for f, v in por_fonte.items() if (v["erros"] or v["parcial"]) and f not in mortas]
+    # N1 (bloqueador da revisao final): "Nenhuma fonte catalogada entregou" so quando TODAS
+    # as de por_fonte morreram — LexML morto + TCU saudavel dizia isso com o card do TCU na tela
+    todas_mortas = bool(mortas) and set(mortas) == set(por_fonte)
     nomes = ", ".join(sorted(por_fonte)) or "nenhuma selecionada"
     tem_web_aberta = any(s.source == "google" for s in kw_statuses)
 
+    def _motivos(f: str) -> str:
+        # parcial por paginacao nao tem motivo no status (e ok/empty); o detalhe diz a pagina
+        return ", ".join(sorted(m for m in por_fonte[f]["motivos"] if m)) or "coleta não terminou"
+
     def _avisos_por_fonte() -> None:
-        if mortas and not parciais_fonte:
+        if todas_mortas:
             # Review da T9, F2: "vem só da web aberta" so quando ha o que mostrar
             if not tem_web_aberta:
                 resto = " Nenhuma outra fonte foi consultada."
@@ -1029,12 +1095,13 @@ def render_step4() -> None:
             else:
                 resto = " A web aberta também não entregou resultado."
             st.warning(f"Nenhuma fonte catalogada ({nomes}) entregou resultado nesta busca: "
-                       + "; ".join(f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas)
+                       + "; ".join(f"{f} indisponível ({_motivos(f)})" for f in mortas)
                        + "." + resto + " Veja o relatório da busca.")
         elif mortas or parciais_fonte:
-            partes = [f"{f} indisponível ({', '.join(sorted(por_fonte[f]['motivos']))})" for f in mortas]
+            # so as mortas e as parciais sao listadas; a fonte saudavel nao aparece (N1)
+            partes = [f"{f} indisponível ({_motivos(f)})" for f in mortas]
             partes += [f"{f} respondeu parcialmente ({por_fonte[f]['entregues']} resultado(s); "
-                       f"{', '.join(sorted(por_fonte[f]['motivos']))})" for f in parciais_fonte]
+                       f"{_motivos(f)})" for f in parciais_fonte]
             st.warning("Cobertura incompleta nas fontes catalogadas: " + "; ".join(partes)
                        + ". O restante pode estar faltando. Veja o relatório da busca.")
         if results and all(r.relevancia_origem == "heuristica" for r in results):
@@ -1048,6 +1115,10 @@ def render_step4() -> None:
         if indisponiveis:
             st.error(f"Nenhum normativo encontrado. {len(indisponiveis)} busca(s) não puderam consultar a fonte "
                      f"(indisponível). Isso não significa que o normativo não existe — veja o relatório.")
+        elif ha_parcial:
+            # N3: parcial sem match nao e "nada encontrado" limpo — o "Tente ampliar" mandava mexer nas keywords
+            st.warning("Nenhum normativo encontrado, mas houve coleta parcial: parte da fonte não foi vista "
+                       "nesta busca, e o normativo pode estar nela. Veja o relatório da busca.")
         else:
             st.info(
                 "Nenhum normativo encontrado para as palavras-chave informadas. "
