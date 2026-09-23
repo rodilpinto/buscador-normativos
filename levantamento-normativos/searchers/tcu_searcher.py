@@ -181,7 +181,9 @@ class TCUSearcher(BaseSearcher):
         """Onde a palavra-chave e procurada: sumario + titulo (esquema real da
         API, medido em 22/09) — com fallback para `ementa` se a API tiver dois
         formatos. Antes lia so `ementa`, que a API nao devolve: zero match, sempre.
-        Acordaos recentes vem SEM sumario (medido): so o titulo casa neles."""
+        Acordaos recentes vem SEM sumario (medido): so o titulo casa neles.
+        Esquema real: tests/fixtures/tcu_acordaos_real.json e
+        tests/fixtures/tcu_acordaos_colegiados_real.json."""
         return " ".join(x for x in (item.get("sumario"), item.get("titulo"), item.get("ementa")) if x)
 
     def _matches_keyword(self, text: str, keyword: str) -> bool:
@@ -364,7 +366,12 @@ class TCUSearcher(BaseSearcher):
         (tipo|numero|data) colidia (3.200 keys ao vivo -> 2.988 ids) e search()
         descartava o 2o em silencio; o dedup (tipo, numero) fundiria ate os de
         datas diferentes (so 2.025 pares numero/ano distintos). Medido nas 3.200:
-        (numero, ano, colegiado) e unico por key. Sem colegiado: "N/AAAA".
+        (numero, ano, colegiado) e unico por key. Sem colegiado: "N/AAAA" e
+        orgao_emissor "TCU".
+
+        Esquema real capturado: tests/fixtures/tcu_acordaos_real.json (22/09) e
+        tests/fixtures/tcu_acordaos_colegiados_real.json (o par 4318/2026 1a x 2a
+        Camara, 23/09).
 
         Args:
             item: Raw API response item.
@@ -375,7 +382,9 @@ class TCUSearcher(BaseSearcher):
         """
         numero = str(item.get("numeroAcordao") or item.get("numero") or "")
         ano = str(item.get("anoAcordao") or item.get("ano") or "")
-        colegiado = item.get("colegiado", "")
+        # `or ""`: a API pode mandar colegiado null (review da T4, M5) — sem isto
+        # o orgao_emissor saia "TCU - None"
+        colegiado = item.get("colegiado") or ""
         date_raw = item.get("dataSessao") or item.get("dataAta") or ""   # precedencia invertida de proposito (API real)
         date_str = self._safe_date_format(str(date_raw)) if date_raw else ""  # "" e nao None: `data` entra no id
         return NormativoResult(
@@ -383,7 +392,7 @@ class TCUSearcher(BaseSearcher):
             tipo="Acordao TCU",
             numero=f"{numero}/{ano}-TCU-{colegiado}" if colegiado else f"{numero}/{ano}",
             data=date_str,
-            orgao_emissor=f"TCU - {colegiado}",
+            orgao_emissor=f"TCU - {colegiado}" if colegiado else "TCU",
             ementa=item.get("sumario") or item.get("ementa", "") or "",
             link=item.get("urlAcordao") or self._build_acordao_link(numero, ano),
             source="tcu",

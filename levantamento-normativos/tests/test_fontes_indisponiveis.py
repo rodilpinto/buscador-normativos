@@ -544,3 +544,12 @@ def test_tcu_acordaos_de_colegiados_diferentes_sobrevivem_ao_dedup_e_a_mesma_cop
     saida = deduplicate([a, b, copia_de_a])
     assert sorted(r.nome for r in saida) == sorted(x["titulo"] for x in COLEGIADOS_REAIS)
     assert next(r for r in saida if r.nome == a.nome).found_by == "k, outra"   # a copia fundiu
+
+
+def test_tcu_acordao_com_colegiado_nulo_nao_escreve_none():
+    """Review da T4 (M5, pre-existente): a API pode mandar `colegiado: null` — nada de "TCU - None"."""
+    from searchers.tcu_searcher import TCUSearcher
+    r = TCUSearcher()._map_acordao(dict(ACORDAO, colegiado=None), "turismo")
+    assert r.orgao_emissor == "TCU"
+    assert r.numero == f'{ACORDAO["numeroAcordao"]}/{ACORDAO["anoAcordao"]}'   # sem colegiado: "N/AAAA"
+    assert "None" not in r.orgao_emissor + r.numero + r.nome

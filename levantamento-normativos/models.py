@@ -105,6 +105,9 @@ class NormativoResult:
               "Lei", "Decreto", "Instrucao Normativa", "Portaria",
               "Acordao TCU", "Resolucao", "Framework/Padrao", "Outro".
         numero: Numero do ato (ex: "13.709").  String vazia se nao aplicavel.
+              Acordao do TCU: citacao com o colegiado, ex. "4318/2026-TCU-Primeira
+              Camara" (frente 2, T4: as Camaras numeram em series proprias).
+              O ``id`` e montado a partir de ``numero`` (ver ``__post_init__``).
         data: Data no formato DD/MM/AAAA, ou ``None`` se desconhecida.
         orgao_emissor: Orgao emissor.
               Ex: "Presidencia da Republica", "TCU", "ISACA".
