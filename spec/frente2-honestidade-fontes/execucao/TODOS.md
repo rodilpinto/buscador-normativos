@@ -68,4 +68,4 @@ related: [CONTEXTO.md, INSIGHTS.md]
       frente2/<b>` (já em `master`); (6) remotos: só `frente2/trilha-a` e `frente2/trilha-b` existem em `origin`
       (`git ls-remote origin 'refs/heads/frente2/*'`) — `git push origin --delete` só com ok do Rodrigo. A T10 também lista
       a evidência do próprio repo principal (`tests/evidencia/`, inclui `final-ui/`).
-- [ ] `/checkpoint` fase 5
+- [x] `/checkpoint` fase 5 (23/09) — **execução da frente 2 encerrada**

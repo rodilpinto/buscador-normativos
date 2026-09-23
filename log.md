@@ -2,6 +2,13 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-23] checkpoint | frente 2 encerrada (fase 5): worktrees limpos, evidência preservada
+
+T10 em `master` (`9b4d9dd`). Limpeza: 6 worktrees removidos depois de copiar a evidência de cada um para
+`tests/evidencia/<worktree>/` (ignorada, local; contagem conferida arquivo a arquivo); branches locais `t9`, `fix-*`, `t10`
+apagadas; `frente2/trilha-a`/`-b` ficam (remoto atrás) → B-07. Execução por agentes encerrada: `execucao/` vira registro.
+Próxima: frente 5 (LM local). 🔴 D-C17 aberta. Snapshot de memória não escrito (política de autorização).
+
 ## [2026-09-23] review | T10: state file enxugado (§3/§7/§8 históricos arquivados aqui); SSOT dos números do fechamento
 
 Review da T10 (testador APROVADO; reviewer: aprovável com consertos). O `SESSION-ONBOARD` caiu para perto de 1 página:

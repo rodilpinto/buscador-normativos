@@ -6,6 +6,9 @@ related: [TODOS.md, INSIGHTS.md, ../00-overview.md, ../reference/global-constrai
 
 # Contexto da execução da frente 2
 
+> ✅ **ENCERRADA em 23/09** (T10 + `/checkpoint` fase 5). Este arquivo passa a ser registro histórico; o estado vivo
+> do projeto está no `SESSION-ONBOARD-buscador.md`. Regras e briefs daqui servem de modelo para a próxima execução por agentes.
+
 > **Depois de qualquer compactação de memória: ler este arquivo e `TODOS.md` antes de continuar.**
 
 ## Objetivo (pedido do Rodrigo, 2026-09-22, literal)

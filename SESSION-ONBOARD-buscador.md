@@ -35,8 +35,8 @@ indisponível, parcial e sem resultado. Executada por agentes (D-C16): T1–T9 �
 (`7322cc0`) + FIX-SAÍDA (`51883f6`) → T10. Critérios §7 conferidos (runner, golden,
 dedup, V11 — números e saídas em `implementacao/10-fechar-frente.md`). Registro completo: `spec/frente2-honestidade-fontes/execucao/` (TODOS =
 SSOT, INSIGHTS, `revisoes/`) e `implementacao/10-fechar-frente.md` (comandos e saídas). ⚠ Fechou com a 🔴 **D-C17 aberta**.
-Os worktrees `../bn-*` guardam screenshots de evidência (não versionados); a limpeza deles é o último passo da fase 5
-(`execucao/TODOS.md`).
+Fase 5 fechada (`/checkpoint` de 23/09): worktrees removidos, a evidência (screenshots e `.xlsx`, não versionados) está em
+`tests/evidencia/<worktree>/` deste repo — local, ignorada pelo git. Branches `frente2/trilha-*` no remoto: B-07.
 
 **Cadeia:** `git log --oneline --reverse 1c063ea..HEAD` (frente 2 inteira; não é restatada aqui). Marcos: `da543be` T1 ·
 `9e259ca` trilha B · `08d9d8c` trilha A · `d4cab80` T9 · `7322cc0`/`51883f6` consertos da revisão final. ⚠ O SHA mais
@@ -88,8 +88,6 @@ passo é o desenho (brainstorm → spec → plano), a partir dos insumos (a)–(
 backend por ambiente, endpoint OpenAI-compatível do Gemini, **`st.secrets` vencendo a variável vazia do runner**, chave lida
 só no import e `ementa None` com LLM ligado. ⚠ As chaves de LLM estão definidas no ambiente desta máquina: app lançado à mão
 usa `env -u GEMINI_API_KEY -u GOOGLE_API_KEY -u OPENAI_API_KEY` (`~/.claude/ENVIRONMENT.md`).
-**Antes disso**, se ainda estiver aberto em `spec/frente2-honestidade-fontes/execucao/TODOS.md`, feche a fase 5 da frente 2:
-`/checkpoint` e limpeza dos worktrees, pela receita que está lá.
 
 🔴 **D-C17 aberta e declarada** (dedup fuzzy funde acórdãos distintos: 26 de 900 numa amostra real; perda silenciosa).
 Opções `a` / `a'` / `b` / `c` em `_DECISOES-PENDENTES.md`. Qualquer escolha vira **task própria** no passo fuzzy de
@@ -98,7 +96,7 @@ Opções `a` / `a'` / `b` / `c` em `_DECISOES-PENDENTES.md`. Qualquer escolha vi
 
 Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy). (D-C10.1 fechada em 22/09: tags só nos
 marcos.) ⛔ **Não avançar a branch `deploy`**: só num marco, com ok do Rodrigo (`git push origin master:deploy`). O fim da
-frente 2 **não** é autorização. Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`). O B-04 (medir a lacuna
+frente 2 **não** é autorização. Ações do Rodrigo pendentes: `BLOCKED-ON-RODRIGO.md` (B-01 em diante). O B-04 (medir a lacuna
 de cobertura) ganhou as medições da frente 2.
 
 ## 7. Ponteiros
