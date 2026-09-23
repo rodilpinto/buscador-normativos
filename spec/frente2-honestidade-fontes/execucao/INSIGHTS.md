@@ -141,3 +141,17 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   lados mantidos; runner **291** (13+64+98+71+45) + golden OK no merge; `master` por fast-forward em `08d9d8c`.
 - A T9 roda num worktree próprio (`../bn-t9`) para o checkpoint da fase 2 poder commitar em `master` ao mesmo tempo sem
   dividir o índice do git.
+
+## Revisão final (23/09) — 5 perspectivas
+
+- **Mutação: 15/15 mortas pelo gate** (os testes pegam regressão da lógica de honestidade) — mas o golden não passa pelos
+  searchers (lacuna registrada).
+- **O que só a revisão final pegou, depois de 9 tasks com testador + reviewer cada:** (1) **crítico de segurança** — a aba
+  principal da planilha grava texto de página web cru e vira fórmula (o plano tinha deixado "fora do escopo"); (2)
+  **bloqueador** — o aviso "nenhuma fonte catalogada entregou" dispara com o TCU entregando (cenário que o V11 não
+  exercita, porque o V11 pressupõe o TCU parcial de 22/09); (3) o TCU parcial aparece como "indisponível" no relatório e na
+  planilha; (4) a legenda "0% = nenhuma palavra-chave na ementa" é falsa por causa de acento; (5) a janela real do TCU é
+  ~1 semana e ninguém diz. Padrão: **revisões por task olham o diff da task; só a revisão do estado inteiro vê o que as
+  tasks combinadas afirmam ao usuário** — e o app real, rodado por quem o usa, vê o que nenhum teste vê.
+- Triagem (📝 minha): entra o que é segurança ou afirmação falsa; explicabilidade vai para a frente 4. Duas trilhas de
+  conserto em paralelo (`fix-fontes`, `fix-saida`).
