@@ -159,7 +159,7 @@ TASKS = [
 
 aviso = (
     "> Extraído **verbatim** do plano v4 (linhas {ini}-{fim}). **O plano segue fonte de verdade**:\n"
-    "> divergência entre o plano e esta cópia → o plano ganha. Status só no `_TODO.md` — **não marque\n"
+    "> divergência entre o plano e esta cópia → o plano ganha. Status em `../execucao/TODOS.md` — **não marque\n"
     "> os checkboxes aqui**. Antes de começar, ler `../reference/global-constraints.md` (Global\n"
     "> Constraints, Estrutura de arquivos, BASELINE por task). Ordem e dependências: `../00-overview.md`.\n"
 )

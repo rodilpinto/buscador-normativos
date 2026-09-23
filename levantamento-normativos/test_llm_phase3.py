@@ -275,6 +275,66 @@ except Exception as e:
     record("_parse_json_array tests", False, traceback.format_exc())
 
 # ===========================================================================
+# 9. Origem da nota (frente 2, spec 2026-09-22 §3.4)
+# ===========================================================================
+run_section("9. Origem da nota de relevancia")
+
+try:
+    from llm import score_relevance_com_origem
+    from llm import gemini_client as _gc
+    from models import ORIGENS_RELEVANCIA
+
+    _docs = [{"nome": "Lei 13.709", "ementa": "Dispoe sobre protecao de dados pessoais e privacidade."},
+             {"nome": "COBIT", "ementa": "Framework de governanca de TI."}]
+
+    # sem chave (o topo do arquivo garante): heuristica
+    pares = score_relevance_com_origem("tema", _docs, ["dados pessoais", "privacidade"])
+    record("sem LLM devolve pares (nota, origem)", all(isinstance(p, tuple) and len(p) == 2 for p in pares))
+    record("sem LLM a origem e 'heuristica'", all(o == "heuristica" for _, o in pares), str(pares))
+    record("nota heuristica = fracao das keywords na ementa", abs(pares[0][0] - 1.0) < 1e-9 and pares[1][0] == 0.0, str(pares))
+    record("toda origem esta em ORIGENS_RELEVANCIA", all(o in ORIGENS_RELEVANCIA for _, o in pares))
+
+    # sem chave e sem keywords: nao ha o que calcular -> fallback_erro rotulado
+    pares2 = score_relevance_com_origem("tema", _docs, None)
+    record("sem LLM e sem keywords: 0.5 rotulado fallback_erro",
+           all(p == (0.5, "fallback_erro") for p in pares2), str(pares2))
+
+    # wrapper preserva o contrato antigo
+    record("score_relevance == notas de score_relevance_com_origem",
+           score_relevance("tema", _docs, ["dados pessoais", "privacidade"]) == [n for n, _ in pares])
+
+    # com LLM "disponivel" mas lote vazio: fallback_erro (dublando is_available e _generate)
+    _orig_avail, _orig_gen = _gc.is_available, _gc._generate
+    try:
+        _gc.is_available = lambda: True
+        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: ""
+        pares3 = score_relevance_com_origem("tema", _docs, ["x"])
+        record("lote vazio do modelo -> (0.5, fallback_erro)", all(p == (0.5, "fallback_erro") for p in pares3), str(pares3))
+
+        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: "[0.9, 0.1]"
+        pares4 = score_relevance_com_origem("tema", _docs, ["x"])
+        record("lote valido -> origem 'modelo'", pares4 == [(0.9, "modelo"), (0.1, "modelo")], str(pares4))
+
+        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: '[0.9, "abc"]'
+        pares5 = score_relevance_com_origem("tema", _docs, ["x"])
+        record("valor nao numerico -> so aquele item e fallback_erro",
+               pares5 == [(0.9, "modelo"), (0.5, "fallback_erro")], str(pares5))
+
+        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: "[0.9]"
+        pares6 = score_relevance_com_origem("tema", _docs, ["x"])
+        record("tamanho errado -> lote inteiro fallback_erro", all(p == (0.5, "fallback_erro") for p in pares6), str(pares6))
+
+        # review da T6 (alem do plano): json.loads aceita NaN e true; nao podem virar nota do modelo
+        _gc._generate = lambda prompt, temperature=0.0, max_tokens=1024: '[NaN, true]'
+        pares7 = score_relevance_com_origem("tema", _docs, ["x"])
+        record("NaN e bool do modelo -> fallback_erro",
+               pares7 == [(0.5, "fallback_erro"), (0.5, "fallback_erro")], str(pares7))
+    finally:
+        _gc.is_available, _gc._generate = _orig_avail, _orig_gen
+except Exception as e:
+    record("secao 9 (origem da nota)", False, traceback.format_exc())
+
+# ===========================================================================
 # Summary
 # ===========================================================================
 print(f"\n{'='*60}")

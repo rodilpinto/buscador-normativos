@@ -1,7 +1,7 @@
 ---
 title: "Decisões abertas — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-22
+last_updated: 2026-09-23
 related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -12,6 +12,41 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
+
+## 🔴 D-C17 — O dedup fuzzy funde acórdãos DISTINTOS do TCU: consertar nesta frente ou depois?
+
+- **Onde aparece:** 23/09, re-teste da T4 da frente 2 (`spec/frente2-honestidade-fontes/execucao/revisoes/T4.md`).
+- **Fato medido:** depois da T4 os acórdãos passam a ter o `sumario` literal como ementa, e o passo **fuzzy** do dedup
+  (`deduplicator.py:251-270`, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
+  distintos, **26 somem fundidos em outros** (ex.: "ACÓRDÃO 2344/2026 ATA 33/2026 - PLENÁRIO" fundido no 2225/2026 — os dois
+  sumários começam "TOMADA DE CONTAS ESPECIAL. FRAUDE NA CONCESSÃO DE BENEFÍCIOS PREVIDENCIÁRIOS…"). Repro:
+  `scratchpad/fuzzy.py` do testador (fora do repo — 📝 reproduzir com a fixture real se a decisão for consertar).
+  Antes da T4 isso não acontecia porque a ementa do acórdão vinha vazia (a fonte era cega).
+- **Por que é decisão sua:** a spec da frente 2 (§3.7) e o plano fixam **"sem mudar como ele deduplica"** e
+  `dedup_esperado.json` **nunca muda nesta frente**. Consertar o fuzzy é mudar o dedup.
+- **Trava:** nada da execução — a T4 segue, e as demais tasks não dependem disso. Mas enquanto não se decide, uma busca
+  com ≤ 1.000 itens pode **perder acórdãos em silêncio** (o oposto do que a frente promete).
+
+| Opção | Ganha | Perde / risco |
+|---|---|---|
+| **a** Consertar nesta frente: o fuzzy não funde dois itens que têm `numero` diferentes (📝 sugestão do testador) | fecha a perda silenciosa agora | muda o dedup contra a spec §3.7; precisa conferir se o golden (`dedup_esperado.json`) muda — se mudar, recongelar com justificativa |
+| **b** Registrar e consertar depois (frente própria, com golden) | respeita o escopo da frente 2 | a perda silenciosa fica no ar até lá; o relatório não avisa |
+| **c** Consertar depois, mas nesta frente **declarar** a fusão (ex.: o merge anota `found_by`/um contador de fundidos no diagnóstico) | nada some sem registro; dedup igual | é código novo fora do plano; a fusão errada continua acontecendo |
+
+✅ **Conferido pelo reviewer da T4 (23/09), rodando `deduplicate` sobre `tests/golden/entrada_fixa.json`:** a opção `a`
+como escrita **MUDA o golden** — a única fusão fuzzy do golden (razão 0,99) é uma Instrução Normativa `"1"` com uma
+Portaria `"750"` (tipo e `numero` diferentes); com `a`, 14→11 vira 14→12 e o gate perde o único caso fuzzy.
+➕ **Opção `a'` (do reviewer):** o fuzzy não funde dois itens de **mesmo `tipo`, ambos com `numero` não vazio e
+diferente**. Bloqueia as 26/900 fusões de acórdãos e **mantém o golden** (o caso do golden tem `tipo` diferente).
+Continua sendo mudança no dedup → decisão sua.
+
+📝 **Recomendação minha (revista):** `a'`, nesta frente, com o golden conferido intacto e um teste com os dois acórdãos
+reais que se fundiam; se preferir não mexer no dedup agora, `c`. É exatamente a classe de defeito que a frente existe
+para matar.
+
+**Decisão tomada:** _(pendente)_
+
+---
 
 ## 🔴 D-C9 — Como consumir o plano da Fase 1: dobrar as emendas, construir como está, ou dividir em tasks?
 
@@ -99,11 +134,11 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 > versão como um ponto de retorno e seguir para as próximas versões"* → **tags nos marcos funcionais**, não por task.
 > Criadas e empurradas: `v1.0` (`eb91277`) e `v1.0.1` (`e2cd56a`). 📝 Leitura minha da frase; corrigir se não for isso.
 
-- **Onde aparece:** 22/09, pergunta minha ao registrar a D-C10; **não respondida**.
+- **Onde aparece:** 22/09, pergunta minha ao registrar a D-C10; respondida na prática no mesmo dia (ver o topo).
 - **Trava:** nada. 📝 Recomendação: só nos marcos — o push por task (D-C7) + golden + runner já dão o
   rastro; tag por task é ruído. Se `a` (marcos): criar `v1.0` já (aponta `eb91277`).
 
-**Decisão tomada:** _(pendente)_
+**Decisão tomada:** tags só nos marcos funcionais (22/09) — ver o topo desta entrada.
 
 ---
 
@@ -122,9 +157,12 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
   [...] Carefully consider the dependencies between features."* Feito em `spec/frente2-honestidade-fontes/`: 5 fases,
   10 tasks, corte **verbatim** (script `tools/split_frente2.py`, cobertura verificada) + header com "Depende de" e
   critérios de aceite **derivados do plano**. Regra herdada do split de 10/09 (D-C9, opção `c`): **o plano segue fonte
-  de verdade**; divergência → o plano ganha; status só no `_TODO.md`. Ordem continua sequencial T1 → T10; a execução
-  em duas trilhas paralelas depois da T1 ficou como 📝 proposta minha no overview, **não** decidida.
+  de verdade**; divergência → o plano ganha. ~~Status só no `_TODO.md`. Ordem sequencial; trilhas = 📝 não decidida.~~
+  ⚠ Superado no mesmo dia pelo ➕ abaixo: status em `execucao/TODOS.md`; execução por trilhas.
   ⚠ Não fecha a D-C9: aquela é sobre o plano de 16/09 (v2.0).
+  ➕ **Execução por trilhas decidida pelo Rodrigo (22/09, noite):** *"create different tracks [...] find any phases
+  or tasks that do not have a dependency on each other"* — a proposta 📝 do overview (trilhas A = T2→T5 e B = T6→T8
+  depois da T1) passa a ser o modo de execução. Regras: `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md`.
 
 - **D-C15 · Como a frente 2 é revisada e executada.** Rodrigo, 22/09: *"2 rodadas de adversarial review e
   depois vamos parar e começar a implementação em uma nova sessão com contexto zerado."* Feito: o plano

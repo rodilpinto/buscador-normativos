@@ -8,7 +8,7 @@ here.
 
 Every public function degrades gracefully when no API key is configured:
 - expand_topic_to_keywords returns []
-- score_relevance returns keyword-based heuristic scores or [0.5, ...]
+- score_relevance_com_origem returns (nota, origem): heuristica sem LLM (ou (0.5, "fallback_erro") sem keywords); score_relevance e o wrapper que descarta a origem
 - categorize_results returns ["Não categorizado", ...]
 
 No function in this module ever raises an unhandled exception.
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 import time
@@ -341,11 +342,11 @@ Gere entre 15 e 30 palavras-chave.'''
     return keywords
 
 
-def score_relevance(
+def score_relevance_com_origem(
     topic: str,
     results: list[dict],
     keywords: Optional[list[str]] = None,
-) -> list[float]:
+) -> list[tuple[float, str]]:
     """Score how relevant each search result is to the research topic.
 
     Processes results in batches of 20 to stay within token limits. When the
@@ -357,7 +358,12 @@ def score_relevance(
         keywords: Optional list of search keywords for the fallback heuristic.
 
     Returns:
-        List of float scores in [0.0, 1.0], same length and order as results.
+        Lista de (nota, origem), mesma ordem dos results. origem e um de
+        models.ORIGENS_RELEVANCIA: "modelo" quando o LLM deu a nota;
+        "heuristica" quando nao ha LLM e ha keywords; "fallback_erro" quando
+        o LLM falhou (lote vazio, tamanho errado, valor nao numerico) ou nao
+        ha nem LLM nem keywords. Antes, esses tres casos davam 0.5 sem marca.
+        Notas em [0.0, 1.0]; mesmo tamanho que results.
     """
     topic = (topic or "")[:500].strip()
 
@@ -366,15 +372,12 @@ def score_relevance(
 
     if not is_available():
         if keywords:
-            logger.info("Gemini unavailable — using keyword heuristic for relevance.")
-            return [
-                _keyword_relevance(keywords, r.get("ementa", ""))
-                for r in results
-            ]
-        logger.info("Gemini unavailable and no keywords — returning default scores.")
-        return [0.5] * len(results)
+            logger.info("LLM indisponivel — heuristica por palavras-chave.")
+            return [(_keyword_relevance(keywords, r.get("ementa", "")), "heuristica") for r in results]
+        logger.info("LLM indisponivel e sem keywords — 0.5 rotulado como fallback_erro.")
+        return [(0.5, "fallback_erro")] * len(results)
 
-    all_scores: list[float] = []
+    all_scores: list[tuple[float, str]] = []
     batches = _chunk_list(results, BATCH_SIZE)
 
     for batch_idx, batch in enumerate(batches):
@@ -405,7 +408,7 @@ Exemplo: [0.9, 0.3, 0.7, 0.1]'''
         text = _generate(prompt, temperature=0.0, max_tokens=512)
         if not text:
             logger.warning("Gemini returned empty response for relevance batch %d.", batch_idx)
-            all_scores.extend([0.5] * len(batch))
+            all_scores.extend([(0.5, "fallback_erro")] * len(batch))
             continue
 
         parsed = _parse_json_array(text)
@@ -413,11 +416,16 @@ Exemplo: [0.9, 0.3, 0.7, 0.1]'''
             batch_scores = []
             for val in parsed:
                 try:
+                    # json.loads aceita true/false, NaN e Infinity: lixo do modelo nao pode sair rotulado como nota do modelo.
+                    if isinstance(val, bool):
+                        raise TypeError("bool nao e nota")
                     score = float(val)
+                    if not math.isfinite(score):
+                        raise ValueError("nota nao finita")
                     score = max(0.0, min(1.0, score))
+                    batch_scores.append((score, "modelo"))
                 except (TypeError, ValueError):
-                    score = 0.5
-                batch_scores.append(score)
+                    batch_scores.append((0.5, "fallback_erro"))
             all_scores.extend(batch_scores)
         else:
             logger.warning(
@@ -425,13 +433,22 @@ Exemplo: [0.9, 0.3, 0.7, 0.1]'''
                 batch_idx, len(batch),
                 len(parsed) if parsed else "None",
             )
-            all_scores.extend([0.5] * len(batch))
+            all_scores.extend([(0.5, "fallback_erro")] * len(batch))
 
         # Rate limiting for large result sets (>200 items = >10 batches)
         if len(batches) > 10 and batch_idx < len(batches) - 1:
             time.sleep(4.0)
 
     return all_scores
+
+
+def score_relevance(
+    topic: str,
+    results: list[dict],
+    keywords: Optional[list[str]] = None,
+) -> list[float]:
+    """Compat: so as notas. Ver score_relevance_com_origem para a procedencia."""
+    return [nota for nota, _ in score_relevance_com_origem(topic, results, keywords)]
 
 
 def categorize_results(topic: str, results: list[dict]) -> list[str]:

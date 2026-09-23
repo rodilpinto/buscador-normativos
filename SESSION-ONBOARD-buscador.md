@@ -1,7 +1,7 @@
 ---
 title: Buscador de Base Normativa — state snapshot
 maintained_by: sessões do Claude Code; humanos podem editar
-last_updated: 2026-09-22
+last_updated: 2026-09-23
 related: [_TODO.md, _DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, decisions/DECISIONS-LOG.md, docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md, docs/superpowers/plans/2026-09-16-consolidacao-fase1.md]
 ---
 
@@ -19,27 +19,31 @@ palavras-chave → busca → **triagem em poucas decisões** → download → or
 pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
 board de 16/09 (decisão D-C2).
 
-## 2. Estado na última pausa (2026-09-22, fim do dia)
+## 2. Estado na última pausa (2026-09-23, checkpoint da fase 3 da frente 2)
 
 🟢 **Frente 1 da v1.x fechada** (T3 merge → T1 golden-master → T2 runner). O código de A vive em
 `levantamento-normativos/` **neste repo**, com história preservada; **repo A privado e arquivado**.
-Nenhuma linha de produção mudou. Contagem atual de testes: `BASELINE` em `tools/run_all_tests.py`.
+Nenhuma linha de produção mudou **na frente 1** (a frente 2 muda — ver abaixo). Contagem atual de testes: `BASELINE` em `tools/run_all_tests.py`.
 
 🟢 **Noite de 22/09 — app na nuvem funcional:** `https://buscador-normativos.streamlit.app/` (privado), IA gerando
 palavras-chave (chave `nuati.secin`, modelo `gemini-3.5-flash-lite`). Ponto de retorno: tag **`v1.0.1`**. A nuvem
 segue a branch **`deploy`** (congelada em `v1.0.1`); o trabalho segue em `master`. Detalhe em §4 e §8.
 
-🟡 **Frente 2 (honestidade das fontes): spec e plano v4 prontos, revisados em 3 rodadas adversariais,
-zero código.** É a próxima. Tudo está dobrado no corpo do plano — **não há seção de emendas a consultar**.
+▶ **Frente 2 (honestidade das fontes) EM EXECUÇÃO desde 22/09 (noite), por agentes.** Plano v4 dividido em
+`spec/frente2-honestidade-fontes/` (D-C16). **Status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`
+(SSOT)**; regras do orquestrador e trilhas: `execucao/CONTEXTO.md`; briefs dos agentes: `execucao/BRIEFS.md`.
+✅ **Fase 1 (T1) em `master`.** ✅ **Trilha B inteira (T6, T7, T8) em `master`** desde `9e259ca` → **fase 3 fechada**;
+a T8 entrou junto (a fase 4 fecha com a T9). ▶ **Trilha A** (T2→T5) no worktree `../bn-trilha-a`, branch
+`frente2/trilha-a`: T2 e T3 fechadas no ciclo; T4 em teste — ver "Trabalho em voo" em §6. O worktree `../bn-trilha-b`
+fica até o fim (guarda os screenshots de evidência, não versionados); a branch dele já está em `master`.
 
-**Cadeia desta sessão** (ordem do `git log`): `dc99d73` → `4f36080` (T3) → `97e61cc` → `d054d5b` (T1) →
-`e18dd4b` (T2) → `b489d00`/`5c4718a` (spec) → `b1a6d3c` (plano v1) → `1e24933` (v2) → `407b5a1`/`f55488c`
-(repo A, ledgers) → `46cdb0e` (v3) → `02dc620`/`a457e84` (v4) → `eec2d44` (checkpoint) → commit dos consertos
-do dogfood.
-⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou este arquivo** — a cadeia
-real termina em `git log --oneline -3`.
+**Cadeia da sessão de 22–23/09:** rode `git log --oneline --reverse 1c063ea..HEAD` (é longa e cresce a cada task;
+não é mais restatada aqui). Marcos: `da543be` T1 · `a6de0af` checkpoint fase 1 · `9e259ca` merge da trilha B.
+Sessões anteriores: `git log`. ⚠ **O SHA mais novo listado aqui está SEMPRE um passo atrás do commit que gravou
+este arquivo** — a cadeia real termina em `git log --oneline -3`. ⚠ Commits das trilhas vivem nas branches
+`frente2/trilha-*` até o merge.
 
-**Working tree:** limpo na pausa; `master` = `origin/master`. Remoto `levantamento` (repo A local) segue
+**Working tree (`master`):** limpo no checkpoint; `master` = `origin/master`. Remoto `levantamento` (repo A local) segue
 configurado; A está arquivado no GitHub. A tag `levantamento-v1-streamlit` existe aqui **e** no remoto de B.
 
 **Ferramentas:** `python tools/run_all_tests.py` (≈9 min — as suítes LIVE batem em fontes quebradas) e
@@ -93,26 +97,36 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 
 ## 6. Próximo movimento
 
-▶ **Frente 2 EM EXECUÇÃO (22/09):** ler `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md` e `TODOS.md`
-(SSOT) **antes de tudo** — orquestrador não escreve código; trilhas A/B em worktrees. O texto abaixo é o plano de partida.
+▶ **Frente 2 EM EXECUÇÃO.** Ler `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md` e `TODOS.md` (SSOT)
+**antes de tudo**. Regra do Rodrigo (22/09): **o orquestrador não escreve código** — despacha, por task, coder
+(implementa) → coder (testa + e2e Playwright) → code-reviewer → o mesmo coder aplica o review e documenta em
+`spec/frente2-honestidade-fontes/implementacao/NN-*.md`; `/checkpoint` a cada fase; no fim, reviewers de várias
+perspectivas, depois a T10. Briefs prontos em `execucao/BRIEFS.md`.
 
-**Executar o plano v4 da frente 2, a partir da T1**, em sessão nova. Primeiro passo agêntico, sem
-depender de ninguém: abrir `spec/frente2-honestidade-fontes/00-overview.md` (fases, dependências, protocolo),
-dar ao subagente **`tasks/01-vocabulario-honestidade.md` + `reference/global-constraints.md`** (split verbatim
-do plano, 22/09, D-C16 — o plano segue fonte de verdade), e despachar a T1
-(`superpowers:subagent-driven-development`), com o gate por task: `python tools/run_all_tests.py` verde
-**e** `python tools/golden_master.py comparar` OK **e** push. ⚠ A regra do plano "se o observado divergir,
-parar" vale para a diferença entre o **bloco de testes** e o observado — contar `def test_` antes de
-suspeitar do código.
+**Trabalho em voo no checkpoint da fase 3 (23/09):** trilha A — testador da **T4** rodando em `../bn-trilha-a`
+(o coder da trilha fica disponível para o review/doc da T4 e depois a T5). O passo exato de cada task está em
+`execucao/TODOS.md`; os vereditos já recebidos em `execucao/revisoes/T{N}.md`. **Onde o resultado cai:** commits na branch da trilha (`git -C ../bn-trilha-a log
+--oneline master..` / idem `bn-trilha-b`). **Se a sessão morreu com eles no meio:** `git -C ../bn-trilha-X status`
+— árvore suja = task pela metade: despachar um coder novo com o brief 1 de `BRIEFS.md` mandando **conferir o
+estado contra os steps da task e continuar** (não recomeçar); árvore limpa com commit = seguir para o brief 2
+(teste). Worktrees criados com `git worktree add -b frente2/trilha-X ../bn-trilha-X master`.
+**Casos do trabalho em voo:** árvore limpa sem commit = task nem começou → brief 1; commit + árvore suja = fix/doc
+pela metade → brief 4 com `execucao/revisoes/T{N}.md`; na dúvida, `git -C <wt> log -1 --stat` e o `TODOS.md` dizem o passo.
+**Próximo passo agêntico:** fechar o ciclo da T4 e da T5 (briefs 2 → 3 → 4); então a trilha A faz `git merge
+origin/master` na própria branch — ⚠ **conflito esperado em `tools/run_all_tests.py`** (`BASELINE`: a trilha B mudou
+`test_llm_phase3`/`test_phase4`, a A mudou `SUITES_PYTEST` e a chave da suíte nova), resolvido por coder mantendo os
+dois lados; runner + golden no merge; fast-forward de `master` → `/checkpoint` fase 2 → T9 em `master`.
 
-Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy). (D-C10.1 fechada em 22/09:
-tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a T1.
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy), 🔴 **D-C17** (dedup fuzzy funde acórdãos
+distintos — não trava a execução, mas é perda silenciosa até o Rodrigo decidir). (D-C10.1 fechada em 22/09:
+tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do
+Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a frente 2.
 
 ## 7. Ponteiros
 
 | Doc | Papel |
 |---|---|
-| `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (próxima) |
+| `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md` | **spec da frente 2** (em execução) |
 | `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` | **plano v4 da frente 2** — tudo dobrado no corpo; ordem = numeração; **fonte de verdade** |
 | `spec/frente2-honestidade-fontes/` | **split do plano v4** (22/09, D-C16): `00-overview.md` (5 fases, dependências) + `tasks/01..10` (verbatim + critérios de aceite) + `reference/` — é o que o subagente lê |
 | `docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md` | spec da consolidação (arquitetura; vale) |

@@ -17,8 +17,10 @@ Duas saidas sao congeladas, escolhidas por serem deterministicas de verdade:
    aciona a primeira congelaria 1/3 do modulo e daria verde sobre o resto.
    Verificado em 2026-09-22: as 3 disparam, uma cada, 14 -> 11 unicos.
 
-2. **planilha** — hash dos VALORES DAS CELULAS, nao dos bytes do arquivo.
-   Ver `_sha_planilha`, que explica por que os bytes nao servem.
+2. **planilha** — hash dos VALORES DAS CELULAS, nao dos bytes do arquivo, de
+   TODAS as abas ('Normativos' e 'Diagnostico da busca', esta alimentada por
+   `diagnostico_fixo.json`). Ver `_sha_planilha`, que explica por que os bytes
+   nao servem e o que obriga a recongelar.
 """
 from __future__ import annotations
 
@@ -62,26 +64,47 @@ def _saida_dedup(itens: list) -> list[dict]:
     )
 
 
+def _carregar_diagnostico() -> list:
+    from models import KeywordStatus
+    dados = json.loads((GOLDEN / "diagnostico_fixo.json").read_text(encoding="utf-8"))
+    return [KeywordStatus(**d) for d in dados]
+
+
 def _sha_planilha(itens: list) -> str:
-    """Hash dos VALORES das celulas, nao dos bytes do arquivo.
+    """Hash dos VALORES das celulas, nao dos bytes do arquivo — de TODAS as abas.
 
     .xlsx e um ZIP: o date_time de cada membro e o docProps/core.xml carregam o
     relogio da geracao, entao o sha dos bytes crus muda a CADA execucao, com
-    entrada identica. Medido por tres revisores independentes em 2026-09-16.
+    entrada identica (medido por tres revisores independentes em 2026-09-16).
     Congelar bytes faria o comparador imprimir DIVERGIU na sequencia imediata,
     sem nada ter mudado — e o risco pior nao e o falso vermelho, e o executor
     apagar a prova para destravar a task.
 
     load_workbook e a mesma tecnica que test_phase4.py ja usa.
 
-    A funcao publica e `generate_excel(results, topic)` (excel_export.py:274) —
-    e o que app.py e test_phase4.py importam.
+    Hasheia TODAS as abas (M7 da rodada de 22/09): a aba 'Diagnostico da busca'
+    e o registro de que a fonte nao respondeu; sem ela no hash, uma regressao
+    ali passaria com 'golden-master OK'. O diagnostico fixo cobre: error com
+    motivo e detalhe; ok parcial; empty; nao_consultada; error retentado sem
+    detalhe (so error_message). `quando` e fixo para o hash ser estavel.
+
+    ⚠ O hash da planilha depende de models.redigir e rotulo_status (aba de
+    diagnostico), de excel_export.ORIGEM_LABEL (aba Normativos), de VAZIO e do
+    titulo com `quando` fixo (rodada 3): mudanca INTENCIONAL em qualquer um
+    deles = recongelar com justificativa, nao regressao do dedup/export.
+
+    A funcao publica e generate_excel(results, topic, diagnostico=None, quando=None)
+    (excel_export.py) — e o que app.py e test_phase4.py usam.
     """
     from excel_export import generate_excel
     from openpyxl import load_workbook
 
-    ws = load_workbook(generate_excel(itens, topic="golden-master")).active
-    linhas = [tuple(c.value for c in linha) for linha in ws.iter_rows()]
+    wb = load_workbook(generate_excel(itens, topic="golden-master",
+                                      diagnostico=_carregar_diagnostico(), quando="22/09/2026 00:00"))
+    linhas = []
+    for ws in wb.worksheets:
+        linhas.append(("__aba__", ws.title))
+        linhas.extend(tuple(c.value for c in linha) for linha in ws.iter_rows())
     return hashlib.sha256(repr(linhas).encode("utf-8")).hexdigest()
 
 

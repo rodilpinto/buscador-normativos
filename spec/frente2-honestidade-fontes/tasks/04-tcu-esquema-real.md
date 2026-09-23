@@ -1,13 +1,13 @@
 ---
 task: 4
 fase: "Fase 2 — Fontes honestas"
-plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 1768-1873)
+plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 1768-1881)
 reference: spec/frente2-honestidade-fontes/reference/global-constraints.md
 depends_on: [T3]
 ---
 
-> Extraído **verbatim** do plano v4 (linhas 1768-1873). **O plano segue fonte de verdade**:
-> divergência entre o plano e esta cópia → o plano ganha. Status só no `_TODO.md` — **não marque
+> Extraído **verbatim** do plano v4 (linhas 1768-1881). **O plano segue fonte de verdade**:
+> divergência entre o plano e esta cópia → o plano ganha. Status em `../execucao/TODOS.md` — **não marque
 > os checkboxes aqui**. Antes de começar, ler `../reference/global-constraints.md` (Global
 > Constraints, Estrutura de arquivos, BASELINE por task). Ordem e dependências: `../00-overview.md`.
 
@@ -44,6 +44,14 @@ depends_on: [T3]
 ✅ **Limite medido pela rodada 2 (ao vivo):** `sumario` vem **nulo em 20/20** acórdãos das sessões mais recentes e em ~40% da janela de 500 registros; `titulo` é só "ACÓRDÃO N/AAAA ATA X/AAAA - PLENÁRIO". Ou seja: depois desta task, casam os acórdãos **que a API já preencheu** — a contagem "N sem texto" do detalhe (T3) é o que diz isso ao usuário. Não é "voltaram a casar"; é "deixaram de ser invisíveis".
 
 📝 **Mapeamento** (literal, sem parafrasear): `nome ← titulo`; `numero ← f"{numeroAcordao}/{anoAcordao}"`; `data ← dataSessao` (⚠ R3: a precedência **inverte** — antes era `dataAta or dataSessao`; a API real só tem `dataSessao`; e o vazio continua `""`, **não** `None`, porque `data` entra no `id` e `None` mudaria o id de todo acórdão sem data); `orgao_emissor ← f"TCU - {colegiado}"`; `ementa ← sumario`; `link ← urlAcordao` (fallback `_build_acordao_link`); `situacao ← situacao` (a API traz `"OFICIALIZADO"` em 100% dos medidos — vai literal; a docstring de `NormativoResult.situacao` passa a admitir "o valor literal da fonte"). O filtro procura em `sumario` **e** `titulo`. Chaves antigas continuam aceitas como fallback.
+
+> ⚠ **23/09 — EXECUÇÃO (teste da T4, commit `bdd89a1` na branch `frente2/trilha-a`):** `numero ← f"{numeroAcordao}/{anoAcordao}"`
+> **colidia**: 1ª e 2ª Câmara numeram em séries próprias e se reúnem no mesmo dia → mesmo `id`, e o segundo acórdão sumia
+> (212 colisões de id e ~1.175 fusões no dedup `tipo_numero`, medidos em 3.200 acórdãos reais). O executado é
+> `numero ← f"{numeroAcordao}/{anoAcordao}-TCU-{colegiado}"` quando há colegiado (forma de citação do TCU, campos literais);
+> o assert do Step 1 (`r.numero == …`) e o bloco `_map_acordao` do Step 3 abaixo foram ajustados de acordo. Registro:
+> `spec/frente2-honestidade-fontes/execucao/revisoes/T4.md` e a nota "Complemento de 23/09" na spec §3.7. O texto abaixo
+> fica como estava (histórico do plano).
 
 **Files:** `tcu_searcher.py` (`_map_acordao`, `_texto_do_acordao`); `models.py` (docstring de `situacao`); `tests/test_fontes_indisponiveis.py`; `tools/run_all_tests.py`; spec §3.7.
 

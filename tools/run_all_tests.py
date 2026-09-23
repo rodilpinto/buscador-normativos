@@ -53,9 +53,9 @@ PADRAO_PYTEST = re.compile(r"(\d+) passed")
 # que acrescenta o teste — o aviso de crescimento existe para lembrar disso.
 BASELINE = {
     "test_searchers.py": 13,
-    "test_llm_phase3.py": 53,
+    "test_llm_phase3.py": 64,
     "test_comprehensive.py": 98,
-    "test_phase4.py": 58,
+    "test_phase4.py": 71,
     "tests/test_fontes_indisponiveis.py": 45,   # T2: 16 + 1 da review; T3: +9 + 3 da review; T4: +3, o xfail vira passed, +2 do tester (colegiados) +1 da review (M5); T5: +8 + 1 (log sem chave do CSE)
 }
 

@@ -1,13 +1,13 @@
 ---
 task: 5
 fase: "Fase 2 — Fontes honestas"
-plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 1877-2194)
+plan: docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md (linhas 1885-2202)
 reference: spec/frente2-honestidade-fontes/reference/global-constraints.md
 depends_on: [T1, T2]
 ---
 
-> Extraído **verbatim** do plano v4 (linhas 1877-2194). **O plano segue fonte de verdade**:
-> divergência entre o plano e esta cópia → o plano ganha. Status só no `_TODO.md` — **não marque
+> Extraído **verbatim** do plano v4 (linhas 1885-2202). **O plano segue fonte de verdade**:
+> divergência entre o plano e esta cópia → o plano ganha. Status em `../execucao/TODOS.md` — **não marque
 > os checkboxes aqui**. Antes de começar, ler `../reference/global-constraints.md` (Global
 > Constraints, Estrutura de arquivos, BASELINE por task). Ordem e dependências: `../00-overview.md`.
 

@@ -1,6 +1,6 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-09-22
+last_audit: 2026-09-23
 related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -9,7 +9,8 @@ related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SES
 > **Frente ativa: frente 2** — conteúdo das tasks em `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`
 > (tudo dobrado no corpo; ordem = numeração). O plano de 16/09 só volta na v2.0 (T4/T7/T8) e aí valem
 > as três seções de emendas dele (precedência **C > B > A > corpo**, marcadores `⛔` no corpo).
-> **Status**: aqui, e só aqui.
+> **Status**: aqui, e só aqui — **exceto a frente 2 em execução**, cujo status por task vive em
+> `spec/frente2-honestidade-fontes/execucao/TODOS.md` (SSOT da execução, 22/09).
 
 ## ⛔ Superado — o plano de 16 tasks NÃO vale mais
 
@@ -69,15 +70,15 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 
 - [x] **Frente 1 · rede de proteção** — ✅ T3 `4f36080` · T1 `d054d5b` · T2 `e18dd4b` (22/09). Baseline atual:
       `BASELINE` em `tools/run_all_tests.py` (**única casa do número**; não restatar aqui).
-- [ ] **Frente 2 · honestidade das fontes** — 🟡 **spec e plano prontos, zero código.**
+- [ ] **Frente 2 · honestidade das fontes** — ▶ **em execução por agentes** (fases e status por task: `spec/frente2-honestidade-fontes/execucao/TODOS.md`).
       Spec: `docs/superpowers/specs/2026-09-22-frente2-honestidade-fontes-design.md`.
       Plano **v4** (3 rodadas adversariais, tudo dobrado no corpo — não há seção de emendas a consultar):
       `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md`, 10 tasks, TDD, BASELINE previsto
-      por task na tabela do próprio plano. ⚠ Ordem de execução = numeração (T1…T10). Executar em **sessão
-      nova**, subagente por task (`superpowers:subagent-driven-development`), runner + golden como gate.
+      por task na tabela do próprio plano. ⚠ Ordem = numeração no plano; na execução, trilhas A (T2–T5) e B (T6–T8) em
+      paralelo depois da T1, por decisão do Rodrigo de 22/09 (D-C16). Runner + golden como gate.
       ✅ **Split em arquivos por task (22/09, D-C16):** `spec/frente2-honestidade-fontes/` — `00-overview.md`
       (5 fases, grafo de dependências, protocolo por task), `tasks/01..10` (verbatim + "Depende de" + critérios de
-      aceite derivados do plano), `reference/`. O plano segue fonte de verdade; status só aqui.
+      aceite derivados do plano), `reference/`. O plano segue fonte de verdade.
       ▶ **Em execução desde 22/09.** Status por task da frente 2: **`spec/frente2-honestidade-fontes/execucao/TODOS.md`**
       (SSOT da execução — aqui não se marca mais nada da frente 2). Contexto/regras: `execucao/CONTEXTO.md`.
 - [ ] **Frente 5 · LM local** — T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
@@ -87,7 +88,10 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       endpoint **OpenAI-compatível** (`https://generativelanguage.googleapis.com/v1beta/openai/`, informado pelo
       Rodrigo junto com a chave `nuati.secin`) — um backend OpenAI-compatível só, trocando `base_url`+chave, poderia
       servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner. (d) a chave é lida **uma vez, no import** de
-      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (e) `_generate` engole o erro da API
+      `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (g) achado na T5 (23/09): com o logger `urllib3` em DEBUG, a linha da requisição do CSE sai com `key=AIza…` (o app fixa
+      WARNING em `app.py:38`; vaza só se alguém ligar DEBUG) — filtro de log com `redigir`. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
+      `TypeError` em `score_relevance_com_origem` (`gemini_client.py:384`) e `categorize_results` (`:476`) — `(r.get('ementa') or '')`.
+      (e) `_generate` engole o erro da API
       (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
 - [ ] **Frente 4 · explicabilidade** — F8 + F9; spec não escrita; depende do vocabulário da frente 2.
@@ -143,6 +147,19 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       fórmula na aba `Normativos`; dublar `test_lexml_cql_injection_sanitization` (faz rede real); na tela, agrupar
       o detalhe do TCU por fonte (é idêntico por keyword); runner "sem LLM" de verdade — `st.secrets` vence a
       variável vazia (frente 5); reduzir os ~390s dos testes LIVE (📝 `BUSCADOR_SKIP_LIVE=1`, não decidido).
+- [ ] **Sobras achadas na EXECUÇÃO da frente 2** (testadores/reviewers; detalhe em
+      `spec/frente2-honestidade-fontes/execucao/revisoes/T*.md` e `INSIGHTS.md`):
+      - (T2, Step 11b do plano) `test_lexml_cql_injection_sanitization` em `test_comprehensive.py` faz **rede real** — dublar.
+      - (T2 M2) LexML: WAF/HTML num URL já cacheado (`_sru_url`) não entra em `_urls_mortos` nem tenta fallback.
+      - (T2 obs. 2) keyword que sanitiza para vazio nunca é enviada mas sai `empty` — tratar em `search()`.
+      - (T2 obs. 3 + T5) keywords além de `MAX_RETRIES` ou cortadas no retry ficam sem nota no detalhe — LexML e Google.
+      - (T5) ddgs devolveu lista vazia depois de HTTP 202 do DDG (COBIT, ISO 27001 → "sem resultado"): possível mascaramento no ddgs — investigar.
+      - (T3) TCU: `ChunkedEncodingError`/`ContentDecodingError` viram `erro_interno` sem retry (é erro da fonte).
+      - (T3) TCU: status `nao_consultada`/`erro_interno` por keyword sem `parcial` nem o resumo dos endpoints.
+      - (T3) TCU: `max_results<=0` ainda baixa todas as páginas (≈128s por busca; metade do tempo do `test_searchers`).
+      - (T3 d) `redigir`: o regex `[^&\s]+` come `;`/`,` depois do segredo → `[^&\s;,)'"]+` + teste.
+      - (T1) 📝 hardening de `redigir`: marcador de corte conta `len - 2*metade`; guarda para `limite < len(marca)`;
+        validar `motivo` em `__setattr__`; redigir `key%3D…`/`"key": "…"` (frente 5).
 - [ ] Registrar este repo no `MEMORY.md` do `projetos-nuati` como solução nova.
       ⛔ **Bloqueado em autorização** — é auto-memória; a regra `memory-write-policy` exige que o
       Rodrigo autorize antes.
