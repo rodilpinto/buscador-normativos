@@ -37,8 +37,9 @@ Não implementa a feature; testa o que o Coder A entregou em `{DIR}`:
    Runner em **foreground** com `timeout 900 python -u tools/run_all_tests.py` (o runner leva ~9,5 min: 590s é curto demais) (em background travou uma vez, 23/09);
    não rodar o runner e o e2e ao mesmo tempo.
 3. **E2E com Playwright** (Python, `p.chromium.launch(channel="chrome")` — navegadores do Playwright não estão
-   baixados). Subir o app: em `{DIR}/levantamento-normativos/`, `python -m streamlit run app.py --server.headless true
-   --server.port {PORTA}` em background; dirigir: "Inserir palavras-chave manualmente" → keywords → "Proximo >>" →
+   baixados). Subir o app: em `{DIR}/levantamento-normativos/`, `env -u GEMINI_API_KEY -u GOOGLE_API_KEY -u OPENAI_API_KEY python -m streamlit run app.py
+   --server.headless true --server.port {PORTA}` em background (⚠ as chaves de LLM estão DEFINIDAS no ambiente desta
+   máquina — sem o `env -u` o app chama o Gemini de verdade; `~/.claude/ENVIRONMENT.md`, 23/09); dirigir: "Inserir palavras-chave manualmente" → keywords → "Proximo >>" →
    "Iniciar Busca" → esperar "Passo 4 - " → screenshot em `{DIR}/tests/evidencia/` (não versionar) e **olhar**.
    Afirmar: o app sobe, a busca chega ao Passo 4 sem traceback, e o comportamento observável da task (o que a task
    muda e for visível na tela/planilha exportada/log). Derrubar o app no fim.
