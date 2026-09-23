@@ -110,6 +110,17 @@ def test_lexml_xml_truncado_e_resposta_ilegivel(monkeypatch):
     assert s.keyword_statuses[0].motivo == "resposta_ilegivel"
 
 
+def test_lexml_corpo_200_nao_html_nao_xml_e_ilegivel_com_url_no_detalhe(monkeypatch):
+    """Review da T2 (I1), ALEM do plano: 200 application/json nao e HTML (passa o
+    sniff) nem XML (falha no parse). O detalhe tem de levar a URL efetiva com a
+    query, senao nao da para reproduzir com curl (Global Constraints)."""
+    s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, '{"erro": "nao e SRU"}', "application/json"))
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo) == ("error", "resposta_ilegivel")
+    assert "| GET " in st.detalhe and "operation=searchRetrieve" in st.detalhe
+
+
 def test_lexml_sru_valido_continua_ok_mesmo_com_bom_e_content_type_estranho(monkeypatch):
     """M10: o sniff nao pode reprovar SRU valido por BOM ou content-type."""
     s, _ = _lexml_com(monkeypatch, lambda u, p: RespostaFake(200, "\ufeff" + SRU_VALIDO, "text/plain"))

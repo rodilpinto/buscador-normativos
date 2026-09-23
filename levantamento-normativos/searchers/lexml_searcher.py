@@ -17,15 +17,17 @@ from urllib.parse import urlencode
 
 import requests
 
-from models import KeywordStatus, NormativoResult
+from models import KeywordStatus, NormativoResult, redigir
 from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback
 
 logger = logging.getLogger(__name__)
 
 # SRU endpoint URLs. The primary URL is tried first; if it answers 404, a WAF
-# challenge or an unreadable body, the fallbacks are used in order (see
+# challenge or an HTML body, the fallbacks are used in order (see
 # LexMLSearcher._fetch_sru; frente 2, 2026-09-23 — connection errors no longer
-# fall back, they are declared as motivo="conexao").
+# fall back, they are declared as motivo="conexao"). A non-HTML body that does
+# not parse as SRU fails in _parse_sru_response (resposta_ilegivel), WITHOUT
+# fallback.
 PRIMARY_SRU_URL = "https://www.lexml.gov.br/busca/SRU"
 FALLBACK_SRU_URL = "https://www.lexml.gov.br/sru/SRU"
 FALLBACK_SRU_URL_2 = "https://www.lexml.gov.br/srw/SRU"
@@ -84,6 +86,10 @@ class LexMLSearcher(BaseSearcher):
         # palavras-chave: parte dos ~390s do test_searchers.py em 22/09).
         self._urls_mortos: dict[str, FonteIndisponivel] = {}
         self._keyword_atual: str = ""   # para o detalhe dizer de qual keyword e a causa cacheada
+        # URL efetiva (com query) do ultimo corpo devolvido por _try_fetch: se o
+        # parse falhar, o detalhe precisa dela para ser reproduzivel com curl
+        # (review da T2, I1: 200 application/json virava resposta_ilegivel sem URL).
+        self._ultima_url: str = ""
 
     def source_name(self) -> str:
         return "LexML Brasil"
@@ -320,7 +326,14 @@ class LexMLSearcher(BaseSearcher):
                 xml_text = self._fetch_sru(params)
                 # R3-H3: o parse fica DENTRO do try — XML ilegivel na pagina 2 e
                 # falha de paginacao (parcial), nao erro fatal que joga fora a pagina 1
-                records, total_count = self._parse_sru_response(xml_text, keyword)
+                try:
+                    records, total_count = self._parse_sru_response(xml_text, keyword)
+                except FonteIndisponivel as e:
+                    # I1 (review da T2): o parse nao conhece a URL — anexa-a por ultimo
+                    # (R2-B1) e segue para o except de fora (pagina 2 continua parcial).
+                    # redigir() aqui porque FonteIndisponivel so redige no __init__.
+                    e.detalhe = redigir(f"{e.detalhe} | GET {self._ultima_url}")
+                    raise
             except FonteIndisponivel as e:
                 if not getattr(e, "keyword", ""):
                     e.keyword = keyword          # de qual keyword e esta causa (cache)
@@ -355,9 +368,10 @@ class LexMLSearcher(BaseSearcher):
         """Send an SRU GET request, with fallback URL logic.
 
         On the first call, tries PRIMARY_SRU_URL. If it gets a 404, a WAF
-        challenge or an unreadable body, tries FALLBACK_SRU_URL, then
-        FALLBACK_SRU_URL_2. The working URL is cached in self._sru_url for
-        subsequent calls. Timeout/connection/5xx/4xx are errors of THIS
+        challenge or an HTML body, tries FALLBACK_SRU_URL, then
+        FALLBACK_SRU_URL_2. A non-HTML body that does not parse as SRU is NOT
+        a fallback case: it is returned and fails in _parse_sru_response.
+        The working URL is cached in self._sru_url for subsequent calls. Timeout/connection/5xx/4xx are errors of THIS
         request, not of the URL: they propagate and do not skip to the next
         URL (frente 2, 2026-09-23 — before, a connection error also fell back).
 
@@ -367,6 +381,7 @@ class LexMLSearcher(BaseSearcher):
         Returns:
             Response body as string. Raises FonteIndisponivel when no URL works; failed URLs are cached in self._urls_mortos for this search.
         """
+        # If we already know which URL works, use it directly
         if self._sru_url:
             result = self._try_fetch(self._sru_url, params)
             if result is not None:
@@ -480,6 +495,7 @@ class LexMLSearcher(BaseSearcher):
             if sc >= 400:
                 raise FonteIndisponivel("http_4xx", f"HTTP {sc} | GET {efetiva}")
             self._exigir_sru(response, efetiva)
+            self._ultima_url = efetiva   # I1: para o detalhe de um parse que falhe
             return response.text
         return None  # inalcancavel: o laco sempre devolve ou levanta
 
