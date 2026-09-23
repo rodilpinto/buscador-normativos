@@ -115,3 +115,12 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
 - Lições de MÁQUINA (`sed -i` convertendo CRLF→LF sem aplicar; suspensão inflando `time.monotonic`) foram para
   `~/.claude/ENVIRONMENT.md` na hora — tinham ficado paradas "para a T10", contra a regra environment-lessons-go-global.
 - Achado adiado "→ T9" (escape HTML duplo) não estava nos itens carregados: agora está, e a regra de adiamento também.
+
+## T4 · TCU esquema real (trilha A, em andamento)
+
+- Impl: ver-falhar 4 failed como previsto; 33 passed; ao vivo "turismo" passou de 0 para 1 acórdão, **literal**.
+- ❌ **Testador reprovou por um defeito que nenhuma das 3 rodadas adversariais nem o plano viram:** acórdãos da 1ª e da
+  2ª Câmara têm séries de numeração próprias e sessões no mesmo dia → mesmo `id` (`tipo|numero|data`) → o segundo
+  **some em silêncio** (212 colisões em 3.200 ao vivo). Só apareceu porque o testador buscou **muitas** páginas ao vivo:
+  a janela de 500 do teste tinha 0 colisões. Lição: **identidade de registro se testa contra o volume real, não contra
+  a fixture** — duas amostras reais não provam unicidade. O dedup (`tipo_numero`) fundiria os dois também.

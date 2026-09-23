@@ -13,6 +13,33 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
 
+## 🔴 D-C17 — O dedup fuzzy funde acórdãos DISTINTOS do TCU: consertar nesta frente ou depois?
+
+- **Onde aparece:** 23/09, re-teste da T4 da frente 2 (`spec/frente2-honestidade-fontes/execucao/revisoes/T4.md`).
+- **Fato medido:** depois da T4 os acórdãos passam a ter o `sumario` literal como ementa, e o passo **fuzzy** do dedup
+  (`deduplicator.py:251-270`, razão ≥ 0,85, só roda com ≤ 1.000 itens) compara ementas: numa amostra real de 900 acórdãos
+  distintos, **26 somem fundidos em outros** (ex.: "ACÓRDÃO 2344/2026 ATA 33/2026 - PLENÁRIO" fundido no 2225/2026 — os dois
+  sumários começam "TOMADA DE CONTAS ESPECIAL. FRAUDE NA CONCESSÃO DE BENEFÍCIOS PREVIDENCIÁRIOS…"). Repro:
+  `scratchpad/fuzzy.py` do testador (fora do repo — 📝 reproduzir com a fixture real se a decisão for consertar).
+  Antes da T4 isso não acontecia porque a ementa do acórdão vinha vazia (a fonte era cega).
+- **Por que é decisão sua:** a spec da frente 2 (§3.7) e o plano fixam **"sem mudar como ele deduplica"** e
+  `dedup_esperado.json` **nunca muda nesta frente**. Consertar o fuzzy é mudar o dedup.
+- **Trava:** nada da execução — a T4 segue, e as demais tasks não dependem disso. Mas enquanto não se decide, uma busca
+  com ≤ 1.000 itens pode **perder acórdãos em silêncio** (o oposto do que a frente promete).
+
+| Opção | Ganha | Perde / risco |
+|---|---|---|
+| **a** Consertar nesta frente: o fuzzy não funde dois itens que têm `numero` diferentes (📝 sugestão do testador) | fecha a perda silenciosa agora | muda o dedup contra a spec §3.7; precisa conferir se o golden (`dedup_esperado.json`) muda — se mudar, recongelar com justificativa |
+| **b** Registrar e consertar depois (frente própria, com golden) | respeita o escopo da frente 2 | a perda silenciosa fica no ar até lá; o relatório não avisa |
+| **c** Consertar depois, mas nesta frente **declarar** a fusão (ex.: o merge anota `found_by`/um contador de fundidos no diagnóstico) | nada some sem registro; dedup igual | é código novo fora do plano; a fusão errada continua acontecendo |
+
+📝 **Recomendação minha:** `a`, se o golden não mudar (o caso fuzzy do golden é de itens sem `numero` — a conferir antes);
+senão `c`. É exatamente a classe de defeito que a frente existe para matar.
+
+**Decisão tomada:** _(pendente)_
+
+---
+
 ## 🔴 D-C9 — Como consumir o plano da Fase 1: dobrar as emendas, construir como está, ou dividir em tasks?
 
 - **Onde aparece:** fim da sessão de 16/09, depois das 3 rodadas adversariais. **Não respondida.**

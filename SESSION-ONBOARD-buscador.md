@@ -117,7 +117,8 @@ origin/master` na própria branch — ⚠ **conflito esperado em `tools/run_all_
 `test_llm_phase3`/`test_phase4`, a A mudou `SUITES_PYTEST` e a chave da suíte nova), resolvido por coder mantendo os
 dois lados; runner + golden no merge; fast-forward de `master` → `/checkpoint` fase 2 → T9 em `master`.
 
-Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy). (D-C10.1 fechada em 22/09:
+Decisões abertas que **não** travam: D-C9 (só volta na v2.0), D-C14 (deploy), 🔴 **D-C17** (dedup fuzzy funde acórdãos
+distintos — não trava a execução, mas é perda silenciosa até o Rodrigo decidir). (D-C10.1 fechada em 22/09:
 tags só nos marcos.) ⛔ **Não avançar a branch `deploy`** durante a frente 2 — só no marco, com ok. Ações do
 Rodrigo pendentes: B-01 a B-06 (`BLOCKED-ON-RODRIGO.md`) — nenhuma trava a frente 2.
 
