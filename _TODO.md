@@ -78,8 +78,8 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       ✅ **Split em arquivos por task (22/09, D-C16):** `spec/frente2-honestidade-fontes/` — `00-overview.md`
       (5 fases, grafo de dependências, protocolo por task), `tasks/01..10` (verbatim + "Depende de" + critérios de
       aceite derivados do plano), `reference/`. O plano segue fonte de verdade; status só aqui.
-      - [ ] T1 vocabulário · [ ] T2 LexML · [ ] T3 TCU · [ ] T4 TCU esquema real · [ ] T5 Google
-      - [ ] T6 origem da nota · [ ] T7 `_merge` · [ ] T8 planilha (recongela golden) · [ ] T9 tela (V11) · [ ] T10 fechar
+      ▶ **Em execução desde 22/09.** Status por task da frente 2: **`spec/frente2-honestidade-fontes/execucao/TODOS.md`**
+      (SSOT da execução — aqui não se marca mais nada da frente 2). Contexto/regras: `execucao/CONTEXTO.md`.
 - [ ] **Frente 5 · LM local** — T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
       do conector do wiki-chat no `log.md` (22/09).
       ➕ **Insumos de 22/09 (noite):** (a) configuração **por ambiente** — nuvem Streamlit = Gemini (não alcança a

@@ -93,6 +93,9 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 
 ## 6. Próximo movimento
 
+▶ **Frente 2 EM EXECUÇÃO (22/09):** ler `spec/frente2-honestidade-fontes/execucao/CONTEXTO.md` e `TODOS.md`
+(SSOT) **antes de tudo** — orquestrador não escreve código; trilhas A/B em worktrees. O texto abaixo é o plano de partida.
+
 **Executar o plano v4 da frente 2, a partir da T1**, em sessão nova. Primeiro passo agêntico, sem
 depender de ninguém: abrir `spec/frente2-honestidade-fontes/00-overview.md` (fases, dependências, protocolo),
 dar ao subagente **`tasks/01-vocabulario-honestidade.md` + `reference/global-constraints.md`** (split verbatim
