@@ -14,13 +14,14 @@ import ipaddress
 import logging
 import os
 import socket
+from typing import Optional
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
-from models import KeywordStatus, NormativoResult
-from searchers.base import BaseSearcher, ProgressCallback
+from models import KeywordStatus, NormativoResult, redigir
+from searchers.base import BaseSearcher, FonteIndisponivel, ProgressCallback
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,7 @@ class GoogleSearcher(BaseSearcher):
 
     RATE_LIMIT_DELAY = 2.0
     RATE_LIMIT_JITTER = 0.5
+    SOURCE_ID = "google"
 
     def source_name(self) -> str:
         return "Google (Frameworks/Padroes)"
@@ -125,13 +127,13 @@ class GoogleSearcher(BaseSearcher):
     # Search backend implementations
     # ------------------------------------------------------------------
 
-    def _search_urls(self, keyword: str) -> tuple[list[dict], str]:
+    def _search_urls(self, keyword: str) -> tuple[list[dict], Optional[FonteIndisponivel]]:
         """Search for results matching the keyword.
 
         Returns:
-            Tuple of (results_list, error_message).
-            Each result is a dict with keys: url, title, snippet.
-            error_message is empty on success.
+            (results, erro). Each result is a dict with keys: url, title, snippet.
+            erro e None em sucesso (inclusive "sem resultado"); FonteIndisponivel
+            quando a fonte nao pode ser consultada (frente 2).
         """
         if _BACKEND == "cse":
             return self._search_cse_api(keyword)
@@ -140,9 +142,9 @@ class GoogleSearcher(BaseSearcher):
         elif _BACKEND == "scraping":
             return self._search_scraping(keyword)
         else:
-            return [], "Nenhum backend de busca disponivel. Instale 'ddgs': pip install ddgs"
+            return [], FonteIndisponivel("erro_interno", "Nenhum backend de busca disponivel. Instale 'ddgs': pip install ddgs")
 
-    def _search_ddgs(self, keyword: str) -> tuple[list[dict], str]:
+    def _search_ddgs(self, keyword: str) -> tuple[list[dict], Optional[FonteIndisponivel]]:
         """Search using DuckDuckGo (ddgs package).
 
         Reliable, free, no API keys, no blocking.
@@ -155,18 +157,18 @@ class GoogleSearcher(BaseSearcher):
 
         try:
             raw_results = list(DDGS().text(query, max_results=RESULTS_PER_QUERY))
-            results = []
-            for r in raw_results:
-                results.append({
-                    "url": r.get("href", ""),
-                    "title": r.get("title", ""),
-                    "snippet": r.get("body", ""),
-                })
-            return results, ""
         except Exception as e:
-            return [], f"DuckDuckGo: {e}"
+            from ddgs.exceptions import DDGSException, RatelimitException, TimeoutException
+            if isinstance(e, RatelimitException):          # subclasse de DDGSException: testar ANTES
+                return [], FonteIndisponivel("rate_limit", f"DuckDuckGo: {e}")
+            if isinstance(e, TimeoutException):
+                return [], FonteIndisponivel("timeout", f"DuckDuckGo: {e}")
+            if isinstance(e, DDGSException) and "no results" in str(e).lower():
+                return [], None   # M5: "No results found." e resultado legitimo, nao falha (ddgs 9.12, ddgs.py:215)
+            return [], FonteIndisponivel("erro_interno", f"DuckDuckGo: {type(e).__name__}: {e}")
+        return [{"url": r.get("href", ""), "title": r.get("title", ""), "snippet": r.get("body", "")} for r in raw_results], None
 
-    def _search_cse_api(self, keyword: str) -> tuple[list[dict], str]:
+    def _search_cse_api(self, keyword: str) -> tuple[list[dict], Optional[FonteIndisponivel]]:
         """Search using Google Custom Search JSON API."""
         params = {
             "key": _google_api_key,
@@ -178,41 +180,42 @@ class GoogleSearcher(BaseSearcher):
 
         try:
             response = requests.get(CSE_API_URL, params=params, timeout=CSE_TIMEOUT)
-
-            if response.status_code == 429:
-                return [], "Google CSE: cota diaria excedida (100 queries/dia no plano gratuito)"
-            if response.status_code == 403:
-                return [], "Google CSE: acesso negado (verifique GOOGLE_API_KEY e GOOGLE_CSE_ID)"
-
-            response.raise_for_status()
-            data = response.json()
-
-            results = []
-            for item in data.get("items", []):
-                results.append({
-                    "url": item.get("link", ""),
-                    "title": item.get("title", ""),
-                    "snippet": item.get("snippet", ""),
-                })
-            return results, ""
-
+            efetiva = getattr(response, "url", CSE_API_URL)   # redigida pelo KeywordStatus/FonteIndisponivel
+            sc = response.status_code
+            if sc == 429:
+                return [], FonteIndisponivel("rate_limit", f"HTTP 429 — cota diária excedida (100 queries/dia no plano gratuito) | GET {efetiva}")
+            if sc == 403:
+                return [], FonteIndisponivel("http_4xx", f"HTTP 403 — acesso negado (verifique GOOGLE_API_KEY e GOOGLE_CSE_ID) | GET {efetiva}")
+            if sc == 404:
+                return [], FonteIndisponivel("endpoint_inexistente", f"HTTP 404 | GET {efetiva}")
+            if 400 <= sc < 500:
+                return [], FonteIndisponivel("http_4xx", f"HTTP {sc} | GET {efetiva}")
+            if sc >= 500:
+                return [], FonteIndisponivel("http_5xx", f"HTTP {sc}; corpo: {(response.text or '')[:120]!r} | GET {efetiva}")
+            try:
+                data = response.json()
+            except ValueError:   # R2-H3: 200 nao-JSON caia num handler que assumia e.response
+                return [], FonteIndisponivel("resposta_ilegivel", f"HTTP 200 nao e JSON; corpo: {(response.text or '')[:120]!r} | GET {efetiva}")
+            results = [{"url": i.get("link", ""), "title": i.get("title", ""), "snippet": i.get("snippet", "")}
+                       for i in data.get("items", [])]
+            return results, None
         except requests.exceptions.Timeout:
-            return [], "Google CSE: timeout na requisicao"
-        except requests.exceptions.RequestException as e:
-            return [], f"Google CSE: erro de rede: {e}"
+            return [], FonteIndisponivel("timeout", f"sem resposta em {CSE_TIMEOUT}s | GET {CSE_API_URL}")
+        except requests.exceptions.ConnectionError as e:
+            return [], FonteIndisponivel("conexao", f"conexao recusada/sem rota ({str(e)[:120]}) | GET {CSE_API_URL}")
         except Exception as e:
-            return [], f"Google CSE: erro inesperado: {e}"
+            return [], FonteIndisponivel("erro_interno", f"Google CSE: {type(e).__name__}: {e}")
 
-    def _search_scraping(self, keyword: str) -> tuple[list[dict], str]:
+    def _search_scraping(self, keyword: str) -> tuple[list[dict], Optional[FonteIndisponivel]]:
         """Search using googlesearch-python (scraping, no API key needed)."""
         from googlesearch import search as google_search
 
         query = f"{keyword} {SITE_RESTRICTION}"
         try:
             urls = list(google_search(query, num_results=RESULTS_PER_QUERY, lang="pt"))
-            return [{"url": u, "title": "", "snippet": ""} for u in urls], ""
+            return [{"url": u, "title": "", "snippet": ""} for u in urls], None
         except Exception as e:
-            return [], str(e)
+            return [], FonteIndisponivel("erro_interno", f"googlesearch: {type(e).__name__}: {e}")
 
     # ------------------------------------------------------------------
     # Main search method
@@ -228,6 +231,8 @@ class GoogleSearcher(BaseSearcher):
 
         Args:
             keywords: Search terms. Only the first MAX_GOOGLE_KEYWORDS are used.
+                The rest (and any keyword cut by max_results) get a KeywordStatus
+                with motivo="nao_consultada" — never vanish from the report (frente 2).
             max_results: Maximum total results.
             progress_callback: Optional callback(current, total, message).
 
@@ -251,6 +256,11 @@ class GoogleSearcher(BaseSearcher):
 
         for idx, keyword in enumerate(active_keywords):
             if len(results) >= max_results:
+                # R3-H2 (M4): keyword nunca enviada nao pode sumir do relatorio
+                for restante in active_keywords[idx:]:
+                    self.keyword_statuses.append(KeywordStatus(
+                        keyword=restante, source=self.SOURCE_ID, result_count=0, status="error", motivo="nao_consultada",
+                        detalhe=f"busca parou em max_results={max_results} antes desta palavra-chave"))
                 break
 
             if progress_callback:
@@ -258,13 +268,15 @@ class GoogleSearcher(BaseSearcher):
 
             logger.info(f"Google [{idx+1}/{total_steps}]: buscando '{keyword}'")
 
-            search_results, error_msg = self._search_urls(keyword)
+            search_results, erro = self._search_urls(keyword)
 
-            if error_msg:
-                logger.warning(f"Google search failed for '{keyword}': {error_msg}")
+            if erro is not None:
+                # erro e FonteIndisponivel: o detalhe ja foi redigido no __init__ — a chave do
+                # CSE vai na query string e nao pode chegar ao log (item da review da T2)
+                logger.warning(f"Google search failed for '{keyword}': {erro}")
                 self.keyword_statuses.append(KeywordStatus(
-                    keyword=keyword, source="google", result_count=0,
-                    status="error", error_message=error_msg,
+                    keyword=keyword, source=self.SOURCE_ID, result_count=0,
+                    status="error", error_message=str(erro), motivo=erro.motivo, detalhe=erro.detalhe,
                 ))
                 failed_keywords.append(keyword)
                 continue
@@ -275,7 +287,7 @@ class GoogleSearcher(BaseSearcher):
             if _BACKEND == "scraping" and len(search_results) == 0:
                 consecutive_zeros = sum(
                     1 for s in self.keyword_statuses
-                    if s.source == "google" and s.result_count == 0
+                    if s.source == self.SOURCE_ID and s.result_count == 0
                 )
                 if consecutive_zeros >= 2:
                     logger.warning(
@@ -283,8 +295,8 @@ class GoogleSearcher(BaseSearcher):
                         f"Possible IP blocking."
                     )
                     self.keyword_statuses.append(KeywordStatus(
-                        keyword=keyword, source="google", result_count=0,
-                        status="error",
+                        keyword=keyword, source=self.SOURCE_ID, result_count=0,
+                        status="error", motivo="bloqueio_waf",
                         error_message=(
                             "Google retornou 0 resultados (possivel bloqueio de IP). "
                             "Instale 'ddgs' para busca sem bloqueio: pip install ddgs"
@@ -334,7 +346,7 @@ class GoogleSearcher(BaseSearcher):
                 kw_count += 1
 
             self.keyword_statuses.append(KeywordStatus(
-                keyword=keyword, source="google", result_count=kw_count,
+                keyword=keyword, source=self.SOURCE_ID, result_count=kw_count,
                 status="ok" if kw_count > 0 else "empty",
             ))
 
@@ -352,22 +364,24 @@ class GoogleSearcher(BaseSearcher):
             api_still_down = False
             for keyword in failed_keywords[:MAX_RETRIES]:
                 if len(results) >= max_results or api_still_down:
+                    # R3-H1: sem requisicao NAO marca retried — so registra que pulou
                     for kws in self.keyword_statuses:
-                        if kws.keyword == keyword and kws.source == "google" and kws.status == "error":
-                            kws.retried = True
-                            if api_still_down:
-                                kws.error_message = "API indisponivel (retry skipped)"
+                        if kws.keyword == keyword and kws.source == self.SOURCE_ID and kws.status == "error":
+                            motivo_pulo = "a retentativa anterior falhou" if api_still_down else "max_results atingido"
+                            kws.detalhe = f"{kws.detalhe} | retry pulado: {motivo_pulo}"
                             break
                     continue
 
-                search_results, error_msg = self._search_urls(keyword)
+                search_results, erro = self._search_urls(keyword)
                 for kws in self.keyword_statuses:
-                    if kws.keyword == keyword and kws.source == "google" and kws.status == "error":
+                    if kws.keyword == keyword and kws.source == self.SOURCE_ID and kws.status == "error":
                         kws.retried = True
-                        if error_msg:
-                            kws.error_message = f"Retry failed: {error_msg}"
+                        if erro is not None:
+                            kws.error_message = f"Retry failed: {erro}"
+                            kws.motivo, kws.detalhe = erro.motivo, erro.detalhe
                             api_still_down = True
                         else:
+                            recuperado = f"recuperado no retry após {kws.motivo}"   # ANTES de zerar o motivo
                             kw_count = 0
                             for sr in search_results:
                                 if len(results) >= max_results:
@@ -395,12 +409,22 @@ class GoogleSearcher(BaseSearcher):
                                 ))
                                 kw_count += 1
                             kws.status = "ok" if kw_count > 0 else "empty"
-                            kws.error_message = ""
+                            kws.error_message, kws.motivo = "", ""
+                            kws.detalhe = recuperado
                             kws.result_count = kw_count
                         break
 
                 if not api_still_down:
                     self._rate_limit()
+
+        # M4 (R2-H3): keyword alem de MAX_GOOGLE_KEYWORDS nunca foi enviada — nao pode sumir do relatorio.
+        # Posicao pinada: DEPOIS do retry e ANTES do callback final (antes do laco ela era apagada
+        # pela reinicializacao de keyword_statuses).
+        for restante in keywords[MAX_GOOGLE_KEYWORDS:]:
+            self.keyword_statuses.append(KeywordStatus(
+                keyword=restante, source=self.SOURCE_ID, result_count=0, status="error", motivo="nao_consultada",
+                detalhe=f"limite MAX_GOOGLE_KEYWORDS={MAX_GOOGLE_KEYWORDS} — palavra-chave não enviada à web aberta",
+            ))
 
         if progress_callback:
             progress_callback(
@@ -431,7 +455,7 @@ class GoogleSearcher(BaseSearcher):
             resolved_ip = socket.getaddrinfo(hostname, None)[0][4][0]
             addr = ipaddress.ip_address(resolved_ip)
             if addr.is_private or addr.is_loopback or addr.is_link_local:
-                logger.warning("Blocked SSRF attempt to private IP: %s -> %s", url, resolved_ip)
+                logger.warning("Blocked SSRF attempt to private IP: %s -> %s", redigir(url), resolved_ip)
                 return False
         except (socket.gaierror, ValueError, OSError):
             return False
@@ -440,7 +464,7 @@ class GoogleSearcher(BaseSearcher):
     def _fetch_page_metadata(self, url: str) -> tuple[str, str]:
         """Fetch title and meta description from a URL."""
         if not self._is_safe_url(url):
-            logger.warning("Skipping unsafe URL: %s", url)
+            logger.warning("Skipping unsafe URL: %s", redigir(url))
             return "", ""
         headers = {
             "User-Agent": (
@@ -453,7 +477,8 @@ class GoogleSearcher(BaseSearcher):
             response = requests.get(url, headers=headers, timeout=PAGE_FETCH_TIMEOUT)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            logger.debug(f"Failed to fetch metadata from {url}: {e}")
+            # redigir: URL e excecao crua do requests podem trazer segredo na query (frente 2)
+            logger.debug(f"Failed to fetch metadata from {redigir(url)}: {redigir(str(e))}")
             return "", ""
         try:
             soup = BeautifulSoup(response.content, "html.parser")

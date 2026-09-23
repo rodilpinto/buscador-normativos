@@ -553,3 +553,133 @@ def test_tcu_acordao_com_colegiado_nulo_nao_escreve_none():
     assert r.orgao_emissor == "TCU"
     assert r.numero == f'{ACORDAO["numeroAcordao"]}/{ACORDAO["anoAcordao"]}'   # sem colegiado: "N/AAAA"
     assert "None" not in r.orgao_emissor + r.numero + r.nome
+
+
+# ---------------------------------------------------------------------------
+# Google / DuckDuckGo (M5)
+# ---------------------------------------------------------------------------
+
+def _ddg_com(monkeypatch, text_impl):
+    """text_impl(query) -> lista de dicts (ou levanta). Dubla ddgs.DDGS (import tardio dentro de _search_ddgs)."""
+    from searchers import google_searcher
+    monkeypatch.setattr(google_searcher, "_BACKEND", "ddgs")
+
+    class DDGSFake:
+        def text(self, query, max_results=10):
+            return text_impl(query)
+
+    import ddgs
+    monkeypatch.setattr(ddgs, "DDGS", DDGSFake)
+    return google_searcher.GoogleSearcher()
+
+
+def _um_resultado(q):
+    return [{"href": f"https://www.gov.br/{abs(hash(q)) % 10**6}", "title": f"Guia {q}", "body": "texto"}]
+
+
+def test_ddg_no_results_e_empty_nao_error(monkeypatch):
+    from ddgs.exceptions import DDGSException
+    def sem(q): raise DDGSException("No results found.")
+    s = _ddg_com(monkeypatch, sem)
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo, st.source) == ("empty", "", "google")
+
+
+def test_ddg_timeout_e_ratelimit_mapeiam_motivo(monkeypatch):
+    from ddgs.exceptions import TimeoutException, RatelimitException
+    def lento(q): raise TimeoutException("t")
+    s = _ddg_com(monkeypatch, lento); s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "timeout"
+    def cota(q): raise RatelimitException("r")
+    s2 = _ddg_com(monkeypatch, cota); s2.search(["x"], max_results=5)
+    assert s2.keyword_statuses[0].motivo == "rate_limit"
+
+
+def test_ddg_erro_generico_e_erro_interno(monkeypatch):
+    def bug(q): raise KeyError("href")
+    s = _ddg_com(monkeypatch, bug); s.search(["x"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "erro_interno"
+
+
+def test_google_keywords_alem_de_5_ganham_nao_consultada(monkeypatch):
+    s = _ddg_com(monkeypatch, lambda q: [])
+    s.search([f"k{i}" for i in range(7)], max_results=50)
+    nao = [st for st in s.keyword_statuses if st.motivo == "nao_consultada"]
+    assert [st.keyword for st in nao] == ["k5", "k6"]
+    assert "MAX_GOOGLE_KEYWORDS=5" in nao[0].detalhe
+    assert len(s.keyword_statuses) == 7
+
+
+def test_google_cap_de_max_results_dentro_das_5_tambem_e_nao_consultada(monkeypatch):
+    """R3-H2: o break por max_results dentro das 5 ativas nao pode sumir com keywords."""
+    s = _ddg_com(monkeypatch, _um_resultado)
+    s.search([f"k{i}" for i in range(7)], max_results=2)
+    assert len(s.keyword_statuses) == 7
+    assert [st.status for st in s.keyword_statuses[:2]] == ["ok", "ok"]
+    assert all(st.motivo == "nao_consultada" for st in s.keyword_statuses[2:])
+    assert "max_results=2" in s.keyword_statuses[2].detalhe and "MAX_GOOGLE_KEYWORDS" in s.keyword_statuses[5].detalhe
+
+
+def test_ddg_retry_que_da_certo_zera_motivo(monkeypatch):
+    """R2-H3: o laco de retry tambem fala FonteIndisponivel, senao a aba diz 'Sem resultado · timeout'."""
+    from ddgs.exceptions import TimeoutException
+    vez = {"n": 0}
+    def uma_vez(q):
+        vez["n"] += 1
+        if vez["n"] == 1:
+            raise TimeoutException("t")
+        return [{"href": "https://www.gov.br/x", "title": "Guia", "body": "texto"}]
+    s = _ddg_com(monkeypatch, uma_vez)
+    resultados = s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert (st.status, st.motivo, st.retried, st.result_count) == ("ok", "", True, 1)
+    assert st.detalhe == "recuperado no retry após timeout"
+    assert len(resultados) == 1
+
+
+def test_ddg_retry_pulado_nao_marca_retried(monkeypatch):
+    """R3-H1: so a 1a keyword e reenviada; as outras NAO podem sair 'Retentado: Sim'."""
+    from ddgs.exceptions import TimeoutException
+    def sempre(q): raise TimeoutException("t")
+    s = _ddg_com(monkeypatch, sempre)
+    s.search(["a", "b", "c"], max_results=5)
+    assert [st.retried for st in s.keyword_statuses] == [True, False, False]
+    assert all(st.motivo == "timeout" for st in s.keyword_statuses)
+    assert all("retry pulado" in st.detalhe for st in s.keyword_statuses[1:])
+
+
+def test_cse_200_nao_json_e_resposta_ilegivel(monkeypatch):
+    """R2-H3 (CSE): 200 que nao e JSON caia num handler que assumia e.response."""
+    from searchers import google_searcher
+    monkeypatch.setattr(google_searcher, "_BACKEND", "cse")
+    monkeypatch.setattr("searchers.google_searcher.requests.get",
+                        lambda url, params=None, timeout=None, **kw: RespostaFake(200, "<html>oi</html>", "text/html", url=url + "?key=AIzaSECRET&cx=1"))
+    s = google_searcher.GoogleSearcher()
+    s.search(["x"], max_results=5)
+    st = s.keyword_statuses[0]
+    assert st.motivo == "resposta_ilegivel" and "AIzaSECRET" not in st.detalhe
+
+
+def test_cse_falha_nao_vaza_a_chave_no_log(monkeypatch, caplog):
+    """Item carregado da review da T2 (ALEM do plano): a chave do CSE vai na query
+    string e a mensagem crua do requests traz a URL inteira — nenhum log de
+    google_searcher pode imprimi-la (nem o detalhe/error_message do status)."""
+    import logging
+    from searchers import google_searcher
+    segredo = "AIzaSECRETO123"
+    monkeypatch.setattr(google_searcher, "_BACKEND", "cse")
+    monkeypatch.setattr(google_searcher, "_google_api_key", segredo)
+
+    def cai(url, params=None, timeout=None, **kw):
+        raise requests.exceptions.ConnectionError(
+            "HTTPSConnectionPool(host='www.googleapis.com', port=443): Max retries exceeded with url: "
+            f"/customsearch/v1?{urlencode(params or {})} (Caused by NewConnectionError('sem rota'))")
+
+    monkeypatch.setattr("searchers.google_searcher.requests.get", cai)
+    caplog.set_level(logging.DEBUG)
+    s = google_searcher.GoogleSearcher()
+    s.search(["x", "y"], max_results=5)
+    assert s.keyword_statuses[0].motivo == "conexao"
+    assert segredo not in caplog.text
+    assert all(segredo not in st.detalhe + st.error_message for st in s.keyword_statuses)
