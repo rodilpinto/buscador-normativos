@@ -116,7 +116,7 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   `~/.claude/ENVIRONMENT.md` na hora — tinham ficado paradas "para a T10", contra a regra environment-lessons-go-global.
 - Achado adiado "→ T9" (escape HTML duplo) não estava nos itens carregados: agora está, e a regra de adiamento também.
 
-## T4 · TCU esquema real (trilha A, em andamento)
+## T4 · TCU esquema real (trilha A, fechada 23/09)
 
 - Impl: ver-falhar 4 failed como previsto; 33 passed; ao vivo "turismo" passou de 0 para 1 acórdão, **literal**.
 - ❌ **Testador reprovou por um defeito que nenhuma das 3 rodadas adversariais nem o plano viram:** acórdãos da 1ª e da
@@ -124,3 +124,6 @@ related: [CONTEXTO.md, TODOS.md, ../../../LESSONS.md]
   **some em silêncio** (212 colisões em 3.200 ao vivo). Só apareceu porque o testador buscou **muitas** páginas ao vivo:
   a janela de 500 do teste tinha 0 colisões. Lição: **identidade de registro se testa contra o volume real, não contra
   a fixture** — duas amostras reais não provam unicidade. O dedup (`tipo_numero`) fundiria os dois também.
+- (T4 fechada) Conserto: `numero` na forma de citação do TCU com o colegiado literal → 3.200 keys = 3.200 ids = 3.200
+  após dedup. Efeito colateral honesto: com a ementa real, o fuzzy do dedup passou a fundir acórdãos distintos → 🔴 D-C17.
+  O plano foi anotado (não reescrito) e as tasks regeneradas pelo `tools/split_frente2.py`.

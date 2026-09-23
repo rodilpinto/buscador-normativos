@@ -20,8 +20,8 @@ related: [CONTEXTO.md, INSIGHTS.md]
 ## Fase 2 — Fontes honestas (trilha A)
 - [x] **T2** LexML — impl ✅ `8f5ccfc` (16 · runner 238 verde · golden OK) · teste ✅ APROVADO (sondas + ao vivo + e2e: "2 erros" LexML; `revisoes/T2.md`) · review ✅ 1 importante + 1 menor a corrigir (2 adiados → `_TODO` P3) · fix ✅ `407e341` (+1 teste → 17; runner 239) · doc ✅ `3be5d85` · push ✅ · review · fix · doc
 - [x] **T3** TCU falhas — impl ✅ `f044a3c` (26+1 xfail · runner 248 · golden OK) · teste ✅ APROVADO (40 sondas; e2e "4 erros", TCU não é mais "sem resultado"; 4 achados no código do plano → `revisoes/T3.md`) · review ✅ 2 importantes + 1 menor a corrigir (+3 testes → 29) · fix ✅ `e8d59a4` (runner 251) · doc ✅ `dfa6f6f` · push ✅ · review · fix · doc
-- [ ] **T4** TCU esquema real — impl ✅ `e960497` (33 · runner 255 · golden OK; ao vivo "turismo" 0 → 1 acórdão literal) · teste ❌ REPROVADO (1ª×2ª Câmara colidem no id: 212 colisões em 3.200 ao vivo; `revisoes/T4.md`) · fix ✅ `bdd89a1` (`numero` com colegiado, forma de citação do TCU; 35; runner 257; 3.200 keys = 3.200 ids) · re-teste ✅ APROVADO (fuzzy funde acórdãos distintos → 🔴 D-C17, decisão do Rodrigo) · review ▶ · doc · review · fix · doc
-- [ ] **T5** Google — impl · teste · review · fix · doc
+- [x] **T4** TCU esquema real — impl ✅ `e960497` (33 · runner 255 · golden OK; ao vivo "turismo" 0 → 1 acórdão literal) · teste ❌ REPROVADO (1ª×2ª Câmara colidem no id: 212 colisões em 3.200 ao vivo; `revisoes/T4.md`) · fix ✅ `bdd89a1` (`numero` com colegiado, forma de citação do TCU; 35; runner 257; 3.200 keys = 3.200 ids) · re-teste ✅ APROVADO (fuzzy funde acórdãos distintos → 🔴 D-C17, decisão do Rodrigo) · review ✅ (4 menores aplicados) · fix ✅ `38a110d` (36; runner 258) · doc ✅ `3751b2a` · push ✅ · review · fix · doc
+- [ ] **T5** Google — impl ▶ · teste · review · fix · doc
 - [ ] merge trilha A → `master` · `/checkpoint` fase 2
 
 ## Fase 3 — Procedência da nota (trilha B)
