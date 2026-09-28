@@ -2,6 +2,14 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-28] merge | `llm_cadeia` 1.0.1 no `master` (vinda da adoção no scopediagram)
+
+Branch `llm-cadeia-1.0.1` (`98d955e`) revisada linha a linha e integrada por fast-forward; baseline do runner 19 → 23
+(`3f4e61c`); runner TUDO VERDE aqui (as 8 falhas de `test_fontes_indisponiveis.py` relatadas na máquina da Câmara não
+se reproduzem aqui = rede de lá). `master` empurrado com ok do Rodrigo (só o app de teste redeploya; `deploy` conferida
+em `e2cd56a`); branch remota apagada. Checklist v2 = repo público `rodilpinto/checklist-conformidade`: `master` = app ao
+vivo, `feat/llm-cadeia` = app de teste; varredura de chaves nos dois ramos e no histórico: nenhuma.
+
 ## [2026-09-28] feat | `llm_cadeia` 1.0.1: achados da adoção no `scopediagram` (máquina na rede da Câmara)
 
 Primeira adoção do módulo fora do buscador (`scopediagram`). Verificado ao vivo lá: Gemma do Nuati (`google/gemma-4`)
