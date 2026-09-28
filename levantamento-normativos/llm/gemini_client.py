@@ -1,10 +1,14 @@
 """Gemini client for keyword expansion, relevance scoring, and categorization.
 
-This module encapsulates all communication with the Google Gemini API using
-the ``google-genai`` SDK (successor to the deprecated ``google-generativeai``).
-It is the ONLY module in the project that imports ``google.genai``. All other
-modules interact with Gemini exclusively through the public functions exported
-here.
+This module holds the normativos-specific LLM work: prompts, parsing and
+fallbacks. All other modules interact with the LLM exclusively through the
+public functions exported here.
+
+Transport: originally only the Google Gemini API (``google-genai`` SDK, with the
+deprecated ``google-generativeai`` as fallback). Since 23/09/2026 it is a
+provider CHAIN with per-model rotation, and since 25/09 it lives in the generic
+``llm/cadeia.py`` — now the ONLY module in the project that imports
+``google.genai``. Prompts and parsing are unchanged.
 
 Every public function degrades gracefully when no API key is configured:
 - expand_topic_to_keywords returns []
@@ -28,88 +32,29 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# SDK import — google-genai (new) with fallback to google-generativeai (deprecated)
+# Transport — delegated to llm/cadeia.py (25/09/2026)
+#
+# The provider chain (user key > local OpenAI-compatible > Gemini nuati.secin >
+# Gemini 2 > Groq > Cerebras > OpenRouter), the model lists, the per-model
+# cooldowns and the Gemini model history comments now live in cadeia.py, which
+# is generic so other apps can reuse it. This module keeps only what is about
+# normativos: the prompts, the parsing and the fallbacks.
 # ---------------------------------------------------------------------------
 
-_sdk: str = "none"  # "genai" | "legacy" | "none"
+from . import cadeia
 
-try:
-    from google import genai as _genai_new
-    from google.genai import types as _genai_types
-    _sdk = "genai"
-    logger.info("Using google-genai SDK (recommended).")
-except ImportError:
-    _genai_new = None
-    _genai_types = None
-    try:
-        import google.generativeai as _genai_legacy
-        _sdk = "legacy"
-        logger.info("Using deprecated google-generativeai SDK. Consider upgrading to google-genai.")
-    except ImportError:
-        _genai_legacy = None
-        logger.info("No Gemini SDK installed — LLM features disabled.")
-
-# ---------------------------------------------------------------------------
-# API Key Resolution
-# Priority: st.secrets > env var > empty string (graceful degradation)
-# ---------------------------------------------------------------------------
-
-try:
-    import streamlit as st
-    api_key: str = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-except Exception:
-    api_key: str = os.environ.get("GEMINI_API_KEY", "")
-
-# ---------------------------------------------------------------------------
-# Model configuration
-# ---------------------------------------------------------------------------
-
-# gemini-3.5-flash-lite: since 2026-09-22. The API answered 404 "gemini-2.5-flash-lite is no longer
-#   available to new users" for a key created that day (project nuati.secin) and suggested this
-#   model; verified with a real call. Free-tier limits NOT re-verified.
-# History (limits measured when chosen, Mar/2026 — may be stale):
-#   gemini-2.5-flash-lite: best free-tier throughput (15 RPM, 1000/day) — retired for new users
-#   gemini-2.5-flash: better quality but lower free-tier limits (10 RPM, 250/day)
-MODEL_NAME = "gemini-3.5-flash-lite"
-
-# ---------------------------------------------------------------------------
-# Lazy Singleton Client
-# ---------------------------------------------------------------------------
-
-_client = None
-_no_key_logged: bool = False
+# Compat: names other code/tests may read. Both reflect the configured chain.
+api_key: str = cadeia._segredo("GEMINI_API_KEY")
+MODEL_NAME: str = cadeia.GEMINI_MODELOS_PADRAO[0]
 
 
-def _get_client():
-    """Return the singleton client instance, or None if unavailable.
-
-    Supports both the new ``google-genai`` SDK and the deprecated
-    ``google-generativeai`` SDK. Returns None if no SDK is installed
-    or no API key is configured.
-    """
-    global _client, _no_key_logged
-
-    if _sdk == "none":
-        return None
-
-    if _client is None:
-        if not api_key:
-            if not _no_key_logged:
-                logger.info("GEMINI_API_KEY not configured — LLM features disabled.")
-                _no_key_logged = True
-            return None
-
-        if _sdk == "genai":
-            _client = _genai_new.Client(api_key=api_key)
-        else:
-            _genai_legacy.configure(api_key=api_key)
-            _client = _genai_legacy.GenerativeModel(MODEL_NAME)
-
-    return _client
+def descrever_provedores() -> list[str]:
+    """Chain status for the UI, in try order (never includes keys)."""
+    return cadeia.descrever()
 
 
 def _generate(prompt: str, temperature: float = 0.0, max_tokens: int = 1024) -> Optional[str]:
-    """Generate text using whichever SDK is available.
+    """Generate text with the first provider/model of the chain that answers.
 
     Args:
         prompt: The prompt text.
@@ -117,45 +62,19 @@ def _generate(prompt: str, temperature: float = 0.0, max_tokens: int = 1024) -> 
         max_tokens: Maximum output tokens.
 
     Returns:
-        Response text string, or None on any error.
+        Response text string, or None when every provider failed or none is set.
     """
-    client = _get_client()
-    if client is None:
-        return None
-
-    try:
-        if _sdk == "genai":
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=prompt,
-                config=_genai_types.GenerateContentConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                ),
-            )
-            return response.text if response.text else None
-        else:
-            # Legacy SDK
-            response = client.generate_content(
-                prompt,
-                generation_config=_genai_legacy.types.GenerationConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                ),
-            )
-            return response.text if response.text else None
-    except Exception as e:
-        logger.warning("Gemini API error: %s", e)
-        return None
+    texto, _origem = cadeia.gerar(prompt, temperature, max_tokens)
+    return texto
 
 
 def is_available() -> bool:
-    """Check if Gemini API is configured and available.
+    """Check if at least one LLM provider is configured (this session included).
 
-    Returns:
-        True if a non-empty API key was found and a supported SDK is installed.
+    Says nothing about quota: a provider out of quota only shows up as a failed
+    _generate.
     """
-    return _sdk != "none" and bool(api_key)
+    return cadeia.disponivel()
 
 
 # ---------------------------------------------------------------------------

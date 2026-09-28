@@ -2,6 +2,27 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-25] feat | cadeia de LLM: rodízio de modelos, serviços gratuitos, chave do usuário; vira módulo genérico
+
+Pedido do Rodrigo (esgotar Gemini; padrão para outros apps). A cadeia saiu de `gemini_client.py` para `llm/cadeia.py`
+(sem import do projeto); `gemini_client` ficou com prompts/parsing e wrappers (`_generate`, `is_available`). Novidades:
+(1) cada provedor tem lista de modelos — 429/503 param só o modelo (429 diário até a meia-noite do Pacífico), chave
+inválida/rede param o provedor; (2) presets Groq, Cerebras, OpenRouter (`*_API_KEY`, `*_MODELS`); `LLM_ORDEM`;
+(3) campo "Usar minha própria chave de IA" na barra lateral, por sessão (ContextVar), na frente da cadeia. Verificado:
+cota do Gemini = por projeto e por modelo (docs + quotaId); 7 modelos Gemini responderam a chamada real; rodízio real
+(404 → próximo modelo) conferido; `test_cadeia_llm.py` 7 → 14; runner TUDO VERDE; AppTest da barra lateral sem exceção.
+⚠ Groq/Cerebras/OpenRouter sem teste com chave real. LESSONS 25/09. `deploy` segue em `v1.0.1`.
+
+## [2026-09-23] feat | cadeia de LLM A > B > C (urgente, antes da frente 5)
+
+Pedido do Rodrigo: não depender de uma só cota Gemini. `llm/gemini_client.py` troca o cliente único por uma cadeia:
+A = servidor OpenAI-compatível (`LLM_BASE_URL`/`LLM_MODEL`/`LLM_API_KEY`), B = `GEMINI_API_KEY` (nuati.secin),
+C = `GEMINI_API_KEY_2` (chave pessoal). Falha → espera (cota 15 min, erro 5 min) e passa ao próximo; resposta vazia NÃO
+troca de modelo. Prompts e parsing intocados. Barra lateral mostra a ordem e quem está em espera (nunca a chave).
+Versão mínima do protocolo de backend da frente 5 (plano de 16/09, T5/T6), mesma ordem. Teste: `tests/test_cadeia_llm.py`
+(7, sem rede) no runner; runner TUDO VERDE; chamada real ao Gemini pela cadeia conferida. ⚠ O LM `10.10.111.125` é intranet:
+inalcançável do Streamlit Cloud. `deploy` segue em `v1.0.1` até o ok do Rodrigo.
+
 ## [2026-09-23] checkpoint | frente 2 encerrada (fase 5): worktrees limpos, evidência preservada
 
 T10 em `master` (`9b4d9dd`). Limpeza: 6 worktrees removidos depois de copiar a evidência de cada um para

@@ -4,6 +4,25 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-25 · Estado de LLM em variável de módulo vaza entre usuários do Streamlit; cota do Gemini é por projeto E por modelo
+
+**Problema.** Ao pôr um campo "use sua própria chave" no app, o caminho óbvio (acrescentar o provedor à lista global da
+cadeia) faria a chave de um usuário servir **todos** os usuários do app: o Streamlit roda todas as sessões no mesmo
+processo, e variável de módulo é compartilhada. O mesmo vale para "última resposta veio de X".
+
+**Causa-raiz.** Módulo Python = singleton do processo; `st.session_state` = por sessão. O primeiro é para configuração
+do app (Secrets), o segundo para o que o usuário digita.
+
+**Conserto.** `llm/cadeia.py`: a chave do usuário vive no `st.session_state` e é instalada a cada execução via
+`ContextVar` (`usar_contexto`); teste `test_chave_do_usuario_vai_na_frente_so_na_sessao_dela` prova que outro contexto
+não a vê. Junto: a cota do Gemini é `PerProjectPerModel` (quotaId do 429; docs de rate-limits, 25/09) — rodar entre
+modelos do mesmo projeto dá cota nova; segunda chave só soma cota se for **outro projeto**.
+
+**Regra.** Em Streamlit, nada que o usuário digite vai para variável de módulo. E cota de API: conferir na doc/no 429
+**qual é a unidade** (chave, projeto, modelo, organização) antes de desenhar o fallback.
+
+**Cobertura.** ✅ `tests/test_cadeia_llm.py` (14). ⚠ Groq/Cerebras/OpenRouter não testados com chave real.
+
 ## 2026-09-23 · A faixa de auditoria do plano (`dc99d73..HEAD`) tem base sem nenhum `.py` — o comando de remoções dá vazio e "passa"
 
 **Problema.** Na T10 da frente 2, o critério §7 manda rodar a auditoria de documentação sobre `dc99d73..HEAD`.

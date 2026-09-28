@@ -1,0 +1,401 @@
+"""Cadeia de provedores de LLM — modulo GENERICO, reutilizavel em outros apps.
+
+Nao importa nada do projeto: so stdlib, ``requests`` e (opcional) ``google-genai``.
+Para levar a outro app, copie este arquivo e chame ``gerar(prompt)``.
+
+Ordem padrao de tentativa (23-25/09/2026):
+
+    usuario     chave que o proprio usuario digitou na tela (so na sessao dele)
+    local       LLM_BASE_URL + LLM_MODEL (+ LLM_API_KEY) — servidor OpenAI-compativel
+                (LM Studio da Camara 10.10.111.125:1234/v1 — intranet: a nuvem NAO alcanca)
+    gemini      GEMINI_API_KEY   (projeto nuati.secin)
+    gemini-2    GEMINI_API_KEY_2 (chave pessoal; so soma cota se for OUTRO projeto Google)
+    groq        GROQ_API_KEY
+    cerebras    CEREBRAS_API_KEY
+    openrouter  OPENROUTER_API_KEY
+
+``LLM_ORDEM`` (ex.: "local,gemini,groq") troca a ordem; "usuario" vem sempre primeiro.
+Cada provedor tem uma LISTA de modelos (``<NOME>_MODELS``, separados por virgula, troca o
+padrao sem deploy). Dentro de um provedor, os modelos sao tentados em ordem.
+
+Por que rodar entre modelos: a cota do Gemini e "per project" e por modelo — os quotaId
+do 429 sao ``GenerateRequestsPerDayPerProjectPerModel`` / ``...PerMinutePerProjectPerModel``
+(docs ai.google.dev/gemini-api/docs/rate-limits, conferido em 25/09/2026). Esgotou o
+flash-lite, o flash do MESMO projeto ainda tem cota propria. Groq tambem limita por modelo
+e por organizacao; OpenRouter limita os ``:free`` por conta (20/min, 50/dia sem creditos).
+
+Espera apos falha (nunca some item: so decide quem responde):
+    429 por dia        -> modelo parado ate a meia-noite do Pacifico (reset do Gemini)
+    429 por minuto     -> modelo parado 60 s
+    503/500/sobrecarga -> modelo parado 60 s
+    404 (modelo nao existe para esta chave) -> modelo parado 6 h
+    401/403 (chave invalida/sem permissao)  -> provedor inteiro parado 6 h
+    rede/timeout       -> provedor inteiro parado 5 min
+    outro erro         -> modelo parado 5 min
+
+Nenhuma funcao publica levanta excecao; sem nenhum provedor, ``gerar`` devolve (None, None)
+e o app roda sem LLM. Chaves nunca aparecem em log nem em ``descrever()``.
+"""
+
+from __future__ import annotations
+
+import contextvars
+import logging
+import os
+import re
+import time
+from datetime import datetime, timedelta
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# SDK Gemini — google-genai (new) with fallback to google-generativeai (deprecated)
+# ---------------------------------------------------------------------------
+
+_sdk: str = "none"  # "genai" | "legacy" | "none"
+
+try:
+    from google import genai as _genai_new
+    from google.genai import types as _genai_types
+    _sdk = "genai"
+except ImportError:
+    _genai_new = None
+    _genai_types = None
+    try:
+        import google.generativeai as _genai_legacy
+        _sdk = "legacy"
+        logger.info("Using deprecated google-generativeai SDK. Consider upgrading to google-genai.")
+    except ImportError:
+        _genai_legacy = None
+        logger.info("No Gemini SDK installed — Gemini providers disabled.")
+
+# ---------------------------------------------------------------------------
+# Catalogo (📝 escolhas de 25/09/2026 — modelos conferidos nas docs de cada provedor)
+# ---------------------------------------------------------------------------
+
+# Gemini: ordem = maior vazao gratuita primeiro, qualidade depois, Gemma por ultimo (cota grande).
+# gemini-3.5-flash-lite: since 2026-09-22. The API answered 404 "gemini-2.5-flash-lite is no longer
+#   available to new users" for a key created that day (project nuati.secin) and suggested this
+#   model; verified with a real call. Free-tier limits NOT re-verified.
+# History (limits measured when chosen, Mar/2026 — may be stale):
+#   gemini-2.5-flash-lite: best free-tier throughput (15 RPM, 1000/day) — retired for new users
+#     (kept in the list: older keys still get it; a 404 just parks it for 6 h)
+#   gemini-2.5-flash: better quality but lower free-tier limits (10 RPM, 250/day)
+# 25/09: 3.5-flash-lite, 3.5-flash, 3.6-flash, 3-flash-preview, 2.5-flash, 2.5-flash-lite e
+#   gemma-4-31b-it responderam "ok" a uma chamada real; 3.1-flash-lite e 3.8-flash deram 503
+#   (sobrecarga momentanea, nao ausencia).
+GEMINI_MODELOS_PADRAO = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-3-flash-preview",
+    "gemma-4-31b-it",
+]
+
+# Servicos OpenAI-compativeis com camada gratuita. Limites nas docs em 25/09/2026:
+#   groq:       gpt-oss-120b / qwen3.8-27b — 30 req/min, 1.000 req/dia, 8K tokens/min cada
+#   cerebras:   gpt-oss-120b / qwen-3.8-27b — 5 req/min, 1M tokens/dia
+#   openrouter: modelos ":free" — 20 req/min, 50 req/dia (1.000/dia com US$10 de creditos);
+#               "openrouter/free" escolhe sozinho um modelo gratuito disponivel
+# ⚠ Nao testados com chave real (nao ha chave desses servicos nesta maquina).
+PRESETS: dict[str, dict] = {
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1",
+        "segredo": "GROQ_API_KEY",
+        "modelos": ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
+    },
+    "cerebras": {
+        "base_url": "https://api.cerebras.ai/v1",
+        "segredo": "CEREBRAS_API_KEY",
+        "modelos": ["gpt-oss-120b", "qwen-3.8-27b"],
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "segredo": "OPENROUTER_API_KEY",
+        "modelos": ["qwen/qwen3.8-27b:free", "google/gemma-4-31b-it:free", "openrouter/free"],
+    },
+}
+
+ORDEM_PADRAO = ["local", "gemini", "gemini-2", "groq", "cerebras", "openrouter"]
+
+_ESPERA_MINUTO_S = 60.0
+_ESPERA_404_S = 6 * 3600.0
+_ESPERA_AUTH_S = 6 * 3600.0
+_ESPERA_REDE_S = 5 * 60.0
+_ESPERA_OUTRO_S = 5 * 60.0
+
+# ---------------------------------------------------------------------------
+# Leitura de configuracao
+# ---------------------------------------------------------------------------
+
+
+def _segredo(nome: str) -> str:
+    """Read one setting: st.secrets > env var > "" (never raises)."""
+    try:
+        import streamlit as st
+        return str(st.secrets.get(nome, os.environ.get(nome, "")) or "").strip()
+    except Exception:
+        return os.environ.get(nome, "").strip()
+
+
+def _lista(valor: str) -> list[str]:
+    return [v.strip() for v in valor.split(",") if v.strip()]
+
+
+def _novo_provedor(nome: str, tipo: str, chave: str, modelos: list[str], base_url: str = "") -> dict:
+    return {
+        "nome": nome, "tipo": tipo, "chave": chave, "modelos": list(modelos),
+        "base_url": base_url.rstrip("/"), "bloqueado_ate": 0.0, "modelo_bloqueado_ate": {},
+        "cliente": None,
+    }
+
+
+def _montar_provedores() -> list[dict]:
+    """Build the chain from secrets/env, in LLM_ORDEM (or default) order."""
+    disponiveis: dict[str, dict] = {}
+
+    base_url, modelos = _segredo("LLM_BASE_URL"), _lista(_segredo("LLM_MODEL"))
+    if base_url and modelos:
+        disponiveis["local"] = _novo_provedor("local", "openai", _segredo("LLM_API_KEY"), modelos, base_url)
+
+    if _sdk != "none":
+        modelos_gemini = _lista(_segredo("GEMINI_MODELS")) or GEMINI_MODELOS_PADRAO
+        for nome, segredo in (("gemini", "GEMINI_API_KEY"), ("gemini-2", "GEMINI_API_KEY_2")):
+            chave = _segredo(segredo)
+            if chave:
+                disponiveis[nome] = _novo_provedor(nome, "gemini", chave, modelos_gemini)
+
+    for nome, preset in PRESETS.items():
+        chave = _segredo(preset["segredo"])
+        if chave:
+            modelos = _lista(_segredo(f"{nome.upper()}_MODELS")) or preset["modelos"]
+            disponiveis[nome] = _novo_provedor(nome, "openai", chave, modelos, preset["base_url"])
+
+    ordem = _lista(_segredo("LLM_ORDEM")) or ORDEM_PADRAO
+    ordem += [n for n in ORDEM_PADRAO if n not in ordem]   # nome esquecido na LLM_ORDEM ainda entra, no fim
+    return [disponiveis[n] for n in ordem if n in disponiveis]
+
+
+_provedores: list[dict] = _montar_provedores()
+
+# ---------------------------------------------------------------------------
+# Chave do usuario — por SESSAO, nunca global
+#
+# Streamlit serve varios usuarios no MESMO processo: uma chave digitada por um
+# nao pode ir para _provedores (os outros usariam a cota dele). O app guarda o
+# contexto no st.session_state e o instala a cada execucao do script com
+# usar_contexto(); o ContextVar vale so para a thread daquela execucao.
+# ---------------------------------------------------------------------------
+
+_contexto_padrao: dict = {"usuario": None, "ultimo": None}
+_contexto: contextvars.ContextVar[dict] = contextvars.ContextVar("cadeia_llm", default=_contexto_padrao)
+
+
+def provedor_do_usuario(tipo: str, chave: str, modelo: str = "", base_url: str = "") -> Optional[dict]:
+    """Build the user's own provider. tipo: "gemini" | um preset | "openai" (exige base_url).
+
+    Returns None when the input is incomplete. modelo vazio = modelos padrao do tipo.
+    """
+    chave = (chave or "").strip()
+    modelos = _lista(modelo or "")
+    if tipo == "gemini":
+        if not chave or _sdk == "none":
+            return None
+        return _novo_provedor("usuario", "gemini", chave, modelos or GEMINI_MODELOS_PADRAO)
+    if tipo in PRESETS:
+        if not chave:
+            return None
+        return _novo_provedor("usuario", "openai", chave, modelos or PRESETS[tipo]["modelos"],
+                              PRESETS[tipo]["base_url"])
+    if tipo == "openai":
+        if not base_url.strip() or not modelos:
+            return None
+        return _novo_provedor("usuario", "openai", chave, modelos, base_url.strip())
+    return None
+
+
+def usar_contexto(contexto: Optional[dict]) -> None:
+    """Install this session's context ({"usuario": provedor|None, "ultimo": str|None})."""
+    _contexto.set(contexto if contexto is not None else _contexto_padrao)
+
+
+def novo_contexto() -> dict:
+    return {"usuario": None, "ultimo": None}
+
+
+def _cadeia_efetiva() -> list[dict]:
+    usuario = _contexto.get().get("usuario")
+    return ([usuario] if usuario else []) + _provedores
+
+
+# ---------------------------------------------------------------------------
+# Status
+# ---------------------------------------------------------------------------
+
+
+def disponivel() -> bool:
+    """True if at least one provider is configured (says nothing about quota)."""
+    return bool(_cadeia_efetiva())
+
+
+def ultimo_usado() -> Optional[str]:
+    """"provedor (modelo)" of this session's last successful answer."""
+    return _contexto.get().get("ultimo")
+
+
+def descrever() -> list[str]:
+    """Chain status for the UI, in try order. Never includes keys."""
+    agora = time.time()
+    linhas = []
+    for p in _cadeia_efetiva():
+        if p["bloqueado_ate"] > agora:
+            linhas.append(f"{p['nome']} — em espera")
+            continue
+        livres = [m for m in p["modelos"] if p["modelo_bloqueado_ate"].get(m, 0.0) <= agora]
+        parados = len(p["modelos"]) - len(livres)
+        sufixo = f" (+{parados} em espera)" if parados else ""
+        linhas.append(f"{p['nome']} — {livres[0] if livres else 'todos em espera'}{sufixo}")
+    return linhas
+
+
+# ---------------------------------------------------------------------------
+# Classificacao de erro -> quanto tempo esperar, e se para o modelo ou o provedor
+# ---------------------------------------------------------------------------
+
+
+def _meia_noite_pacifico(agora: float) -> float:
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("America/Los_Angeles")
+        d = datetime.fromtimestamp(agora, tz)
+        amanha = (d + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        return amanha.timestamp()
+    except Exception:
+        return agora + 6 * 3600.0
+
+
+def _classificar(e: Exception, agora: float) -> tuple[str, float]:
+    """Return (escopo, bloqueado_ate); escopo = "modelo" | "provedor"."""
+    texto = str(e).upper()
+    nome_tipo = type(e).__name__.upper()
+    if "429" in texto or "RESOURCE_EXHAUSTED" in texto or "RATE LIMIT" in texto or "QUOTA" in texto:
+        if re.search(r"PER ?DAY|PER-DAY|\bRPD\b|DAILY|PER_DAY", texto):
+            return "modelo", _meia_noite_pacifico(agora)
+        return "modelo", agora + _ESPERA_MINUTO_S
+    if any(m in texto for m in ("401", "403", "API_KEY_INVALID", "PERMISSION_DENIED", "UNAUTHENTICATED",
+                                "INVALID API KEY", "API KEY NOT VALID")):
+        return "provedor", agora + _ESPERA_AUTH_S
+    if "404" in texto or "NOT_FOUND" in texto:
+        return "modelo", agora + _ESPERA_404_S
+    if any(m in texto for m in ("503", "500", "502", "UNAVAILABLE", "OVERLOADED", "HIGH DEMAND")):
+        return "modelo", agora + _ESPERA_MINUTO_S
+    if "CONNECTION" in nome_tipo or "TIMEOUT" in nome_tipo or "CONNECTION" in texto or "TIMED OUT" in texto:
+        return "provedor", agora + _ESPERA_REDE_S
+    return "modelo", agora + _ESPERA_OUTRO_S
+
+
+def _sem_chave(texto: str, p: dict) -> str:
+    """Belt and braces: never let a key reach a log line."""
+    return texto.replace(p["chave"], "***") if p.get("chave") else texto
+
+
+# ---------------------------------------------------------------------------
+# Transportes
+# ---------------------------------------------------------------------------
+
+_PENSAMENTO = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def _gerar_openai(p: dict, modelo: str, prompt: str, temperature: float, max_tokens: int) -> Optional[str]:
+    """One call to an OpenAI-compatible /chat/completions. Raises on failure."""
+    import requests
+    headers = {"Content-Type": "application/json"}
+    if p["chave"]:
+        headers["Authorization"] = f"Bearer {p['chave']}"
+    resp = requests.post(
+        f"{p['base_url']}/chat/completions",
+        headers=headers,
+        json={
+            "model": modelo,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            # modelos de raciocinio (gpt-oss, qwen) gastam tokens pensando antes da resposta
+            "max_tokens": max(max_tokens, 4096),
+        },
+        timeout=(5, 120),  # connect fast-fails an unreachable server; local models are slow to answer
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"{resp.status_code} {resp.text[:300]}")
+    texto = resp.json()["choices"][0]["message"].get("content") or ""
+    return _PENSAMENTO.sub("", texto).strip() or None
+
+
+def _gerar_gemini(p: dict, modelo: str, prompt: str, temperature: float, max_tokens: int) -> Optional[str]:
+    """One Gemini call with this provider's key. Raises on failure."""
+    if _sdk == "genai":
+        if p["cliente"] is None:
+            p["cliente"] = _genai_new.Client(api_key=p["chave"])
+        response = p["cliente"].models.generate_content(
+            model=modelo,
+            contents=prompt,
+            config=_genai_types.GenerateContentConfig(
+                temperature=temperature,
+                max_output_tokens=max_tokens,
+            ),
+        )
+        return response.text if response.text else None
+    # Legacy SDK: configure() is global, so re-apply this provider's key per call
+    _genai_legacy.configure(api_key=p["chave"])
+    response = _genai_legacy.GenerativeModel(modelo).generate_content(
+        prompt,
+        generation_config=_genai_legacy.types.GenerationConfig(
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+        ),
+    )
+    return response.text if response.text else None
+
+
+# ---------------------------------------------------------------------------
+# Entrada principal
+# ---------------------------------------------------------------------------
+
+
+def gerar(prompt: str, temperature: float = 0.0, max_tokens: int = 1024) -> tuple[Optional[str], Optional[str]]:
+    """Ask the first provider/model of the chain that answers.
+
+    Returns:
+        (texto, "provedor (modelo)"), or (None, None) when all failed or none is set.
+        An EMPTY answer returns (None, origem) without trying the next one: an empty
+        answer is not an outage, and falling through would silently mix models.
+    """
+    ctx = _contexto.get()
+    for p in _cadeia_efetiva():
+        agora = time.time()
+        if p["bloqueado_ate"] > agora:
+            continue
+        for modelo in p["modelos"]:
+            if p["modelo_bloqueado_ate"].get(modelo, 0.0) > agora:
+                continue
+            try:
+                if p["tipo"] == "openai":
+                    texto = _gerar_openai(p, modelo, prompt, temperature, max_tokens)
+                else:
+                    texto = _gerar_gemini(p, modelo, prompt, temperature, max_tokens)
+            except Exception as e:
+                agora = time.time()
+                escopo, ate = _classificar(e, agora)
+                logger.warning("LLM %s/%s falhou (%s); %s em espera %ds.", p["nome"], modelo,
+                               _sem_chave(str(e)[:200], p), escopo, int(ate - agora))
+                if escopo == "provedor":
+                    p["bloqueado_ate"] = ate
+                    break
+                p["modelo_bloqueado_ate"][modelo] = ate
+                continue
+            origem = f"{p['nome']} ({modelo})"
+            if texto:
+                ctx["ultimo"] = origem
+            return texto, origem
+    return None, None

@@ -41,7 +41,7 @@ SUITES_SCRIPT = {
 # e o runner acusar regressao onde nao houve. Pela mesma regra, cada suite entra
 # aqui no commit que a CRIA: tests/test_fontes_indisponiveis.py entrou na frente 2
 # (Task 2, 2026-09-23) — sem rede, requests.get e time.sleep dublados.
-SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py"]
+SUITES_PYTEST = ["test_phase4.py", "tests/test_fontes_indisponiveis.py", "tests/test_cadeia_llm.py"]
 
 PADRAO_PYTEST = re.compile(r"(\d+) passed")
 
@@ -56,6 +56,7 @@ BASELINE = {
     "test_llm_phase3.py": 65,   # revisao final FIX-FONTES (23/09): +1 (F-UX2, relevancia sem acento)
     "test_comprehensive.py": 98,
     "test_phase4.py": 94,   # T9: +1 (origem curta do app) +2 (escape da tela, item carregado T2/T3) +2 (review: _md_html no card, aviso da web aberta) ; FIX-SAIDA: +14 (N1 +1, S-SEC +2, N8 +3, UX1+N3 +5, N9 +3); review FIX-SAIDA: +4 (char de controle)
+    "tests/test_cadeia_llm.py": 14,   # 23/09: cadeia A > B > C (7); 25/09: rodizio de modelos, presets, chave do usuario (7 -> 14)
     "tests/test_fontes_indisponiveis.py": 66,   # T2: 16 + 1 da review; T3: +9 + 3 da review; T4: +3, o xfail vira passed, +2 do tester (colegiados) +1 da review (M5); T5: +8 + 1 (log sem chave do CSE)
     # ^ revisao final FIX-FONTES (23/09): 45 -> 60, +15 = F-N2 3, F-M2 1, F-N4 1, F-N5 3, F-UX3 1, F-MT503 1, F-MT1 1, F-MT3 1, F-SSRF 3
     # ^ review da FIX-FONTES (23/09): 60 -> 66, +6 = SSRF todos os enderecos 2, found_by exato 2 (TCU, LexML), duplicatas do Google 1, janela no singular 1
