@@ -10,6 +10,8 @@ cerebras-2, openrouter-2; a chave do usuário funcionou. Diagnóstico local ao v
 (categorias idênticas); `gemini-3.5-flash-lite` estava em 503 nas duas chaves — o app ao vivo (v1.0.1) não tem fallback.
 Busca no app de teste: LexML `bloqueio_waf`/503 (B-05, conhecido desde 22/09, não é regressão). ⚠ `GROQ_API_KEY_2`
 apareceu no contexto da conversa (seleção no editor) → trocar depois da reunião. Não empurrar `master` até a reunião.
+Depois, a pedido do Rodrigo ("commit and push"): teste ao vivo de `sistema=` + `json=True` nos 5 provedores → JSON válido
+em todos; `master` empurrado (redeploy do app de teste só com docs).
 
 ## [2026-09-28] feat | `llm_cadeia/` — módulo de LLM copiável para todas as soluções
 

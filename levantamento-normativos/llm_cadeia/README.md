@@ -122,5 +122,7 @@ As esperas valem por processo (reiniciar o app zera).
 - **1.0.0 (28/09/2026)** — vira pasta copiável (de `llm/cadeia.py` do buscador). `gerar` devolve `Resposta`
   (`texto`, `origem`, `tentativas`); `sistema=`, `json=`; segunda chave `_2` para todo serviço; `painel_llm()`;
   `python -m llm_cadeia`; piso de 4096 tokens também no Gemini (medido: 16 tokens → resposta vazia).
+  **Verificado ao vivo (28/09):** gemini, gemini-2, groq, cerebras e openrouter respondem; `sistema=` + `json=True`
+  devolvem JSON que passa em `json.loads` nos 5. ⚠ Não verificado: `local` (Gemma do Nuati — inalcançável desta máquina).
 - 25/09 — rodízio de modelos, Groq/Cerebras/OpenRouter, chave do usuário por sessão.
 - 23/09 — cadeia A (local) > B (Gemini) > C (Gemini 2).
