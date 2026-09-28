@@ -2,6 +2,15 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-28] deploy | app de teste `buscador-normativos-teste` (branch `master`); `deploy` intocada antes da reunião
+
+`master` empurrado (`affc13f`); `origin/deploy` conferido igual antes/depois (`e2cd56a`). Rodrigo criou o app de teste
+(Python 3.14, Secrets = `~/.llm-chaves.toml`) e confirmou: IA gerou palavras-chave, status lista gemini, gemini-2, groq-2,
+cerebras-2, openrouter-2; a chave do usuário funcionou. Diagnóstico local ao vivo: os 5 provedores pontuam e categorizam
+(categorias idênticas); `gemini-3.5-flash-lite` estava em 503 nas duas chaves — o app ao vivo (v1.0.1) não tem fallback.
+Busca no app de teste: LexML `bloqueio_waf`/503 (B-05, conhecido desde 22/09, não é regressão). ⚠ `GROQ_API_KEY_2`
+apareceu no contexto da conversa (seleção no editor) → trocar depois da reunião. Não empurrar `master` até a reunião.
+
 ## [2026-09-28] feat | `llm_cadeia/` — módulo de LLM copiável para todas as soluções
 
 Decisão do Rodrigo: distribuir por **copiar e colar** (não serviço nem pip); origem neste repo; destino final servidor
