@@ -184,6 +184,21 @@ def test_log_e_tentativas_nunca_levam_a_chave(provs, monkeypatch, caplog):
     assert not any("segredo-A" in t for t in r.tentativas)
 
 
+def test_ao_responder_avisa_quem_respondeu_e_nunca_quebra_o_gerar(provs, monkeypatch):
+    _dublar(monkeypatch, {"A/m1": None})
+    avisos = []
+    ctx = cadeia.novo_contexto()
+    ctx["ao_responder"] = avisos.append
+    cadeia.usar_contexto(ctx)
+    cadeia.gerar("p")                                 # resposta vazia: nao avisa
+    assert avisos == []
+    provs[0]["modelos"] = ["m2"]
+    assert cadeia.gerar("p").texto == "ok-A/m2"
+    assert avisos == ["A (m2)"]
+    ctx["ao_responder"] = lambda origem: 1 / 0        # gancho quebrado nao derruba a resposta
+    assert cadeia.gerar("p").texto == "ok-A/m2"
+
+
 # --- transportes -----------------------------------------------------------
 
 class _RespostaFake:
@@ -216,6 +231,47 @@ def test_sistema_vira_mensagem_system_e_json_tira_a_cerca(monkeypatch):
     assert enviado["messages"] == [{"role": "system", "content": "voce e um auditor"},
                                    {"role": "user", "content": "p"}]
     assert "response_format" not in enviado
+
+
+class _Resposta400:
+    status_code = 400
+
+    def __init__(self, texto):
+        self.text = texto
+
+
+@pytest.mark.parametrize("erro", [
+    "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+    "Unsupported value: 'temperature' does not support 0.0 with this model. Only the default (1) value is supported.",
+])
+def test_modelo_de_raciocinio_da_openai_repete_com_max_completion_tokens(monkeypatch, erro):
+    import requests
+    corpos = []
+
+    def post(url, headers, json, timeout):
+        corpos.append(dict(json))
+        return _Resposta400(erro) if len(corpos) == 1 else _RespostaFake("ok")
+
+    monkeypatch.setattr(requests, "post", post)
+    assert cadeia._gerar_openai(_prov("A", "openai"), "gpt-5-mini", "p", None, False, 0.0, 10) == "ok"
+    assert len(corpos) == 2
+    assert corpos[0]["max_tokens"] == 4096 and corpos[0]["temperature"] == 0.0
+    assert corpos[1]["max_completion_tokens"] == 4096
+    assert "max_tokens" not in corpos[1] and "temperature" not in corpos[1]
+
+
+def test_outro_400_nao_repete(monkeypatch):
+    import requests
+    chamadas = []
+
+    def post(url, headers, json, timeout):
+        chamadas.append(1)
+        return _Resposta400("400 model not found")
+
+    monkeypatch.setattr(requests, "post", post)
+    with pytest.raises(RuntimeError, match="400"):
+        cadeia._gerar_openai(_prov("A", "openai"), "m", "p", None, False, 0.0, 10)
+    assert chamadas == [1]
 
 
 def test_sem_json_a_cerca_fica():

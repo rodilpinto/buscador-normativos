@@ -1,6 +1,6 @@
 # llm_cadeia — LLM com fallback entre provedores (pasta copiável)
 
-**Versão 1.0.0** · **Origem:** `buscador-normativos/levantamento-normativos/llm_cadeia/` (repo
+**Versão 1.0.1** · **Origem:** `buscador-normativos/levantamento-normativos/llm_cadeia/` (repo
 `github.com/rodilpinto/buscador-normativos`). Spec: `docs/superpowers/specs/2026-09-28-llm-cadeia-portatil-design.md`.
 
 Um jeito só de chamar LLM em todas as soluções do Nuati. Tenta, em ordem, até alguém responder:
@@ -57,6 +57,14 @@ with st.sidebar:
 
 A chave digitada pelo usuário fica só no `st.session_state` daquela sessão — nunca em disco, log, variável de
 módulo nem para outros usuários — e vai na frente de todas.
+
+"Última resposta: provedor (modelo)" é atualizada na **mesma** execução do script, logo depois do `gerar`
+(o painel instala o gancho `ao_responder` no contexto da sessão); não precisa de `st.rerun()`.
+
+**OpenAI paga:** não é segredo do app. O usuário escolhe "Outro (compatível com OpenAI)", URL base
+`https://api.openai.com/v1`, modelo (ex.: `gpt-5-mini`) e a própria chave. Modelos de raciocínio da OpenAI
+recusam `max_tokens` e `temperature` ≠ 1: o transporte repete a chamada uma vez com `max_completion_tokens` e
+sem `temperature`. ⚠ Coberto por teste com dublê; não verificado ao vivo (sem chave OpenAI em 28/09).
 
 ## Segredos (iguais em todos os apps)
 
@@ -118,6 +126,18 @@ As esperas valem por processo (reiniciar o app zera).
 > Se precisar de algo que o módulo não faz, NÃO altere a cópia: registre o pedido para a origem.
 
 ## Changelog
+
+- **1.0.1 (28/09/2026)** — achados da adoção no `scopediagram` (rede da Câmara):
+  - **Verificado ao vivo:** `local` (`google/gemma-4`, LM Studio do Nuati) com `sistema=` + `json=True` →
+    JSON sem cerca, `json.loads` OK, acentos corretos (11,8 s); extração IGOE completa passou no pydantic (~48 s).
+    A rede da Câmara deixa passar gemini, groq, cerebras e openrouter.
+  - `painel_llm()` atualiza "Última resposta" na mesma execução (gancho `ao_responder` no contexto; erro no
+    gancho nunca derruba o `gerar`).
+  - OpenAI (modelos de raciocínio): 400 por `max_tokens`/`temperature` → 1 repetição com `max_completion_tokens`
+    e sem `temperature`. ⚠ Só teste com dublê.
+  - Docstrings desatualizadas corrigidas (`gerar` devolve `Resposta`; presets já verificados com chave real).
+  - ⚠ Chave Gemini criada em set/2026 recebe 404 em `gemini-2.5-flash(-lite)` ("no longer available to new
+    users"); a lista padrão já cai para 3.x, mas app que fixar `gemini-2.5-flash` quebra com chave nova.
 
 - **1.0.0 (28/09/2026)** — vira pasta copiável (de `llm/cadeia.py` do buscador). `gerar` devolve `Resposta`
   (`texto`, `origem`, `tentativas`); `sistema=`, `json=`; segunda chave `_2` para todo serviço; `painel_llm()`;

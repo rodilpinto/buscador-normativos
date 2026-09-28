@@ -4,6 +4,21 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-28 · Barra lateral do Streamlit roda antes do LLM: "Última resposta" ficava um passo atrasada
+
+**Problema.** Adotando o `llm_cadeia` no `scopediagram`, a linha "Última resposta" de `painel_llm()` não aparecia depois
+da geração: só na interação seguinte.
+
+**Causa-raiz.** O Streamlit executa o script de cima para baixo; a barra lateral é desenhada antes do `gerar()`, então
+lê o `ultimo` da execução anterior.
+
+**Conserto.** `painel_llm()` desenha a linha num `st.empty()` e instala no contexto da sessão o gancho `ao_responder`,
+que o `gerar` chama após cada resposta (erro no gancho é engolido: `gerar` nunca levanta).
+
+**Regra.** Status que depende de algo calculado mais abaixo no script: placeholder + atualização, não `st.rerun()`.
+
+**Cobertura.** ✅ `test_ao_responder_avisa_quem_respondeu_e_nunca_quebra_o_gerar`; ✅ ao vivo no app do scopediagram (28/09).
+
 ## 2026-09-25 · Estado de LLM em variável de módulo vaza entre usuários do Streamlit; cota do Gemini é por projeto E por modelo
 
 **Problema.** Ao pôr um campo "use sua própria chave" no app, o caminho óbvio (acrescentar o provedor à lista global da

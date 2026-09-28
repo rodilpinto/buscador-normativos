@@ -54,7 +54,12 @@ def painel_llm(mostrar_campo_de_chave: bool = True) -> None:
     linhas = nucleo.descrever()
     if linhas:
         st.caption("IA (em ordem de tentativa):\n\n" + "\n\n".join(f"- {c}" for c in linhas))
-        if nucleo.ultimo_usado():
-            st.caption(f"Última resposta: {nucleo.ultimo_usado()}")
     else:
         st.caption("IA: nenhum provedor configurado (roda sem LLM).")
+
+    # A barra lateral roda ANTES do gerar(): sem o placeholder, "Última resposta" so
+    # apareceria na execucao seguinte do script. O gancho atualiza a linha na mesma execucao.
+    linha = st.empty()
+    if nucleo.ultimo_usado():
+        linha.caption(f"Última resposta: {nucleo.ultimo_usado()}")
+    ctx["ao_responder"] = lambda origem: linha.caption(f"Última resposta: {origem}")

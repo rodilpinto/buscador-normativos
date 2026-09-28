@@ -2,6 +2,16 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-28] feat | `llm_cadeia` 1.0.1: achados da adoção no `scopediagram` (máquina na rede da Câmara)
+
+Primeira adoção do módulo fora do buscador (`scopediagram`). Verificado ao vivo lá: Gemma do Nuati (`google/gemma-4`)
+com `sistema=` + `json=True` → `json.loads` OK (antes "não verificado"); a rede da Câmara deixa passar gemini, groq,
+cerebras e openrouter. Correções: "Última resposta" na mesma execução (gancho `ao_responder`; verificado no app do
+scopediagram sem `st.rerun()`); OpenAI de raciocínio repete com `max_completion_tokens` (⚠ só dublê); docstrings
+desatualizadas. Módulo: 23 passed (19 + 4). Suíte `tests/` + `test_llm_phase3.py`: 8 failed / 58 passed, **as mesmas 8
+falhas no `3edba4d` sem as mudanças** (`tests/test_fontes_indisponiveis.py`, DDG/Google; não é regressão do módulo).
+Commit local no `master`; ⚠ push aguardando o Rodrigo (nota de 28/09 abaixo: não empurrar `master` até a reunião).
+
 ## [2026-09-28] deploy | app de teste `buscador-normativos-teste` (branch `master`); `deploy` intocada antes da reunião
 
 `master` empurrado (`affc13f`); `origin/deploy` conferido igual antes/depois (`e2cd56a`). Rodrigo criou o app de teste

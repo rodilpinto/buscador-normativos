@@ -35,8 +35,9 @@ Espera apos falha (nunca some item: so decide quem responde):
     rede/timeout       -> provedor inteiro parado 5 min
     outro erro         -> modelo parado 5 min
 
-Nenhuma funcao publica levanta excecao; sem nenhum provedor, ``gerar`` devolve (None, None)
-e o app roda sem LLM. Chaves nunca aparecem em log nem em ``descrever()``.
+Nenhuma funcao publica levanta excecao; sem nenhum provedor, ``gerar`` devolve
+``Resposta(texto=None, origem=None, ...)`` e o app roda sem LLM. Chaves nunca aparecem em
+log nem em ``descrever()``.
 """
 
 from __future__ import annotations
@@ -102,7 +103,7 @@ GEMINI_MODELOS_PADRAO = [
 #   cerebras:   gpt-oss-120b / qwen-3.8-27b — 5 req/min, 1M tokens/dia
 #   openrouter: modelos ":free" — 20 req/min, 50 req/dia (1.000/dia com US$10 de creditos);
 #               "openrouter/free" escolhe sozinho um modelo gratuito disponivel
-# ⚠ Nao testados com chave real (nao ha chave desses servicos nesta maquina).
+# Verificados com chave real em 28/09/2026 (python -m llm_cadeia): groq, cerebras e openrouter respondem.
 PRESETS: dict[str, dict] = {
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
@@ -196,7 +197,7 @@ _provedores: list[dict] = _montar_provedores()
 # usar_contexto(); o ContextVar vale so para a thread daquela execucao.
 # ---------------------------------------------------------------------------
 
-_contexto_padrao: dict = {"usuario": None, "ultimo": None}
+_contexto_padrao: dict = {"usuario": None, "ultimo": None, "ao_responder": None}
 _contexto: contextvars.ContextVar[dict] = contextvars.ContextVar("cadeia_llm", default=_contexto_padrao)
 
 
@@ -224,12 +225,17 @@ def provedor_do_usuario(tipo: str, chave: str, modelo: str = "", base_url: str =
 
 
 def usar_contexto(contexto: Optional[dict]) -> None:
-    """Install this session's context ({"usuario": provedor|None, "ultimo": str|None})."""
+    """Install this session's context.
+
+    {"usuario": provedor|None, "ultimo": str|None, "ao_responder": callable(origem)|None}.
+    ao_responder is called after each successful answer (painel_llm uses it to refresh
+    "Última resposta" in the same script run); its errors are swallowed.
+    """
     _contexto.set(contexto if contexto is not None else _contexto_padrao)
 
 
 def novo_contexto() -> dict:
-    return {"usuario": None, "ultimo": None}
+    return {"usuario": None, "ultimo": None, "ao_responder": None}
 
 
 def _cadeia_efetiva() -> list[dict]:
@@ -326,13 +332,26 @@ def _limpar(texto: str, json_: bool) -> Optional[str]:
     return texto or None
 
 
+def _pede_parametros_de_raciocinio(texto: str) -> bool:
+    """True for the OpenAI 400s of reasoning models: "Use 'max_completion_tokens' instead" /
+    "'temperature' does not support 0.0 with this model"."""
+    texto = (texto or "").lower()
+    return "max_completion_tokens" in texto or ("temperature" in texto and "unsupported" in texto)
+
+
 def _gerar_openai(p: dict, modelo: str, prompt: str, sistema: Optional[str], json_: bool,
                   temperature: float, max_tokens: int) -> Optional[str]:
     """One call to an OpenAI-compatible /chat/completions. Raises on failure.
 
     json_ does NOT send response_format: support varies by server (📝 suspected, not
     verified: LM Studio rejects {"type": "json_object"}). The prompt must ask for JSON;
-    _limpar strips the fence.
+    _limpar strips the fence. Verified 28/09/2026 with google/gemma-4 on the Nuati LM Studio:
+    sistema= + JSON asked in the prompt -> json.loads OK.
+
+    OpenAI reasoning models (gpt-5*, o-series) answer 400 to "max_tokens" (they want
+    "max_completion_tokens") and to temperature != 1. On that 400 the call is repeated ONCE
+    with max_completion_tokens and without temperature. ⚠ Built from the OpenAI error texts;
+    covered by a mocked test, NOT verified live (no OpenAI key available on 28/09).
     """
     import requests
     headers = {"Content-Type": "application/json"}
@@ -340,18 +359,27 @@ def _gerar_openai(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
         headers["Authorization"] = f"Bearer {p['chave']}"
     mensagens = ([{"role": "system", "content": sistema}] if sistema else []) + \
         [{"role": "user", "content": prompt}]
-    resp = requests.post(
-        f"{p['base_url']}/chat/completions",
-        headers=headers,
-        json={
-            "model": modelo,
-            "messages": mensagens,
-            "temperature": temperature,
-            # modelos de raciocinio (gpt-oss, qwen) gastam tokens pensando antes da resposta
-            "max_tokens": max(max_tokens, 4096),
-        },
-        timeout=(5, 120),  # connect fast-fails an unreachable server; local models are slow to answer
-    )
+    corpo = {
+        "model": modelo,
+        "messages": mensagens,
+        "temperature": temperature,
+        # modelos de raciocinio (gpt-oss, qwen) gastam tokens pensando antes da resposta
+        "max_tokens": max(max_tokens, 4096),
+    }
+
+    def enviar():
+        return requests.post(
+            f"{p['base_url']}/chat/completions",
+            headers=headers,
+            json=corpo,
+            timeout=(5, 120),  # connect fast-fails an unreachable server; local models are slow to answer
+        )
+
+    resp = enviar()
+    if resp.status_code == 400 and _pede_parametros_de_raciocinio(resp.text):
+        corpo["max_completion_tokens"] = corpo.pop("max_tokens")
+        corpo.pop("temperature")
+        resp = enviar()
     if resp.status_code >= 400:
         raise RuntimeError(f"{resp.status_code} {resp.text[:300]}")
     return _limpar(resp.json()["choices"][0]["message"].get("content") or "", json_)
@@ -402,6 +430,17 @@ def _gerar_gemini(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
 # ---------------------------------------------------------------------------
 # Entrada principal
 # ---------------------------------------------------------------------------
+
+
+def _avisar(ctx: dict, origem: str) -> None:
+    """Call the session's ao_responder hook, if any. Never raises (gerar's promise)."""
+    gancho = ctx.get("ao_responder")
+    if gancho is None:
+        return
+    try:
+        gancho(origem)
+    except Exception as e:
+        logger.warning("llm_cadeia: ao_responder falhou: %s", str(e)[:200])
 
 
 @dataclass
@@ -455,6 +494,7 @@ def gerar(prompt: str, sistema: Optional[str] = None, json: bool = False,
                 origem = f"{p['nome']} ({modelo})"
                 if texto:
                     ctx["ultimo"] = origem
+                    _avisar(ctx, origem)
                 return Resposta(texto, origem, tentativas)
     except Exception as e:   # promessa: gerar nunca levanta
         logger.error("llm_cadeia: erro inesperado: %s", str(e)[:200])
