@@ -7,7 +7,7 @@ public functions exported here.
 Transport: originally only the Google Gemini API (``google-genai`` SDK, with the
 deprecated ``google-generativeai`` as fallback). Since 23/09/2026 it is a
 provider CHAIN with per-model rotation, and since 25/09 it lives in the generic
-``llm/cadeia.py`` — now the ONLY module in the project that imports
+``llm/cadeia.py`` (28/09: the copyable package ``llm_cadeia/``, file ``nucleo.py``) — now the ONLY module in the project that imports
 ``google.genai``. Prompts and parsing are unchanged.
 
 Every public function degrades gracefully when no API key is configured:
@@ -32,19 +32,20 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Transport — delegated to llm/cadeia.py (25/09/2026)
+# Transport — delegated to llm/cadeia.py (25/09/2026); since 28/09 the package llm_cadeia/
 #
 # The provider chain (user key > local OpenAI-compatible > Gemini nuati.secin >
 # Gemini 2 > Groq > Cerebras > OpenRouter), the model lists, the per-model
-# cooldowns and the Gemini model history comments now live in cadeia.py, which
+# cooldowns and the Gemini model history comments now live in llm_cadeia/nucleo.py, which
 # is generic so other apps can reuse it. This module keeps only what is about
 # normativos: the prompts, the parsing and the fallbacks.
 # ---------------------------------------------------------------------------
 
-from . import cadeia
+import llm_cadeia as cadeia
+from llm_cadeia.nucleo import _segredo
 
 # Compat: names other code/tests may read. Both reflect the configured chain.
-api_key: str = cadeia._segredo("GEMINI_API_KEY")
+api_key: str = _segredo("GEMINI_API_KEY")
 MODEL_NAME: str = cadeia.GEMINI_MODELOS_PADRAO[0]
 
 
@@ -64,8 +65,7 @@ def _generate(prompt: str, temperature: float = 0.0, max_tokens: int = 1024) -> 
     Returns:
         Response text string, or None when every provider failed or none is set.
     """
-    texto, _origem = cadeia.gerar(prompt, temperature, max_tokens)
-    return texto
+    return cadeia.gerar(prompt, temperatura=temperature, max_tokens=max_tokens).texto
 
 
 def is_available() -> bool:

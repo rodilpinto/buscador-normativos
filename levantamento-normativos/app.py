@@ -26,7 +26,8 @@ import streamlit as st
 from models import (KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, e_indisponivel, redigir,
                     statuses_para_falha_total)
 from searchers import LexMLSearcher, TCUSearcher, GoogleSearcher
-from llm import cadeia, gemini_client
+from llm import gemini_client
+from llm_cadeia.painel_streamlit import painel_llm
 from llm.gemini_client import is_available as llm_available
 from deduplicator import deduplicate
 from excel_export import generate_excel
@@ -254,38 +255,9 @@ with st.sidebar:
 
     st.markdown("".join(lines), unsafe_allow_html=True)
 
-    # Cadeia de LLM (23/09; chave do usuario 25/09). A chave digitada aqui vale
-    # SO para esta sessao: fica no st.session_state (memoria do servidor), nunca
-    # em disco, log ou planilha, e vai na frente da cadeia do app. O contexto e
-    # reinstalado a cada execucao do script (ver llm/cadeia.py, usar_contexto).
-    st.divider()
-    if "llm_contexto" not in st.session_state:
-        st.session_state["llm_contexto"] = cadeia.novo_contexto()
-    _ctx = st.session_state["llm_contexto"]
-    with st.expander("Usar minha própria chave de IA"):
-        _rotulos = {"Gemini (Google AI Studio)": "gemini", "Groq": "groq", "Cerebras": "cerebras",
-                    "OpenRouter": "openrouter", "Outro (compatível com OpenAI)": "openai"}
-        _tipo = _rotulos[st.selectbox("Serviço", list(_rotulos), key="llm_usr_tipo")]
-        _chave = st.text_input("Chave de API", type="password", key="llm_usr_chave")
-        _url = st.text_input("URL base (ex.: http://host:1234/v1)", key="llm_usr_url") if _tipo == "openai" else ""
-        _modelo = st.text_input("Modelo(s), separados por vírgula (vazio = padrão)", key="llm_usr_modelo")
-        st.caption("Vale só nesta sessão; não é gravada. Tem prioridade sobre as chaves do app.")
-    # Recria o provedor so quando a entrada muda, para nao zerar as esperas dele a cada clique.
-    _assinatura = (_tipo, _chave, _url, _modelo)
-    if _ctx.get("assinatura") != _assinatura:
-        _ctx["assinatura"] = _assinatura
-        _ctx["usuario"] = cadeia.provedor_do_usuario(_tipo, _chave, _modelo, _url)
-    cadeia.usar_contexto(_ctx)
-    if _chave and _ctx["usuario"] is None:
-        st.warning("Chave incompleta: para 'Outro', informe URL base e modelo.")
-
-    _linhas = cadeia.descrever()
-    if _linhas:
-        st.caption("IA (em ordem de tentativa):\n\n" + "\n\n".join(f"- {c}" for c in _linhas))
-        if cadeia.ultimo_usado():
-            st.caption(f"Última resposta: {cadeia.ultimo_usado()}")
-    else:
-        st.caption("IA: nenhum provedor configurado (roda sem LLM).")
+    # Cadeia de LLM: campo "usar minha chave" (so nesta sessao) + status. Tem de rodar
+    # antes de qualquer chamada ao LLM; o porque esta em llm_cadeia/painel_streamlit.py.
+    painel_llm()
 
 
 # ===========================================================================

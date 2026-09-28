@@ -1,18 +1,20 @@
-"""Cadeia de provedores de LLM — modulo GENERICO, reutilizavel em outros apps.
+"""Cadeia de provedores de LLM — nucleo do pacote GENERICO ``llm_cadeia``.
 
 Nao importa nada do projeto: so stdlib, ``requests`` e (opcional) ``google-genai``.
-Para levar a outro app, copie este arquivo e chame ``gerar(prompt)``.
+Para levar a outro app, copie a PASTA ``llm_cadeia/`` inteira (ver README.md dela) e
+chame ``gerar(prompt)``. Nasceu em ``llm/cadeia.py`` do buscador-normativos (23-25/09);
+virou pacote em 28/09.
 
-Ordem padrao de tentativa (23-25/09/2026):
+Ordem padrao de tentativa:
 
-    usuario     chave que o proprio usuario digitou na tela (so na sessao dele)
-    local       LLM_BASE_URL + LLM_MODEL (+ LLM_API_KEY) — servidor OpenAI-compativel
-                (LM Studio da Camara 10.10.111.125:1234/v1 — intranet: a nuvem NAO alcanca)
-    gemini      GEMINI_API_KEY   (projeto nuati.secin)
-    gemini-2    GEMINI_API_KEY_2 (chave pessoal; so soma cota se for OUTRO projeto Google)
-    groq        GROQ_API_KEY
-    cerebras    CEREBRAS_API_KEY
-    openrouter  OPENROUTER_API_KEY
+    usuario       chave que o proprio usuario digitou na tela (so na sessao dele)
+    local         LLM_BASE_URL + LLM_MODEL (+ LLM_API_KEY) — servidor OpenAI-compativel
+                  (LM Studio da Camara 10.10.111.125:1234/v1 — intranet: a nuvem NAO alcanca)
+    gemini        GEMINI_API_KEY     (convencao: login nuati.secin)
+    gemini-2      GEMINI_API_KEY_2   (convencao: login rodilpinto; so soma cota se for OUTRO projeto Google)
+    groq, groq-2              GROQ_API_KEY, GROQ_API_KEY_2
+    cerebras, cerebras-2      CEREBRAS_API_KEY, CEREBRAS_API_KEY_2
+    openrouter, openrouter-2  OPENROUTER_API_KEY, OPENROUTER_API_KEY_2
 
 ``LLM_ORDEM`` (ex.: "local,gemini,groq") troca a ordem; "usuario" vem sempre primeiro.
 Cada provedor tem uma LISTA de modelos (``<NOME>_MODELS``, separados por virgula, troca o
@@ -45,6 +47,7 @@ import os
 import re
 import time
 from datetime import datetime, timedelta
+from dataclasses import dataclass, field
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -118,7 +121,9 @@ PRESETS: dict[str, dict] = {
     },
 }
 
-ORDEM_PADRAO = ["local", "gemini", "gemini-2", "groq", "cerebras", "openrouter"]
+# Cada servico aceita uma segunda chave (sufixo _2 no segredo, "-2" no nome), p.ex. outro login.
+ORDEM_PADRAO = ["local", "gemini", "gemini-2", "groq", "groq-2", "cerebras", "cerebras-2",
+                "openrouter", "openrouter-2"]
 
 _ESPERA_MINUTO_S = 60.0
 _ESPERA_404_S = 6 * 3600.0
@@ -168,10 +173,12 @@ def _montar_provedores() -> list[dict]:
                 disponiveis[nome] = _novo_provedor(nome, "gemini", chave, modelos_gemini)
 
     for nome, preset in PRESETS.items():
-        chave = _segredo(preset["segredo"])
-        if chave:
-            modelos = _lista(_segredo(f"{nome.upper()}_MODELS")) or preset["modelos"]
-            disponiveis[nome] = _novo_provedor(nome, "openai", chave, modelos, preset["base_url"])
+        modelos = _lista(_segredo(f"{nome.upper()}_MODELS")) or preset["modelos"]
+        for sufixo_nome, sufixo_segredo in (("", ""), ("-2", "_2")):
+            chave = _segredo(preset["segredo"] + sufixo_segredo)
+            if chave:
+                disponiveis[nome + sufixo_nome] = _novo_provedor(
+                    nome + sufixo_nome, "openai", chave, modelos, preset["base_url"])
 
     ordem = _lista(_segredo("LLM_ORDEM")) or ORDEM_PADRAO
     ordem += [n for n in ORDEM_PADRAO if n not in ordem]   # nome esquecido na LLM_ORDEM ainda entra, no fim
@@ -306,20 +313,39 @@ def _sem_chave(texto: str, p: dict) -> str:
 # ---------------------------------------------------------------------------
 
 _PENSAMENTO = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+_CERCA = re.compile(r"^\s*```[a-zA-Z]*\s*\n?(.*?)\n?```\s*$", re.DOTALL)
 
 
-def _gerar_openai(p: dict, modelo: str, prompt: str, temperature: float, max_tokens: int) -> Optional[str]:
-    """One call to an OpenAI-compatible /chat/completions. Raises on failure."""
+def _limpar(texto: str, json_: bool) -> Optional[str]:
+    """Drop reasoning blocks; with json_, drop a ```json fence around the whole answer."""
+    texto = _PENSAMENTO.sub("", texto or "").strip()
+    if json_:
+        m = _CERCA.match(texto)
+        if m:
+            texto = m.group(1).strip()
+    return texto or None
+
+
+def _gerar_openai(p: dict, modelo: str, prompt: str, sistema: Optional[str], json_: bool,
+                  temperature: float, max_tokens: int) -> Optional[str]:
+    """One call to an OpenAI-compatible /chat/completions. Raises on failure.
+
+    json_ does NOT send response_format: support varies by server (📝 suspected, not
+    verified: LM Studio rejects {"type": "json_object"}). The prompt must ask for JSON;
+    _limpar strips the fence.
+    """
     import requests
     headers = {"Content-Type": "application/json"}
     if p["chave"]:
         headers["Authorization"] = f"Bearer {p['chave']}"
+    mensagens = ([{"role": "system", "content": sistema}] if sistema else []) + \
+        [{"role": "user", "content": prompt}]
     resp = requests.post(
         f"{p['base_url']}/chat/completions",
         headers=headers,
         json={
             "model": modelo,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": mensagens,
             "temperature": temperature,
             # modelos de raciocinio (gpt-oss, qwen) gastam tokens pensando antes da resposta
             "max_tokens": max(max_tokens, 4096),
@@ -328,12 +354,23 @@ def _gerar_openai(p: dict, modelo: str, prompt: str, temperature: float, max_tok
     )
     if resp.status_code >= 400:
         raise RuntimeError(f"{resp.status_code} {resp.text[:300]}")
-    texto = resp.json()["choices"][0]["message"].get("content") or ""
-    return _PENSAMENTO.sub("", texto).strip() or None
+    return _limpar(resp.json()["choices"][0]["message"].get("content") or "", json_)
 
 
-def _gerar_gemini(p: dict, modelo: str, prompt: str, temperature: float, max_tokens: int) -> Optional[str]:
-    """One Gemini call with this provider's key. Raises on failure."""
+def _gerar_gemini(p: dict, modelo: str, prompt: str, sistema: Optional[str], json_: bool,
+                  temperature: float, max_tokens: int) -> Optional[str]:
+    """One Gemini call with this provider's key. Raises on failure.
+
+    max_output_tokens has a 4096 floor, like the OpenAI path: thinking models
+    (gemini-2.5-flash, gemma-4) spend the budget thinking and return EMPTY text when
+    it is small — measured 28/09: 16 tokens -> None, 512 -> "ok" (gemma-4-31b-it).
+    """
+    max_tokens = max(max_tokens, 4096)
+    extras = {}
+    if sistema:
+        extras["system_instruction"] = sistema
+    if json_:
+        extras["response_mime_type"] = "application/json"
     if _sdk == "genai":
         if p["cliente"] is None:
             p["cliente"] = _genai_new.Client(api_key=p["chave"])
@@ -343,19 +380,23 @@ def _gerar_gemini(p: dict, modelo: str, prompt: str, temperature: float, max_tok
             config=_genai_types.GenerateContentConfig(
                 temperature=temperature,
                 max_output_tokens=max_tokens,
+                **extras,
             ),
         )
-        return response.text if response.text else None
+        return _limpar(response.text or "", json_)
     # Legacy SDK: configure() is global, so re-apply this provider's key per call
     _genai_legacy.configure(api_key=p["chave"])
-    response = _genai_legacy.GenerativeModel(modelo).generate_content(
+    response = _genai_legacy.GenerativeModel(
+        modelo, system_instruction=extras.get("system_instruction"),
+    ).generate_content(
         prompt,
         generation_config=_genai_legacy.types.GenerationConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
+            **({"response_mime_type": "application/json"} if json_ else {}),
         ),
     )
-    return response.text if response.text else None
+    return _limpar(response.text or "", json_)
 
 
 # ---------------------------------------------------------------------------
@@ -363,39 +404,59 @@ def _gerar_gemini(p: dict, modelo: str, prompt: str, temperature: float, max_tok
 # ---------------------------------------------------------------------------
 
 
-def gerar(prompt: str, temperature: float = 0.0, max_tokens: int = 1024) -> tuple[Optional[str], Optional[str]]:
-    """Ask the first provider/model of the chain that answers.
+@dataclass
+class Resposta:
+    """Result of gerar(). Never contains a key.
 
-    Returns:
-        (texto, "provedor (modelo)"), or (None, None) when all failed or none is set.
-        An EMPTY answer returns (None, origem) without trying the next one: an empty
-        answer is not an outage, and falling through would silently mix models.
+    texto:      the answer, or None (all failed / none configured / empty answer)
+    origem:     "provedor (modelo)" that answered, or None
+    tentativas: "provedor/modelo: motivo" for each one skipped or failed in THIS call,
+                in order — use it to build the app's error message
+    """
+    texto: Optional[str]
+    origem: Optional[str]
+    tentativas: list[str] = field(default_factory=list)
+
+
+def gerar(prompt: str, sistema: Optional[str] = None, json: bool = False,
+          temperatura: float = 0.0, max_tokens: int = 1024) -> Resposta:
+    """Ask the first provider/model of the chain that answers. Never raises.
+
+    An EMPTY answer returns Resposta(None, origem) without trying the next one: an
+    empty answer is not an outage, and falling through would silently mix models.
     """
     ctx = _contexto.get()
-    for p in _cadeia_efetiva():
-        agora = time.time()
-        if p["bloqueado_ate"] > agora:
-            continue
-        for modelo in p["modelos"]:
-            if p["modelo_bloqueado_ate"].get(modelo, 0.0) > agora:
+    tentativas: list[str] = []
+    try:
+        for p in _cadeia_efetiva():
+            agora = time.time()
+            if p["bloqueado_ate"] > agora:
+                tentativas.append(f"{p['nome']}: em espera")
                 continue
-            try:
-                if p["tipo"] == "openai":
-                    texto = _gerar_openai(p, modelo, prompt, temperature, max_tokens)
-                else:
-                    texto = _gerar_gemini(p, modelo, prompt, temperature, max_tokens)
-            except Exception as e:
-                agora = time.time()
-                escopo, ate = _classificar(e, agora)
-                logger.warning("LLM %s/%s falhou (%s); %s em espera %ds.", p["nome"], modelo,
-                               _sem_chave(str(e)[:200], p), escopo, int(ate - agora))
-                if escopo == "provedor":
-                    p["bloqueado_ate"] = ate
-                    break
-                p["modelo_bloqueado_ate"][modelo] = ate
-                continue
-            origem = f"{p['nome']} ({modelo})"
-            if texto:
-                ctx["ultimo"] = origem
-            return texto, origem
-    return None, None
+            for modelo in p["modelos"]:
+                if p["modelo_bloqueado_ate"].get(modelo, 0.0) > agora:
+                    tentativas.append(f"{p['nome']}/{modelo}: em espera")
+                    continue
+                transporte = _gerar_openai if p["tipo"] == "openai" else _gerar_gemini
+                try:
+                    texto = transporte(p, modelo, prompt, sistema, json, temperatura, max_tokens)
+                except Exception as e:
+                    agora = time.time()
+                    escopo, ate = _classificar(e, agora)
+                    motivo = _sem_chave(str(e)[:200], p)
+                    tentativas.append(f"{p['nome']}/{modelo}: {motivo[:120]}")
+                    logger.warning("LLM %s/%s falhou (%s); %s em espera %ds.", p["nome"], modelo,
+                                   motivo, escopo, int(ate - agora))
+                    if escopo == "provedor":
+                        p["bloqueado_ate"] = ate
+                        break
+                    p["modelo_bloqueado_ate"][modelo] = ate
+                    continue
+                origem = f"{p['nome']} ({modelo})"
+                if texto:
+                    ctx["ultimo"] = origem
+                return Resposta(texto, origem, tentativas)
+    except Exception as e:   # promessa: gerar nunca levanta
+        logger.error("llm_cadeia: erro inesperado: %s", str(e)[:200])
+        tentativas.append(f"erro interno: {type(e).__name__}")
+    return Resposta(None, None, tentativas)

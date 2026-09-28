@@ -2,6 +2,16 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-28] feat | `llm_cadeia/` — módulo de LLM copiável para todas as soluções
+
+Decisão do Rodrigo: distribuir por **copiar e colar** (não serviço nem pip); origem neste repo; destino final servidor
+do Nuati + cópia no Streamlit Cloud (portfólio). Spec `docs/superpowers/specs/2026-09-28-llm-cadeia-portatil-design.md`,
+plano `docs/superpowers/plans/2026-09-28-llm-cadeia-portatil.md`. `llm/cadeia.py` → `llm_cadeia/nucleo.py` (git mv);
+novos: `Resposta` (texto/origem/tentativas), `sistema=`, `json=`, `_2` para todo serviço, `painel_llm()` (saiu do
+`app.py`), `python -m llm_cadeia`, README com instrução para as outras sessões. Achado no diagnóstico real:
+gemini-2.5-flash e gemma-4 devolvem **vazio** com orçamento de tokens pequeno (pensam antes) → piso de 4096 no Gemini.
+Outros apps com LLM achados: `projeto-nuati-diagrama-de-escopo` (JSON + schema), `projetos-nuati-checklist`.
+
 ## [2026-09-25] feat | cadeia de LLM: rodízio de modelos, serviços gratuitos, chave do usuário; vira módulo genérico
 
 Pedido do Rodrigo (esgotar Gemini; padrão para outros apps). A cadeia saiu de `gemini_client.py` para `llm/cadeia.py`
