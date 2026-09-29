@@ -13,12 +13,12 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
 
-## 🔴 D-C26 — Os apps são PÚBLICOS e usam as chaves de LLM do app: manter assim?
+## 🟢 D-C26 — Os apps são PÚBLICOS e usam as chaves de LLM do app: manter assim?
 
 - **Onde aparece:** 29/09, o Rodrigo conferiu o *Sharing* dos seis apps: **todos públicos**. Qualquer pessoa com a URL usa a IA
   gastando as chaves gravadas nos *Secrets* (nuati.secin e rodilpinto: Gemini, Groq, Cerebras, OpenRouter).
 - **Risco medido até onde dá:** cota esgotada por terceiros (o app cai para "sem IA" — degrada, não quebra). **Custo em dinheiro**
-  só se algum projeto Google das chaves tiver **faturamento ligado** — ⚠ **não conferido**; as camadas gratuitas de Groq, Cerebras
+  só se algum projeto Google das chaves tiver **faturamento ligado** — ✅ **conferido desligado em 29/09** (ver a decisão); as camadas gratuitas de Groq, Cerebras
   e OpenRouter não cobram sem cartão/créditos (docs de 25/09). O conteúdo buscado (normas públicas) não é sensível.
 - **Trava:** nada no código; pesa no passe por app (D-C23), quando os apps forem recriados — é a hora natural de escolher.
 
@@ -29,7 +29,12 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 | **c · privados** | Só convidados veem. Portfólio perde a vitrine aberta; conferir quantos apps privados a conta aceita. |
 
 📝 **Recomendação:** `a` já (conferir faturamento é 2 minutos: console.cloud.google.com/billing, nos projetos das duas chaves
-Gemini) e decidir `a`/`b` no passe por app. **Decisão tomada:** _(pendente)_
+Gemini) e decidir `a`/`b` no passe por app.
+
+**Decisão tomada:** ✅ **`a` · manter públicos** — Rodrigo, 29/09: *"billing desligado nos dois projetos, fica a"*. Faturamento
+**desligado** nos dois projetos Google das chaves Gemini (nuati.secin e rodilpinto), conferido por ele no console em 29/09: o pior
+caso de uso por terceiros é cota esgotada, não custo. ⚠ Vale enquanto o faturamento seguir desligado — ligar faturamento num
+desses projetos reabre esta decisão.
 
 ---
 

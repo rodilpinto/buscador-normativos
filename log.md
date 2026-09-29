@@ -2,6 +2,11 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-29] decisão | D-C26 = `a`: apps seguem públicos; faturamento desligado nos dois projetos Google
+
+Rodrigo conferiu no console: faturamento desligado nos projetos das duas chaves Gemini. Pior caso de uso por terceiros = cota
+esgotada (o app degrada para "sem IA"). Ligar faturamento reabre a D-C26.
+
 ## [2026-09-29] correção | os apps do Streamlit são PÚBLICOS (não privados); nova D-C26
 
 O Rodrigo conferiu o painel: seis apps, **todos públicos**, e salvou os Secrets de cada um fora do repo. "Privado" vinha de
