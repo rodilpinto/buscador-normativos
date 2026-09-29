@@ -23,6 +23,7 @@ Nasceu do projeto "Auditoria Interna apoiada por IA" (Secin/Nuati), área `ai-co
 | `docs/superpowers/plans/2026-09-16-consolidacao-fase1.md` | plano da Fase 1 — ⛔ emendas no topo prevalecem sobre o corpo; T3/T1/T2/T9 feitas; T5/T6 → frente 5; T4/T7/T8 = v2.0 |
 | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
 | `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` · `decisions/` | lições · pendências humanas · rodadas de decisão |
+| `docs/superpowers/{specs,plans}/2026-09-28-llm-cadeia-portatil*` | spec + plano do núcleo de LLM (**frente 5**, 🟡 em andamento; plano executado em 28/09) |
 | **`levantamento-normativos/llm_cadeia/README.md`** | **módulo de LLM copiável para as outras soluções** (origem aqui; cópias não se editam) |
 | ⛔ `docs/.../2026-09-08-*` · `spec/buscador/tasks/` | **superados** — histórico apenas |
 

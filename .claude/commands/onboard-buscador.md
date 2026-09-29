@@ -74,7 +74,8 @@ Depois: se o usuário já deu uma tarefa, siga; senão pergunte **"Qual a tarefa
 ## Regras deste projeto
 
 - **Uma task = um chunk.** Rodar a suíte + o golden-master, atualizar duráveis, commitar **e
-  pushar**, e só então a próxima. Fechar com `/checkpoint`.
+  pushar**, e só então a próxima. Fechar com `/checkpoint`. ⚠ **Antes de empurrar `master`, leia a §6 do state file:**
+  se ela declarar congelamento, commite e **não** empurre até o ok explícito do Rodrigo.
 - **TDD é do plano, não é sugestão:** teste que falha → ver falhar → implementar → ver passar →
   commit. Os passos estão escritos.
 - **O agrupamento semântico é ADITIVO** — nunca remove, oculta nem filtra item da visão do

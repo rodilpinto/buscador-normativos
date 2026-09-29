@@ -174,6 +174,8 @@ da Câmara deixou passar Gemini, Groq, Cerebras e OpenRouter — medido do PC, *
 
 ## ⛔ Bloqueadas em autorização (não são escolhas, são permissões)
 
+- **Escrever o snapshot de memória do checkpoint de 29/09** (e marcar o de 22/09 como superado no `MEMORY.md` deste
+  projeto) — pedido ao Rodrigo em 29/09; sem resposta, a auto-memória segue apontando o snapshot de 22/09 ("o repo manda").
 - **Registrar este repo no `MEMORY.md` do `projetos-nuati`** — é auto-memória, e a regra global
   `memory-write-policy` exige autorização explícita do Rodrigo. Item no `_TODO.md` §P3.
 

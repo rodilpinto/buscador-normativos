@@ -106,7 +106,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       Rodrigo junto com a chave `nuati.secin`) — um backend OpenAI-compatível só, trocando `base_url`+chave, poderia
       servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner. (d) a chave é lida **uma vez, no import** de
       `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (g) achado na T5 (23/09): com o logger `urllib3` em DEBUG, a linha da requisição do CSE sai com `key=AIza…` (o app fixa
-      WARNING em `app.py:38`; vaza só se alguém ligar DEBUG) — filtro de log com `redigir`. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
+      WARNING em `app.py:38` (29/09: `:50`); vaza só se alguém ligar DEBUG) — filtro de log com `redigir`. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
       `TypeError` em `score_relevance_com_origem` e `categorize_results` (linhas de 23/09 `:384`/`:476`; em 29/09 `:317`/`:415`) — `(r.get('ementa') or '')`.
       (e) `_generate` engole o erro da API
       (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
@@ -135,7 +135,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
 - [ ] **F7** agrupamento semântico dos resultados — ⚠ **aditivo**, nunca subtrativo (D-C1)
 - [ ] **F8** **aba de instruções e explicações na planilha de saída** — pedido do Rodrigo em
       2026-09-22, ao ver a v1.0 rodando. Hoje a planilha tem **uma aba só** (`Normativos`,
-      `excel_export.py:304`). A aba nova explica as colunas, a procedência de cada resultado e
+      `excel_export.py:304`; 29/09: `:475`). A aba nova explica as colunas, a procedência de cada resultado e
       **como a nota de relevância foi calculada**, inclusive qual parte é determinística.
 - [ ] **F9** **aba de explicações e configurações no app** — mesmo pedido, mesma data. Hoje a
       régua de relevância existe **só dentro do prompt** em `llm/gemini_client.py` e não aparece
