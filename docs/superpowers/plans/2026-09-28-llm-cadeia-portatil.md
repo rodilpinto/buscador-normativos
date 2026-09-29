@@ -2,6 +2,8 @@
 
 > **For agentic workers:** executado inline nesta sessão (superpowers:executing-plans), a pedido do Rodrigo ("go ahead").
 
+> ✅ **Executado em 28/09/2026** — T1–T4 em `affc13f` (um commit só, runner TUDO VERDE); a 1.0.1 veio depois pelo scopediagram (`98d955e`). Casas vivas: README da pasta (versão/changelog) e `_TODO.md`.
+
 **Goal:** transformar `llm/cadeia.py` na pasta copiável `llm_cadeia/`, com `sistema`, `json`, chaves `_2` para todo
 serviço, `Resposta` com tentativas, painel Streamlit e diagnóstico.
 
@@ -31,26 +33,26 @@ serviço, `Resposta` com tentativas, painel Streamlit e diagnóstico.
 `novo_contexto()`, `usar_contexto(ctx)`, `PRESETS`, `GEMINI_MODELOS_PADRAO`, `__version__ = "1.0.0"`.
 Transportes: `_gerar_openai(p, modelo, prompt, sistema, json, temperatura, max_tokens)` e `_gerar_gemini(...)` mesma assinatura.
 
-- [ ] Testes novos (falham antes): `tentativas` lista falhas sem chave; `sistema` vira mensagem `system` no payload
+- [x] Testes novos (falham antes): `tentativas` lista falhas sem chave; `sistema` vira mensagem `system` no payload
       OpenAI; `json=True` tira cercas ```` ```json ````; `GROQ_API_KEY_2` gera provedor `groq-2` logo após `groq`;
       testes existentes adaptados a `Resposta` e à nova assinatura dos transportes.
-- [ ] Implementar; `gemini_client._generate` usa `gerar(...).texto`.
-- [ ] Runner com a suíte no novo caminho (baseline = nova contagem) → TUDO VERDE. Commit.
+- [x] Implementar; `gemini_client._generate` usa `gerar(...).texto`.
+- [x] Runner com a suíte no novo caminho (baseline = nova contagem) → TUDO VERDE. Commit.
 
 ### Task 2: `painel_streamlit.painel_llm()` + `app.py`
 
-- [ ] Mover o bloco da barra lateral de `app.py` para `painel_llm()` (mesmas `key=` dos widgets, mesmo texto).
-- [ ] `app.py`: `from llm_cadeia.painel_streamlit import painel_llm` e chamar dentro de `with st.sidebar:`.
-- [ ] AppTest: sem exceção; escolher Groq + chave falsa → `usuario — openai/gpt-oss-120b` no status. Commit.
+- [x] Mover o bloco da barra lateral de `app.py` para `painel_llm()` (mesmas `key=` dos widgets, mesmo texto).
+- [x] `app.py`: `from llm_cadeia.painel_streamlit import painel_llm` e chamar dentro de `with st.sidebar:`.
+- [x] AppTest: sem exceção; escolher Groq + chave falsa → `usuario — openai/gpt-oss-120b` no status. Commit.
 
 ### Task 3: diagnóstico
 
-- [ ] `diagnostico.py`: `diagnosticar() -> list[tuple[provedor, modelo, "ok"|motivo]]`, chamando cada modelo de cada
+- [x] `diagnostico.py`: `diagnosticar() -> list[tuple[provedor, modelo, "ok"|motivo]]`, chamando cada modelo de cada
       provedor configurado com "Responda só: ok" (ignora esperas); `__main__.py` imprime tabela. Teste sem rede com
       transportes dublados.
-- [ ] Rodar de verdade com a chave desta máquina. Commit.
+- [x] Rodar de verdade com a chave desta máquina. Commit.
 
 ### Task 4: README e docs
 
-- [ ] `llm_cadeia/README.md` (adotar em 5 passos, segredos, uso, diagnóstico, regra de sincronia, changelog).
-- [ ] `CLAUDE.md` ponteiro; `secrets.toml.example` com `_2`; `log.md`; `SESSION-ONBOARD` §8. Runner final. Commit.
+- [x] `llm_cadeia/README.md` (adotar em 5 passos, segredos, uso, diagnóstico, regra de sincronia, changelog).
+- [x] `CLAUDE.md` ponteiro; `secrets.toml.example` com `_2`; `log.md`; `SESSION-ONBOARD` §8. Runner final. Commit.

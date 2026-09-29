@@ -1,7 +1,7 @@
 ---
 title: "Bloqueios no humano — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-23
+last_updated: 2026-09-29
 related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -145,6 +145,10 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
    em `af88593`/`eb91277` e pode perder acesso ao repo num reboot. ⚠ O Community Cloud **não troca o repo de um
    app existente**: repontar para B = apagar e recriar — **copiar os segredos antes de apagar**.
 
+5. ✅ **Em parte, 28/09 (medido do PC do trabalho, NÃO do servidor):** o Gemma responde (`google/gemma-4`, com `sistema=` +
+   JSON), e a rede da Câmara deixa passar Gemini, Groq, Cerebras e OpenRouter (sessão do scopediagram; `log.md` 28/09). As
+   perguntas 1–3 acima continuam abertas para o **servidor**.
+
 Bônus: existe **GitHub/GitLab institucional** onde o repo deva viver? (Você citou `git.camara.gov.br`
 como espelho pelo PC do trabalho — registrado no state file §8.)
 
@@ -156,6 +160,37 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 - `origin/frente2/trilha-a` e `origin/frente2/trilha-b` foram backups das trilhas; o conteúdo está em `master` (as pontas
   remotas `3751b2a`/`6178f9d` são mais antigas que os merges `08d9d8c`/`9e259ca`, e todas são ancestrais de `master`). Se quiser limpar: `git push origin --delete frente2/trilha-a frente2/trilha-b` e depois
   `git branch -D frente2/trilha-a frente2/trilha-b`. Deixar também não custa nada.
+
+---
+
+## 🔴 B-08 · Trocar a chave `GROQ_API_KEY_2` (apareceu na conversa) — depois da reunião
+
+- **Aberto em:** 2026-09-28 · **Bloqueia:** nada; é higiene de segredo.
+- O valor passou pelo contexto de uma sessão do Claude (seleção de linha no editor, 28/09). Só os apps de teste usam Groq.
+- **O que fazer:** console.groq.com/keys → criar chave nova → apagar a antiga → atualizar `~/.llm-chaves.toml` (nesta máquina e
+  na cópia do PC do trabalho) e os *Secrets* dos apps que a usam → *Reboot app*.
+- Junto: o 📝 "rotacionar a chave Gemini" do B-06 item 4 (trecho passou pelo chat em 22/09) continua em aberto.
+
+---
+
+## 🔴 B-09 · Depois da reunião de 29/09: levar a versão nova para os apps ao vivo?
+
+- **Aberto em:** 2026-09-28 · **Origem:** D-C21 (congelamento) e D-C14.
+- **Buscador:** autorizar `git push origin master:deploy` (hoje `deploy` = `v1.0.1`; `master` tem a cadeia de LLM). Antes,
+  conferir no app de teste que a versão atual de `master` está bem.
+- **Checklist v2** (`rodilpinto/checklist-conformidade`, repo **público**): merge de `feat/llm-cadeia` em `master` (o `master`
+  é o app ao vivo). Scopediagram: o equivalente, na sessão dele.
+- **Conferir a visibilidade dos apps de teste** (share.streamlit.io → app → *Settings → Sharing*): se algum estiver público,
+  qualquer um com a URL gasta as chaves de LLM. Ver a contradição anotada na D-C14.
+- 📝 Opcional: trocar o IP interno `10.10.111.125` por um marcador no `.env.example` e no README do repo público do checklist.
+
+---
+
+## 🟢 B-10 · Chaves gratuitas do login nuati.secin (opcional)
+
+- **Aberto em:** 2026-09-28 · **Bloqueia:** nada — o fallback já funciona com as chaves do rodilpinto.
+- Em 28/09 só as chaves `_2` (rodilpinto) de Groq, Cerebras e OpenRouter estavam preenchidas em `~/.llm-chaves.toml`; as sem
+  sufixo, vazias. Passo a passo com links: `levantamento-normativos/llm_cadeia/README.md` (tabela "Segredos").
 
 ---
 

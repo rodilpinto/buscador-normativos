@@ -89,6 +89,11 @@ Depois: se o usuário já deu uma tarefa, siga; senão pergunte **"Qual a tarefa
   Python falha em silêncio.
 - **Auto-memória exige autorização explícita** do Rodrigo antes de qualquer escrita.
 - Separar fato de sugestão: marcar `📝` o que for proposta não validada.
+- **`levantamento-normativos/llm_cadeia/` é ORIGEM de um módulo copiado para outros apps** (D-C18): mudança nela sobe
+  `__version__` + changelog do README; o teste dela viaja com a pasta e não pode importar nada do buscador.
+- **Push em `master` redeploya o app de teste; push na `deploy` muda o app ao vivo** — este, só com ok do Rodrigo.
+- **Chaves de LLM nunca passam pelo chat nem pelo repo.** Para teste local, carregar `~/.llm-chaves.toml` no ambiente de
+  dentro do processo Python, sem imprimir (receita em `~/.claude/ENVIRONMENT.md`).
 
 Até existir uma tarefa, NÃO: editar arquivos · começar a implementar · commitar · explorar além
 dos documentos acima.

@@ -2,6 +2,17 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-29] checkpoint | cadeia de LLM (23–28/09) e congelamento da versão ao vivo para a reunião
+
+Sessão longa, de 23/09 a 29/09, sobre o LLM. Cadeia de commits: `git log --oneline --reverse 0dd60b4..HEAD`. Resumo: cadeia de
+provedores com rodízio de modelos e chave do usuário (`de9f616`) → módulo copiável `llm_cadeia/` 1.0.0 (spec `fb6f2a9`,
+código `affc13f`) → verificação ao vivo nos 5 provedores → 1.0.1 vinda do scopediagram (`98d955e`). Decisões D-C18 a D-C21.
+Ledgers: frente 5 🟡 com veredito por insumo (o (f) reproduzido hoje); B-08, B-09, B-10 novos; D-C17 com prazo vencido
+declarado; D-C14 com a contradição "1 app privada por conta" × dois apps. Lição nova no `LESSONS.md` (modelo que pensa →
+resposta vazia). `~/.claude/ENVIRONMENT.md` ganhou o arquivo de chaves e o que o PC do trabalho alcança. ⚠ Checkpoint
+**commitado e NÃO empurrado**: hoje é o dia da reunião e push em `master` redeploya o app de teste (reserva). Snapshot de
+memória **não** escrito (política de autorização) — perguntado ao Rodrigo.
+
 ## [2026-09-28] merge | `llm_cadeia` 1.0.1 no `master` (vinda da adoção no scopediagram)
 
 Branch `llm-cadeia-1.0.1` (`98d955e`) revisada linha a linha e integrada por fast-forward; baseline do runner 19 → 23

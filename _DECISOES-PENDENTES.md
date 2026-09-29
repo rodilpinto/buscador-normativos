@@ -1,7 +1,7 @@
 ---
 title: "Decisões abertas — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-23
+last_updated: 2026-09-29
 related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -15,6 +15,11 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 ## 🔴 D-C17 — O dedup fuzzy funde acórdãos DISTINTOS do TCU: consertar nesta frente ou depois?
 
+> ⚠ **29/09 — prazo VENCIDO:** o prazo abaixo era "antes do brainstorm da frente 5". Em 28/09 a sessão fez o brainstorm
+> e entregou o núcleo de LLM da frente 5 (`llm_cadeia/`, spec `docs/superpowers/specs/2026-09-28-llm-cadeia-portatil-design.md`)
+> **sem** trazer esta decisão ao Rodrigo — o trabalho foi urgente (reunião de 29/09) e não tocou no dedup. Continua 🔴 aberta
+> e sem nova data; 📝 perguntar na próxima sessão, antes de qualquer task no `deduplicator.py`.
+>
 > ⚠ **Atualizado em 23/09 (frente 2 encerrada com ela aberta):** "nesta frente" e "antes da T10" abaixo já não se
 > aplicam — qualquer escolha vira **task própria**. Prazo recomendado: responder **antes do brainstorm da frente 5**
 > (a revisão de spec pediu que não passe do início dela). O texto original fica abaixo como registro.
@@ -141,6 +146,14 @@ Gemini, e cada tema digitado sai da rede.
 Community Cloud** como vitrine — sabendo que ela roda com Gemini e fora da rede; **produção só no
 servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
 
+⚠ **28/09 — estado novo (fato, não decisão):** o app ao vivo continua na `deploy` = `v1.0.1` (Rodrigo testou em 28/09:
+funciona). Nasceu um **app de teste** `https://buscador-normativos-teste.streamlit.app/`, criado pelo Rodrigo, que segue
+`master` (cadeia de LLM). ⚠ Isso contradiz a linha acima "**limite de 1 app privada por conta**": ou o limite mudou, ou um
+dos dois apps é **público** — não verificado; B-09 manda conferir (app de teste público gastaria as chaves de LLM de quem
+abrir a URL). Servidor do Nuati: o Gemma respondeu ao vivo **do PC do trabalho** (sessão do scopediagram, 28/09) e a rede
+da Câmara deixou passar Gemini, Groq, Cerebras e OpenRouter — medido do PC, **não** do servidor (B-06 segue aberta).
+🔴 **Pergunta aberta derivada:** avançar a `deploy` para `master` depois da reunião de 29/09? → **B-09**.
+
 **Decisão tomada:** _(pendente — 🟡 em análise; ver B-06 para o que só o Rodrigo responde)_
 
 ---
@@ -165,6 +178,19 @@ servidor do Nuati**. O que NÃO fazer: tratar a app da nuvem como produção.
   `memory-write-policy` exige autorização explícita do Rodrigo. Item no `_TODO.md` §P3.
 
 ---
+
+## 🟢 Decididas em 2026-09-28 (cadeia de LLM, trabalho urgente antes da reunião de 29/09)
+
+- **D-C18 · Distribuir o módulo de LLM por COPIAR E COLAR, com origem neste repo.** Rodrigo, 28/09: *"a code that could be
+  copy and pasted on all solutions would be enough"*; ficaram de fora serviço compartilhado e pacote pip. Origem =
+  `levantamento-normativos/llm_cadeia/`; cópias não se editam; melhoria sobe `__version__` + changelog e é recopiada.
+  Primeiro retorno pela regra: a 1.0.1 veio do scopediagram por branch e entrou por merge (`98d955e`).
+- **D-C19 · Destino dos apps: servidor do Nuati; cópia no Streamlit Cloud como portfólio.** Mesmo código nos dois; só os
+  Secrets mudam (no Cloud, sem `LLM_BASE_URL`).
+- **D-C20 · Ordem da cadeia e logins:** chave do usuário (na sessão) > local > gemini > gemini-2 > groq(-2) > cerebras(-2) >
+  openrouter(-2). 📝 Convenção sugerida por mim e usada pelo Rodrigo: sem sufixo = nuati.secin, `_2` = rodilpinto.
+- **D-C21 · Não mexer na versão ao vivo antes da reunião de 29/09** (Rodrigo, 28/09: *"we must not break anything"*). App
+  de teste separado, seguindo `master`; `deploy` intocada. Vale também para os outros apps (checklist: `master` = ao vivo).
 
 ## 🟢 Decididas em 2026-09-22
 

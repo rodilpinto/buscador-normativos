@@ -4,6 +4,24 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-09-28 · Modelo que "pensa" devolve resposta VAZIA com orçamento de tokens pequeno — e o diagnóstico só viu porque chamou de verdade
+
+**Problema.** O primeiro `python -m llm_cadeia` (1 chamada por modelo, `max_tokens=16`) mostrou `gemini-2.5-flash` e
+`gemma-4-31b-it` com **resposta vazia**, sem erro. Os lotes de nota do buscador usam `max_tokens=512`: com esses modelos na
+cadeia, a nota viraria `fallback_erro` em silêncio.
+
+**Causa-raiz.** Modelos de raciocínio gastam o orçamento de saída pensando antes de escrever; com orçamento curto, o texto
+final sai vazio. Medido em 28/09: `gemma-4-31b-it` com 16 tokens → `None`; com 512 e 4096 → `"ok"`.
+
+**Conserto.** Piso de 4096 tokens também no transporte Gemini (`nucleo._gerar_gemini`), igual ao que o OpenAI-compatível já
+tinha; teste que afirma o piso. Depois do piso, o mesmo diagnóstico deu `ok` nesses modelos.
+
+**Regra.** Todo diagnóstico de modelo faz uma chamada **real** por modelo e trata "vazio" como achado, não como sucesso.
+`max_tokens` é teto de custo, não tamanho da resposta: nunca abaixe para "economizar" em modelo que pensa.
+
+**Cobertura.** ✅ `llm_cadeia` (os dois transportes). ⚠ As cópias do módulo em outros apps herdam o conserto só a partir da
+1.0.0 que já o contém; app que chame LLM **fora** do módulo não está coberto.
+
 ## 2026-09-28 · Barra lateral do Streamlit roda antes do LLM: "Última resposta" ficava um passo atrasada
 
 **Problema.** Adotando o `llm_cadeia` no `scopediagram`, a linha "Última resposta" de `painel_llm()` não aparecia depois

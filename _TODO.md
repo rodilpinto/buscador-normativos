@@ -1,13 +1,13 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-09-23
+last_audit: 2026-09-29
 related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
 # TODOs — o que está pendente
 
-> **Frente 2 fechada em 23/09** (T10). **Próxima: frente 5 (LM local)** — ordem D-C11 1 → 2 → **5** → 3 → 4; spec
-> ainda não escrita (insumos na linha da frente 5, abaixo). Histórico da frente 2: conteúdo das tasks em
+> **Frente 2 fechada em 23/09** (T10). **Frente 5 (LM local) 🟡 em andamento** desde 28/09 — o núcleo (cadeia de LLM,
+> `llm_cadeia/`) foi entregue; o que falta está na linha da frente 5, abaixo. Ordem D-C11 1 → 2 → **5** → 3 → 4. Histórico da frente 2: conteúdo das tasks em
 > `docs/superpowers/plans/2026-09-22-frente2-honestidade-fontes.md` (tudo dobrado no corpo; ordem = numeração).
 > O plano de 16/09 só volta na v2.0 (T4/T7/T8) e aí valem
 > as três seções de emendas dele (precedência **C > B > A > corpo**, marcadores `⛔` no corpo).
@@ -89,8 +89,17 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       aceite derivados do plano), `reference/`. O plano segue fonte de verdade.
       Executada de 22/09 (noite) a 23/09. Status por task da frente 2: **`spec/frente2-honestidade-fontes/execucao/TODOS.md`**
       (SSOT da execução — aqui não se marca mais nada da frente 2). Contexto/regras: `execucao/CONTEXTO.md`.
-- [ ] **Frente 5 · LM local** — ▶ **próxima** (frente 2 fechada em 23/09). T5+T6 do plano de 16/09 puxadas para cá; spec **não escrita**. Insumo: pesquisa
-      do conector do wiki-chat no `log.md` (22/09).
+- [ ] **Frente 5 · LM local** — 🟡 **em andamento.** ✅ **Núcleo entregue 23–28/09** (fora da ordem de tasks, a pedido
+      urgente do Rodrigo): `levantamento-normativos/llm_cadeia/` (spec `docs/superpowers/specs/2026-09-28-llm-cadeia-portatil-design.md`,
+      plano `docs/superpowers/plans/2026-09-28-llm-cadeia-portatil.md`; versão e changelog no README da pasta). Cobre o que
+      T5/T6 pediam: backend injetável por ambiente, local OpenAI-compatível com `timeout=(5, 120)` em tupla, backend nulo =
+      cadeia vazia, teste do módulo no runner. **Veredito de cada insumo abaixo (29/09):** (a) ✅ feito (segredos por
+      ambiente); (b) ✅ dispensado — Gemini fala pelo SDK nativo e o local pelo endpoint OpenAI; (c) 🔴 aberto —
+      `nucleo._segredo` ainda lê `st.secrets` antes do ambiente; (d) 🔴 aberto — a cadeia é montada no import
+      (`nucleo._provedores`); (e) 🟡 meio caminho — `gerar` devolve `Resposta.tentativas`, mas `gemini_client._generate` só
+      repassa `.texto` e a tela ainda diz "Nenhuma palavra-chave gerada"; (f) 🔴 aberto — **reproduzido em 29/09** (`TypeError` com `ementa=None`), agora em `gemini_client.py:317` e `:415`; (g) 🔴 aberto.
+      **Falta também:** rodar o app no servidor do Nuati (B-06); ⚠ a D-C17 venceu o prazo (ver o ledger).
+      Insumo antigo: pesquisa do conector do wiki-chat no `log.md` (22/09).
       ➕ **Insumos de 22/09 (noite):** (a) configuração **por ambiente** — nuvem Streamlit = Gemini (não alcança a
       rede interna); servidor Nuati = LM local primário + Gemini de reserva (coerente com D-C5). (b) 📝 o Gemini tem
       endpoint **OpenAI-compatível** (`https://generativelanguage.googleapis.com/v1beta/openai/`, informado pelo
@@ -98,7 +107,7 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       servir os dois; não decidido. (c) consertar `st.secrets` vencendo a variável vazia do runner. (d) a chave é lida **uma vez, no import** de
       `gemini_client.py` — segredo gravado depois exige reboot; ler na hora do uso. (g) achado na T5 (23/09): com o logger `urllib3` em DEBUG, a linha da requisição do CSE sai com `key=AIza…` (o app fixa
       WARNING em `app.py:38`; vaza só se alguém ligar DEBUG) — filtro de log com `redigir`. (f) ⚠ achado na execução da frente 2 (review da T6, 23/09): com LLM ligado, `ementa`/`nome` `None` levanta
-      `TypeError` em `score_relevance_com_origem` (`gemini_client.py:384`) e `categorize_results` (`:476`) — `(r.get('ementa') or '')`.
+      `TypeError` em `score_relevance_com_origem` e `categorize_results` (linhas de 23/09 `:384`/`:476`; em 29/09 `:317`/`:415`) — `(r.get('ementa') or '')`.
       (e) `_generate` engole o erro da API
       (vira "Nenhuma palavra-chave gerada"): o motivo real precisa chegar à tela — mesma família da frente 2.
 - [ ] **Frente 3 · cobertura** — Planalto e/ou LEGIN; spec não escrita. Reabre D-B2 (D-C13).
@@ -109,6 +118,8 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       cores (laranja = parcial, "sem resultado" neutro); emissor/tipo inventados — `"gov.br": "Governo Federal"`
       (`google_searcher.py:101`) casa df.gov.br/go.gov.br, e `nome` montado por nós (TCU atos, LexML sem título, Google com
       a URL) parece título da fonte.
+- [ ] **Depois da reunião de 29/09** (o Rodrigo decide; nada disso é do agente sozinho): `BLOCKED-ON-RODRIGO.md` B-08
+      (trocar a chave Groq), B-09 (versão nova para os apps ao vivo + visibilidade dos apps de teste), B-05 (pedido ao LexML).
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).
       ✅ Tags `v1.0` (`eb91277`) e **`v1.0.1`** (`e2cd56a`, ponto de retorno funcional) criadas e empurradas em 22/09 (D-C10.1).
 
