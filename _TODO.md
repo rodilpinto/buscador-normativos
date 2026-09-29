@@ -118,6 +118,12 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       cores (laranja = parcial, "sem resultado" neutro); emissor/tipo inventados — `"gov.br": "Governo Federal"`
       (`google_searcher.py:101`) casa df.gov.br/go.gov.br, e `nome` montado por nós (TCU atos, LexML sem título, Google com
       a URL) parece título da fonte.
+- [ ] **Fase framework → passe por app (D-C22/D-C23, 29/09).** Este repo espera a sessão do `nuati-framework`. Depois dela,
+      o passe do buscador faz, **junto**: (1) recopiar o framework (o `llm_cadeia/` daqui vira cópia); (2) migrar branches —
+      `deploy` → `main` (padrão no GitHub), `master` → `homologacao`; (3) o Rodrigo recria os dois apps no Streamlit
+      (receita no README do framework); (4) apagar `master`/`deploy` só com os apps no ar. ⛔ Até lá **não editar
+      `llm_cadeia/`** (D-C24). Os insumos (c) e (d) da frente 5 são do módulo → vão para o framework; (e) tem parte no
+      `gemini_client.py` (daqui) e parte no módulo; (f) e (g) são daqui.
 - [ ] **Depois da reunião de 29/09** (o Rodrigo decide; nada disso é do agente sozinho): `BLOCKED-ON-RODRIGO.md` B-08
       (trocar a chave Groq), B-09 (versão nova para os apps ao vivo + visibilidade dos apps de teste), B-05 (pedido ao LexML).
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).

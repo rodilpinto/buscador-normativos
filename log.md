@@ -2,6 +2,15 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-29] decisão | depois da reunião: dois ambientes (`main`/`homologacao`) e framework central `nuati-framework`
+
+Reunião passou; o Rodrigo liberou o push (os 2 commits do checkpoint subiram: `a76b6c0`). Decisões D-C22 (dois ambientes;
+servidor do Nuati espelha `main`), D-C23 (framework em repo próprio e privado, origem única do compartilhado; passe por
+app faz adoção + migração de branches juntas) e D-C24 (`llm_cadeia/` congelado aqui a partir de agora). O framework
+parte da `llm_cadeia` 1.0.1 **deste repo no commit que grava esta entrada** (ver `git log -1 -- log.md`); a cópia do
+checklist (1.0.0) não serve de fonte. Marcação de supersessão dentro do README do `llm_cadeia` (sem mudança de código, versão
+segue 1.0.1). Prompts das 4 sessões entregues ao Rodrigo na conversa.
+
 ## [2026-09-29] checkpoint | cadeia de LLM (23–28/09) e congelamento da versão ao vivo para a reunião
 
 Sessão longa, de 23/09 a 29/09, sobre o LLM. Cadeia de commits: `git log --oneline --reverse 0dd60b4..HEAD`. Resumo: cadeia de

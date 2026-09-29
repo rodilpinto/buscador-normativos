@@ -175,6 +175,11 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 
 ## 🔴 B-09 · Depois da reunião de 29/09: levar a versão nova para os apps ao vivo?
 
+> ✅ **29/09 — forma decidida (D-C22/D-C23):** a promoção acontece no **passe por app**, depois da sessão do framework, já
+> com `main`/`homologacao`. O que **continua** com o Rodrigo neste item: o ok de cada promoção para `main`, recriar os apps
+> no share.streamlit.io (só ele tem o painel) e conferir a visibilidade dos apps de homologação. O texto abaixo é o registro
+> de 28/09; onde ele diz `deploy`/`master`, leia `main`/`homologacao`.
+
 - **Aberto em:** 2026-09-28 · **Origem:** D-C21 (congelamento) e D-C14.
 - **Buscador:** autorizar `git push origin master:deploy` (hoje `deploy` = `v1.0.1`; `master` tem a cadeia de LLM). Antes,
   conferir no app de teste que a versão atual de `master` está bem.

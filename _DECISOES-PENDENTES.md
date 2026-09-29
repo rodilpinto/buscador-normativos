@@ -153,6 +153,8 @@ dos dois apps é **público** — não verificado; B-09 manda conferir (app de t
 abrir a URL). Servidor do Nuati: o Gemma respondeu ao vivo **do PC do trabalho** (sessão do scopediagram, 28/09) e a rede
 da Câmara deixou passar Gemini, Groq, Cerebras e OpenRouter — medido do PC, **não** do servidor (B-06 segue aberta).
 🔴 **Pergunta aberta derivada:** avançar a `deploy` para `master` depois da reunião de 29/09? → **B-09**.
+✅ **29/09 — respondida pela D-C22:** produção = `main`, homologação = `homologacao`, servidor do Nuati espelha `main`; a
+ida da versão nova para produção acontece no passe por app da D-C23.
 
 **Decisão tomada:** _(pendente — 🟡 em análise; ver B-06 para o que só o Rodrigo responde)_
 
@@ -181,9 +183,33 @@ da Câmara deixou passar Gemini, Groq, Cerebras e OpenRouter — medido do PC, *
 
 ---
 
+## 🟢 Decididas em 2026-09-29 (depois da reunião): ambientes e framework central
+
+- **D-C22 · Dois ambientes por app, e só dois.** Rodrigo, 29/09: *"only two, one is a stable version and the other one our
+  playground. the nuati server will be a mirror on the production one."*
+  | Branch | Papel | Onde roda |
+  |---|---|---|
+  | **`main`** | **estável** (produção); branch **padrão** no GitHub | Streamlit `<app>.streamlit.app` (URL atual) + **servidor do Nuati como espelho** (puxa `main`) |
+  | **`homologacao`** | **playground** (homologação); trabalho do dia a dia | Streamlit `<app>-homologacao.streamlit.app` |
+  Promoção `homologacao` → `main` só com ok do Rodrigo + tag de versão. `master`, `deploy` e `feat/*` somem no fim da
+  migração. ⚠ Ordem obrigatória (o Streamlit não troca a branch de um app; é apagar e recriar — docs do Streamlit, "Rename
+  or change your app's GitHub coordinates"): criar branches → recriar os apps (copiar Secrets antes; mesma URL de produção)
+  → conferir no ar → só então apagar as branches velhas. Neste repo: `deploy` (`v1.0.1`) vira `main`; `master` vira
+  `homologacao`. **A receita passo a passo terá casa no README do framework (D-C23)**; aqui fica a decisão.
+- **D-C23 · Framework central em repo próprio, privado: `rodilpinto/nuati-framework`** (nome 📝 sugerido por mim, aceito
+  com "own repo, private"). Reúne o que é comum a todas as soluções (roteamento de LLM = o `llm_cadeia`, identidade visual,
+  contador de tempo economizado, …) e passa a ser a **ORIGEM única** do que é compartilhado. Distribuição continua por
+  copiar e colar (D-C18); **muda só onde mora a origem**. Sequência (Rodrigo, 29/09): commit+push das 4 sessões nas branches
+  de trabalho → sessão nova do framework → uma sessão por app, que **no mesmo passe** adota o framework **e** migra para
+  `main`/`homologacao` (um só recriar de apps por projeto).
+- **D-C24 · Congelamento de `llm_cadeia/` neste repo a partir de 29/09.** Ninguém edita a pasta aqui (nem nas cópias dos
+  outros apps); defeito achado vira pedido à sessão do framework. O framework parte da versão **1.0.1** deste repo (commit
+  citado no `log.md` de 29/09); a cópia do checklist é 1.0.0 e **não** serve de fonte.
+
 ## 🟢 Decididas em 2026-09-28 (cadeia de LLM, trabalho urgente antes da reunião de 29/09)
 
-- **D-C18 · Distribuir o módulo de LLM por COPIAR E COLAR, com origem neste repo.** Rodrigo, 28/09: *"a code that could be
+- **D-C18 · Distribuir o módulo de LLM por COPIAR E COLAR, com origem neste repo.** ⚠ **Origem superada pela D-C23
+  (29/09):** a origem vai para `rodilpinto/nuati-framework`; o "copiar e colar" continua valendo. Rodrigo, 28/09: *"a code that could be
   copy and pasted on all solutions would be enough"*; ficaram de fora serviço compartilhado e pacote pip. Origem =
   `levantamento-normativos/llm_cadeia/`; cópias não se editam; melhoria sobe `__version__` + changelog e é recopiada.
   Primeiro retorno pela regra: a 1.0.1 veio do scopediagram por branch e entrou por merge (`98d955e`).

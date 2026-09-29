@@ -24,7 +24,7 @@ Nasceu do projeto "Auditoria Interna apoiada por IA" (Secin/Nuati), área `ai-co
 | `_TODO.md` · `_DECISOES-PENDENTES.md` · `log.md` | status · decisões · timeline |
 | `LESSONS.md` · `BLOCKED-ON-RODRIGO.md` · `decisions/` | lições · pendências humanas · rodadas de decisão |
 | `docs/superpowers/{specs,plans}/2026-09-28-llm-cadeia-portatil*` | spec + plano do núcleo de LLM (**frente 5**, 🟡 em andamento; plano executado em 28/09) |
-| **`levantamento-normativos/llm_cadeia/README.md`** | **módulo de LLM copiável para as outras soluções** (origem aqui; cópias não se editam) |
+| **`levantamento-normativos/llm_cadeia/README.md`** | módulo de LLM — ⛔ **não editar aqui** (D-C24); a origem passa para `rodilpinto/nuati-framework` (D-C23) |
 | ⛔ `docs/.../2026-09-08-*` · `spec/buscador/tasks/` | **superados** — histórico apenas |
 
 ## Arquitetura (consolidação de 2026-09-16)

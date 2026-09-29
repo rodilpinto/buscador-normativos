@@ -1,6 +1,10 @@
 # llm_cadeia — LLM com fallback entre provedores (pasta copiável)
 
-**Versão 1.0.1** · **Origem:** `buscador-normativos/levantamento-normativos/llm_cadeia/` (repo
+> ⛔ **29/09/2026 — ORIGEM EM MUDANÇA:** a origem deste módulo passa para o repo privado `rodilpinto/nuati-framework`
+> (decisões D-C23/D-C24 no `_DECISOES-PENDENTES.md` do buscador). Esta pasta fica **congelada** na 1.0.1: não edite aqui;
+> quando o framework existir, pegue o módulo de lá. O texto abaixo descreve a 1.0.1 como estava.
+
+**Versão 1.0.1** · **Origem (até 29/09):** `buscador-normativos/levantamento-normativos/llm_cadeia/` (repo
 `github.com/rodilpinto/buscador-normativos`). Spec: `docs/superpowers/specs/2026-09-28-llm-cadeia-portatil-design.md`.
 
 Um jeito só de chamar LLM em todas as soluções do Nuati. Tenta, em ordem, até alguém responder:

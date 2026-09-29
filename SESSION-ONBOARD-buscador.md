@@ -27,7 +27,7 @@ colar; a ORIGEM é aqui). O README dela é o ponto de entrada (uso, segredos, ad
 os 5 provedores externos com chave real (texto, notas, categorias, JSON) e, do PC do trabalho, o Gemma local. O que falta da
 frente 5: `_TODO.md`, linha da frente 5 (veredito por insumo).
 🧊 **Congelamento (D-C21):** o app ao vivo segue a `deploy` = `v1.0.1`; o **app de teste** segue `master`. Levar a versão
-nova ao vivo é decisão do Rodrigo **depois da reunião** (B-09). Adotaram o módulo: scopediagram e checklist v2, cada um
+nova ao vivo é decisão do Rodrigo **depois da reunião** (B-09). ✅ **29/09:** a reunião passou; o caminho decidido está na §6 (D-C22/D-C23/D-C24). Adotaram o módulo: scopediagram e checklist v2, cada um
 numa branch própria (sessões no PC do trabalho). Registro: `log.md`, entradas de 23/09 a 29/09.
 
 ### Estado anterior (2026-09-23, frente 2 fechada — T10)
@@ -97,13 +97,13 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 
 ## 6. Próximo movimento
 
-▶ **Primeiro, com o Rodrigo (depois da reunião de 29/09):** B-09 (levar `master` à `deploy`? visibilidade dos apps de
-teste), B-08 (trocar a chave Groq) e a 🔴 **D-C17**, que venceu o prazo. **Até ele decidir, não empurrar `master`** — o app
-de teste é o reserva da reunião e redeploya a cada push. **O congelamento acaba só com um ok explícito do Rodrigo**
-(não com a passagem do dia); até lá, cada chunk é commitado e fica local.
-▶ **Primeiro passo agêntico** (não depende do Rodrigo): terminar a frente 5 pelos insumos ainda abertos da linha dela no
-`_TODO.md` — o (f) (`ementa None`, reproduzido em 29/09) é o menor e tem teste óbvio; depois (e), (c), (d), (g). Qualquer
-mudança em `llm_cadeia/` sobe `__version__` + changelog (regra de sincronia no README). ⚠ As chaves de LLM estão definidas no ambiente desta máquina: app lançado à mão
+▶ **29/09, depois da reunião — o projeto espera a sessão do framework** (D-C22/D-C23/D-C24 em `_DECISOES-PENDENTES.md`).
+O congelamento de push de 28/09 **acabou** (ok do Rodrigo em 29/09). ⛔ **Não editar `llm_cadeia/`** (D-C24): a origem vai
+para `rodilpinto/nuati-framework`. O próximo trabalho aqui é o **passe por app** (item "Fase framework → passe por app" do
+`_TODO.md`), depois que o framework existir.
+▶ **Primeiro passo agêntico enquanto espera** (não toca `llm_cadeia/`): o insumo (f) da frente 5 (`ementa None` em
+`gemini_client.py`, reproduzido em 29/09) — menor, com teste óbvio, trabalhar em `master` (vira `homologacao`).
+▶ **Com o Rodrigo:** B-08 (trocar a chave Groq), B-09 (oks de promoção, recriar apps) e a 🔴 **D-C17**, que venceu o prazo. ⚠ As chaves de LLM estão definidas no ambiente desta máquina: app lançado à mão
 usa `env -u GEMINI_API_KEY -u GOOGLE_API_KEY -u OPENAI_API_KEY` (`~/.claude/ENVIRONMENT.md`).
 
 🔴 **D-C17 aberta e declarada** (dedup fuzzy funde acórdãos distintos: 26 de 900 numa amostra real; perda silenciosa).
