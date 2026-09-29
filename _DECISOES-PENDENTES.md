@@ -13,6 +13,26 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
 
+## 🔴 D-C26 — Os apps são PÚBLICOS e usam as chaves de LLM do app: manter assim?
+
+- **Onde aparece:** 29/09, o Rodrigo conferiu o *Sharing* dos seis apps: **todos públicos**. Qualquer pessoa com a URL usa a IA
+  gastando as chaves gravadas nos *Secrets* (nuati.secin e rodilpinto: Gemini, Groq, Cerebras, OpenRouter).
+- **Risco medido até onde dá:** cota esgotada por terceiros (o app cai para "sem IA" — degrada, não quebra). **Custo em dinheiro**
+  só se algum projeto Google das chaves tiver **faturamento ligado** — ⚠ **não conferido**; as camadas gratuitas de Groq, Cerebras
+  e OpenRouter não cobram sem cartão/créditos (docs de 25/09). O conteúdo buscado (normas públicas) não é sensível.
+- **Trava:** nada no código; pesa no passe por app (D-C23), quando os apps forem recriados — é a hora natural de escolher.
+
+| Opção | Efeito |
+|---|---|
+| **a · manter públicos, com guarda** | Conferir que nenhum projeto Google das chaves tem faturamento; aceitar o risco de cota. Portfólio segue aberto. |
+| **b · produção pública só com a chave do usuário** | O app público não leva chave nos *Secrets*: quem quiser IA cola a própria (o campo já existe). Homologação com as chaves, mas privada. |
+| **c · privados** | Só convidados veem. Portfólio perde a vitrine aberta; conferir quantos apps privados a conta aceita. |
+
+📝 **Recomendação:** `a` já (conferir faturamento é 2 minutos: console.cloud.google.com/billing, nos projetos das duas chaves
+Gemini) e decidir `a`/`b` no passe por app. **Decisão tomada:** _(pendente)_
+
+---
+
 ## 🟢 D-C25 — O repo interno `Nuati-SECIN/framework` (git.camara), criado em 28/09: arquivar, apagar ou espelho?
 
 - **Onde aparece:** 29/09, relatório da sessão que levantou os recursos (no PC do trabalho). O repo foi criado em 28/09 **com
@@ -149,7 +169,7 @@ data, abrir seção em `decisions/DECISIONS-LOG.md`, fechar `B-02` no `BLOCKED-O
 `https://levantamento-normativos.streamlit.app/` no Community Cloud, **privado** (GET → `303` para o login do
 `share.streamlit.io`). A verificação só olhou o repo; deploy no Community Cloud não deixa arquivo no repo.
 Vinha do repo A. ✅ **Redeploy feito em 22/09 (noite)** a partir do repo B, branch `master`:
-`https://buscador-normativos.streamlit.app/`, privado; B continua privado. ~~⚠ Push em `master` = deploy.~~
+`https://buscador-normativos.streamlit.app/`, ~~privado~~ (**público**, ver a correção de 29/09 abaixo); o **repo** B continua privado. ~~⚠ Push em `master` = deploy.~~
 ⚠ **CORRIGIDO em 22/09:** o app segue a branch **`deploy`** (congelada em `v1.0.1`), não `master` — Rodrigo
 confirmou nesta data que a versão publicada roda a partir da branch. Push em `master` **não** é deploy.
 ✅ Continua valendo: sem Dockerfile/Procfile. Doc oficial do Streamlit Community Cloud: repo **privado é aceito** e o app
@@ -174,6 +194,7 @@ funciona). Nasceu um **app de teste** `https://buscador-normativos-teste.streaml
 dos dois apps é **público** — não verificado; B-09 manda conferir (app de teste público gastaria as chaves de LLM de quem
 abrir a URL). Servidor do Nuati: o Gemma respondeu ao vivo **do PC do trabalho** (sessão do scopediagram, 28/09) e a rede
 da Câmara deixou passar Gemini, Groq, Cerebras e OpenRouter — medido do PC, **não** do servidor (B-06 segue aberta).
+⚠ **CORRIGIDO em 29/09:** o app é **PÚBLICO** — Rodrigo conferiu em share.streamlit.io → *Sharing*: os seis apps da conta estão públicos. "Privado" era afirmação de 22/09, nunca conferida no painel. A contradição "1 app privada por conta" se desfaz: não há app privado. Consequência → **D-C26**.
 🔴 **Pergunta aberta derivada:** avançar a `deploy` para `master` depois da reunião de 29/09? → **B-09**.
 ✅ **29/09 — respondida pela D-C22:** produção = `main`, homologação = `homologacao`, servidor do Nuati espelha `main`; a
 ida da versão nova para produção acontece no passe por app da D-C23.

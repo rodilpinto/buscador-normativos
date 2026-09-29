@@ -188,6 +188,8 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 - Ao avançar a `deploy`: colar nos *Secrets* do app **ao vivo** o mesmo conteúdo do app de teste (`~/.llm-chaves.toml`) e dar
   *Reboot*; conferir que a versão de Python do app ao vivo aceita o código (o de teste roda 3.14; a do ao vivo não está
   registrada — *Settings* do app).
+- ✅ **29/09 — conferido pelo Rodrigo:** os seis apps estão **públicos** (lista no state file §8). Segue na **D-C26**. Secrets de
+  todos salvos por ele fora do repo. Texto original:
 - **Conferir a visibilidade dos apps de teste** (share.streamlit.io → app → *Settings → Sharing*): se algum estiver público,
   qualquer um com a URL gasta as chaves de LLM. Ver a contradição anotada na D-C14.
 - 📝 Opcional: trocar o IP interno `10.10.111.125` por um marcador no `.env.example` e no README do repo público do checklist.

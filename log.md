@@ -2,6 +2,14 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-29] correção | os apps do Streamlit são PÚBLICOS (não privados); nova D-C26
+
+O Rodrigo conferiu o painel: seis apps, **todos públicos**, e salvou os Secrets de cada um fora do repo. "Privado" vinha de
+22/09 e nunca tinha sido conferido no painel — corrigido no state file (§2 e §8) e na D-C14. A lista do painel também confirma
+que a produção do scopediagram serve `main` e revela um sexto app, `dou-clipping-app` (`master`). Nova 🔴 **D-C26**: app
+público gasta as chaves de LLM do app; faturamento dos projetos Google **não conferido**. Orientação dada: não apagar apps
+agora — a recriação acontece no passe por app, depois das branches novas.
+
 ## [2026-09-29] decisão | D-C25 = `a`: `Nuati-SECIN/framework` vira espelho interno do `nuati-framework`
 
 Rodrigo escolheu `a`. Registro na D-C25 (`_DECISOES-PENDENTES.md`). O prompt da sessão do framework (entregue na conversa)
