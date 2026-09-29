@@ -2,6 +2,16 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-29] relatos | pausa das sessões para o framework: scopediagram, checklist, levantamento
+
+Os três relatos voltaram. Conferido aqui por `git ls-remote`: scopediagram `feat/llm-cadeia` = `9d52dc5`, `main` = `0b5aee1`
+(repo **público**, 30 commits varridos, sem chave); checklist no GitHub `feat/llm-cadeia` = `da8ccd4` (1.0.0) e `master` =
+`090aa67` — o `92ac158` do relato está **só** no servidor interno. O levantamento está em `Nuati-SECIN/framework` (git.camara,
+`master` @ `4c751ba`), repo criado em 28/09 → nova 🔴 **D-C25** (o que fazer com ele). A sessão do checklist listou 5 pedidos
+para o `llm_cadeia` (timeout do Gemma, desligar raciocínio, dados internos na pasta, forçar um só provedor, Gemini sem
+timeout) — entram no prompt do framework, não aqui (D-C24). Padrão observado nos dois apps: a entrada de log cita o hash
+**anterior** ao commit que a grava; vale o hash da branch.
+
 ## [2026-09-29] decisão | depois da reunião: dois ambientes (`main`/`homologacao`) e framework central `nuati-framework`
 
 Reunião passou; o Rodrigo liberou o push (os 2 commits do checkpoint subiram: `a76b6c0`). Decisões D-C22 (dois ambientes;

@@ -13,6 +13,25 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
 
+## 🔴 D-C25 — O repo interno `Nuati-SECIN/framework` (git.camara), criado em 28/09: arquivar, apagar ou espelho?
+
+- **Onde aparece:** 29/09, relatório da sessão que levantou os recursos (no PC do trabalho). O repo foi criado em 28/09 **com
+  autorização do Rodrigo**, antes da D-C23 escolher `rodilpinto/nuati-framework` (GitHub, privado). Guarda o levantamento
+  `LEVANTAMENTO-FRAMEWORK.md` (branch `master`, commit `4c751ba`) e uma spec/plano já marcados como superados lá dentro.
+- **Trava:** só a configuração de remotos da sessão do framework. **Não** trava o início dela (ela só LÊ o levantamento).
+
+| Opção | Efeito |
+|---|---|
+| **a · espelho interno** | GitHub = origem; `git.camara` recebe push, como no fluxo do buscador (22/09: GitHub origem → Câmara espelho). O conteúdo atual vira histórico dentro dele. |
+| **b · arquivar** | Fica só leitura; o levantamento é copiado para o `nuati-framework`. |
+| **c · apagar** | Depois de copiar o levantamento. Perde o histórico de 28/09. |
+
+📝 **Recomendação:** `a`, igual ao padrão já decidido para o buscador; o PC do trabalho enxerga os dois lados.
+
+**Decisão tomada:** _(pendente)_
+
+---
+
 ## 🔴 D-C17 — O dedup fuzzy funde acórdãos DISTINTOS do TCU: consertar nesta frente ou depois?
 
 > ⚠ **29/09 — prazo VENCIDO:** o prazo abaixo era "antes do brainstorm da frente 5". Em 28/09 a sessão fez o brainstorm
