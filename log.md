@@ -2,6 +2,11 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-09-29] decisão | D-C25 = `a`: `Nuati-SECIN/framework` vira espelho interno do `nuati-framework`
+
+Rodrigo escolheu `a`. Registro na D-C25 (`_DECISOES-PENDENTES.md`). O prompt da sessão do framework (entregue na conversa)
+leva `a` no campo da D-C25; ela roda no PC do trabalho, numa pasta nova e vazia (não na pasta do repo interno).
+
 ## [2026-09-29] relatos | pausa das sessões para o framework: scopediagram, checklist, levantamento
 
 Os três relatos voltaram. Conferido aqui por `git ls-remote`: scopediagram `feat/llm-cadeia` = `9d52dc5`, `main` = `0b5aee1`

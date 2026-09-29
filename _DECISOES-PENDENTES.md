@@ -13,7 +13,7 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
 
-## 🔴 D-C25 — O repo interno `Nuati-SECIN/framework` (git.camara), criado em 28/09: arquivar, apagar ou espelho?
+## 🟢 D-C25 — O repo interno `Nuati-SECIN/framework` (git.camara), criado em 28/09: arquivar, apagar ou espelho?
 
 - **Onde aparece:** 29/09, relatório da sessão que levantou os recursos (no PC do trabalho). O repo foi criado em 28/09 **com
   autorização do Rodrigo**, antes da D-C23 escolher `rodilpinto/nuati-framework` (GitHub, privado). Guarda o levantamento
@@ -28,7 +28,10 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 📝 **Recomendação:** `a`, igual ao padrão já decidido para o buscador; o PC do trabalho enxerga os dois lados.
 
-**Decisão tomada:** _(pendente)_
+**Decisão tomada:** ✅ **`a` · espelho interno** — Rodrigo, 29/09: *"a, espelho interno"*. GitHub (`rodilpinto/nuati-framework`) é a
+origem; `Nuati-SECIN/framework` recebe push de `main` e `homologacao` depois de cada push no GitHub. O `master` antigo de lá
+(levantamento, `4c751ba`) fica como registro, sem ser sobrescrito (nomes de branch diferentes). Quem executa: a sessão do
+framework, no PC do trabalho (o git.camara não é alcançável desta máquina).
 
 ---
 
