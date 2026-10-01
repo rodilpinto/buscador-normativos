@@ -1058,6 +1058,28 @@ class TestN9Passo3NaoDizConcluidaVerde:
             ("success", "Busca concluida - 2 normativos encontrados")
 
 
+class TestTempoEconomizado:
+    """Passo 5: tempo de trabalho manual poupado (tempo_economizado do nuati-framework, 01/10)."""
+
+    def test_conta_com_ia_desconta_a_ferramenta(self):
+        from app import _estimar_tempo
+        est = _estimar_tempo(True, n_buscas=90, n_encontrados=35, n_selecionados=20, segundos_ferramenta=600)
+        # 20 (tema) + 90 x 5 + 35 x 2 + 20 x 3 = 600 min a mao; ferramenta 10 min
+        assert est.manual_min == pytest.approx(600.0)
+        assert est.economia_min == pytest.approx(590.0)
+
+    def test_sem_ia_nao_conta_a_etapa_do_tema(self):
+        from app import _estimar_tempo
+        est = _estimar_tempo(False, n_buscas=3, n_encontrados=1, n_selecionados=1, segundos_ferramenta=0)
+        assert [e.descricao for e in est.etapas][0].startswith("Buscar")
+        assert est.manual_min == pytest.approx(3 * 5 + 2 + 3)
+
+    def test_nunca_negativo(self):
+        from app import _estimar_tempo
+        est = _estimar_tempo(False, n_buscas=1, n_encontrados=0, n_selecionados=0, segundos_ferramenta=3600)
+        assert est.economia_min == 0.0
+
+
 # ===========================================================================
 #  Run via pytest or direct execution
 # ===========================================================================

@@ -13,6 +13,7 @@ Wizard de 5 passos:
 import html as html_module
 import logging
 import re as _re
+import time
 from collections import Counter
 from datetime import datetime
 from urllib.parse import quote
@@ -29,6 +30,8 @@ from searchers import LexMLSearcher, TCUSearcher, GoogleSearcher
 from llm import gemini_client
 from llm_cadeia.painel_streamlit import painel_llm
 from branding.streamlit_cd import cd_brand
+from tempo_economizado import Estimativa, Etapa, estimar
+from tempo_economizado.painel_streamlit import mostrar_tempo_economizado
 from llm.gemini_client import is_available as llm_available
 from deduplicator import deduplicate
 from excel_export import generate_excel
@@ -79,6 +82,11 @@ _DEFAULTS: dict = {
     "keyword_statuses": [],
     # Step 5
     "excel_buffer": None,
+    # Tempo economizado (Passo 5): quanto a ferramenta levou e o que ela fez
+    "palavras_por_ia": False,
+    "tempo_ia_palavras_s": 0.0,
+    "tempo_busca_s": 0.0,
+    "n_buscas": 0,
 }
 
 for _key, _val in _DEFAULTS.items():
@@ -323,8 +331,11 @@ def _generate_keywords_if_needed() -> None:
         st.session_state["keywords_generated"] = True
         return
 
+    inicio = time.monotonic()
     with st.spinner("Gerando palavras-chave com IA..."):
         keywords = gemini_client.expand_topic_to_keywords(topic)
+    st.session_state["tempo_ia_palavras_s"] = time.monotonic() - inicio
+    st.session_state["palavras_por_ia"] = bool(keywords)
 
     st.session_state["llm_keywords"] = keywords[:]  # Store copy for restore
     st.session_state["edited_keywords"] = keywords[:]
@@ -491,6 +502,7 @@ def _execute_search(
         len(keywords), selected_sources, max_results,
     )
 
+    inicio = time.monotonic()
     with st.status("Buscando normativos...", expanded=True) as status:
         progress_bar = st.progress(0.0)
         status_text = st.empty()
@@ -588,6 +600,8 @@ def _execute_search(
         )
 
     # Store results and diagnostics, advance to Step 4
+    st.session_state["tempo_busca_s"] = time.monotonic() - inicio
+    st.session_state["n_buscas"] = len(keywords) * len(selected_sources)
     st.session_state["results"] = all_results
     st.session_state["search_done"] = True
     st.session_state["keyword_statuses"] = all_keyword_statuses
@@ -1272,6 +1286,26 @@ def render_step4() -> None:
 # ===========================================================================
 
 
+def _estimar_tempo(palavras_por_ia: bool, n_buscas: int, n_encontrados: int,
+                   n_selecionados: int, segundos_ferramenta: float) -> Estimativa:
+    """Tempo de trabalho manual poupado (tempo_economizado do nuati-framework).
+
+    Minutos por etapa: estimativas do Rodrigo (01/10/2026), a partir de um esboco do Claude.
+    A etapa do tema so conta quando a IA gerou as palavras-chave.
+    """
+    etapas = []
+    if palavras_por_ia:
+        etapas.append(Etapa("Transformar o tema em palavras-chave de busca", 1, 20.0, unidade="tema"))
+    etapas += [
+        Etapa("Buscar uma palavra-chave numa fonte e anotar o que voltou", n_buscas, 5.0, unidade="busca"),
+        Etapa("Ler a ementa de cada normativo encontrado e decidir se entra", n_encontrados, 2.0,
+              unidade="normativo"),
+        Etapa("Registrar cada normativo selecionado na planilha (título, ementa, link, fonte)",
+              n_selecionados, 3.0, unidade="normativo"),
+    ]
+    return estimar(etapas, automatico_min=max(0.0, segundos_ferramenta) / 60.0)
+
+
 def render_step5() -> None:
     """Passo 5: Exportar resultados selecionados para Excel."""
 
@@ -1365,6 +1399,15 @@ def render_step5() -> None:
                 ),
                 use_container_width=True,
             )
+
+    # --- Tempo de trabalho manual poupado ---
+    mostrar_tempo_economizado(_estimar_tempo(
+        st.session_state.get("palavras_por_ia", False),
+        st.session_state.get("n_buscas", 0),
+        len(results),
+        len(selected),
+        st.session_state.get("tempo_ia_palavras_s", 0.0) + st.session_state.get("tempo_busca_s", 0.0),
+    ))
 
     # --- Preview table ---
     st.divider()
