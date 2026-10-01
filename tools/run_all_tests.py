@@ -75,12 +75,12 @@ def _rodar(cmd: list[str]) -> tuple[int, str, float]:
     """
     inicio = time.monotonic()
     # 'roda sem LLM' so e garantido se o runner nao herdar a chave (rodada 2: test_comprehensive achou GEMINI_API_KEY no ambiente e levou 429 do Gemini)
-    # ⚠ st.secrets VENCE a variavel vazia: se existir
-    # levantamento-normativos/.streamlit/secrets.toml (hoje so ha o .example),
-    # as suites achariam a chave ali e chamariam o LLM de verdade. O conserto
-    # de codigo e da frente 5 (plano frente 2, Global Constraints).
+    # ⚠ st.secrets VENCE a variavel vazia, e le tambem o ~/.streamlit/secrets.toml global (LESSONS do framework):
+    # no PC do trabalho as suites "sem LLM" chamavam o LLM de verdade (01/10: test_llm_phase3 60/3 e 59/4).
+    # Conserto (llm_cadeia 1.1.0): LLM_SOMENTE com um nome que nao e provedor monta a cadeia VAZIA.
+    # Funciona porque nenhum secrets.toml define LLM_SOMENTE; o ambiente entao vale.
     proc = subprocess.run(
-        cmd, cwd=APP, env={**os.environ, "GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""},
+        cmd, cwd=APP, env={**os.environ, "GEMINI_API_KEY": "", "GOOGLE_API_KEY": "", "LLM_SOMENTE": "nenhum"},
         capture_output=True, text=True, encoding="utf-8", errors="replace"
     )
     return proc.returncode, proc.stdout + proc.stderr, time.monotonic() - inicio
