@@ -1,6 +1,6 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-09-29
+last_audit: 2026-10-01
 related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -94,9 +94,9 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       plano `docs/superpowers/plans/2026-09-28-llm-cadeia-portatil.md`; versão e changelog no README da pasta). Cobre o que
       T5/T6 pediam: backend injetável por ambiente, local OpenAI-compatível com `timeout=(5, 120)` em tupla, backend nulo =
       cadeia vazia, teste do módulo no runner. **Veredito de cada insumo abaixo (29/09):** (a) ✅ feito (segredos por
-      ambiente); (b) ✅ dispensado — Gemini fala pelo SDK nativo e o local pelo endpoint OpenAI; (c) 🔴 aberto —
-      `nucleo._segredo` ainda lê `st.secrets` antes do ambiente; (d) 🔴 aberto — a cadeia é montada no import
-      (`nucleo._provedores`); (e) 🟡 meio caminho — `gerar` devolve `Resposta.tentativas`, mas `gemini_client._generate` só
+      ambiente); (b) ✅ dispensado — Gemini fala pelo SDK nativo e o local pelo endpoint OpenAI; (c) ✅ **01/10**: o runner passa `LLM_SOMENTE=nenhum` (llm_cadeia 1.1.0) e as suítes rodam sem LLM mesmo com
+      o `secrets.toml` global; o `_segredo` continua lendo `st.secrets` antes do ambiente (decisão F-P5 do framework); (d) 🟡 a 1.1.0 trouxe
+      `recarregar()`, mas a cadeia continua montada no import e o app não o chama; (e) 🟡 meio caminho — `gerar` devolve `Resposta.tentativas`, mas `gemini_client._generate` só
       repassa `.texto` e a tela ainda diz "Nenhuma palavra-chave gerada"; (f) 🔴 aberto — **reproduzido em 29/09** (`TypeError` com `ementa=None`), agora em `gemini_client.py:317` e `:415`; (g) 🔴 aberto.
       **Falta também:** rodar o app no servidor do Nuati (B-06); ⚠ a D-C17 venceu o prazo (ver o ledger).
       Insumo antigo: pesquisa do conector do wiki-chat no `log.md` (22/09).
@@ -118,12 +118,39 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       cores (laranja = parcial, "sem resultado" neutro); emissor/tipo inventados — `"gov.br": "Governo Federal"`
       (`google_searcher.py:101`) casa df.gov.br/go.gov.br, e `nome` montado por nós (TCU atos, LexML sem título, Google com
       a URL) parece título da fonte.
-- [ ] **Fase framework → passe por app (D-C22/D-C23, 29/09).** Este repo espera a sessão do `nuati-framework`. Depois dela,
-      o passe do buscador faz, **junto**: (1) recopiar o framework (o `llm_cadeia/` daqui vira cópia); (2) migrar branches —
-      `deploy` → `main` (padrão no GitHub), `master` → `homologacao`; (3) o Rodrigo recria os dois apps no Streamlit
-      (receita no README do framework); (4) apagar `master`/`deploy` só com os apps no ar. ⛔ Até lá **não editar
-      `llm_cadeia/`** (D-C24). Os insumos (c) e (d) da frente 5 são do módulo → vão para o framework; (e) tem parte no
-      `gemini_client.py` (daqui) e parte no módulo; (f) e (g) são daqui.
+- [x] **Fase framework → passe por app (D-C22/D-C23)**: ✅ **feito em 01/10** (sessão no PC do trabalho; detalhe no `log.md`).
+      Branches: `main` = `e2cd56a` (v1.0.1, **sem** framework; produção) e `homologacao` (framework do `nuati-framework` @
+      `56d7eb0`: `llm_cadeia` 1.1.0, `branding` 1.0.0, `tempo_economizado` 1.0.0). Apps recriados pelo Rodrigo e conferidos
+      no ar: `buscador-normativos` (`main`) e `buscador-normativos-homologacao` (`homologacao`). `main` é a padrão no GitHub;
+      `master`, `deploy`, `frente2/*` e `llm-cadeia-1.0.1` apagadas (tags `pre-framework-2026-10-01-*` guardam as pontas).
+      `llm_cadeia/` deixou de ser origem: é **cópia** (D-C24 encerrada). Pendências que ficaram: ver abaixo.
+- [ ] **Depois do passe por app (01/10):**
+      - [ ] (Rodrigo) apagar o app `buscador-normativos-teste` no share.streamlit.io (a branch `master` que ele seguia já não existe).
+      - [ ] (Rodrigo, opcional) completar os Secrets da homologação com o bloco padrão (`LLM_BASE_URL`, `LLM_MODEL`, chaves sem
+            sufixo de Groq/Cerebras/OpenRouter); hoje a cadeia de lá começa no `gemini`. Reboot depois.
+      - [ ] (Rodrigo) promover `homologacao` → `main` quando o framework tiver a `v0.1.0` (F-A3 do framework) e ele der o ok;
+            receita: README do framework §3, "Depois da migração". Produção hoje: v1.0.1, só Gemini.
+      - [ ] 📝 Categorização vazia com o Gemma local (raciocínio ligado): visto em 01/10 no app local; provar
+            `LLM_DISABLE_THINKING=1` nos Secrets do servidor do Nuati quando ele existir (pedido 2 ao framework).
+      - [ ] 📝 O `gemini_client.py` importa `_segredo` (interno) do `llm_cadeia`: trocar quando o framework expuser uma
+            função pública (pedido 1 ao framework).
+- [ ] **Pedidos ao nuati-framework (passe de 01/10)**: entregues no relatório do passe; nada disto se conserta na cópia daqui.
+      1. **`_segredo` é interno e o app depende dele.** `levantamento-normativos/llm/gemini_client.py:45` faz
+         `from llm_cadeia.nucleo import _segredo` (lê `GEMINI_API_KEY` para o `api_key` de compatibilidade). Existe na 1.1.0 e os
+         testes passam, mas é API privada: uma renomeação no framework quebra o import do app. 📝 Sugestão: o framework expor
+         uma função pública de leitura de segredo (ex.: `llm_cadeia.segredo(nome)`), ou o app ler os seus.
+      2. **Resposta vazia do `local` (Gemma) na categorização.** App local da `homologacao`, 01/10: log
+         `Gemini returned empty response for categorize batch 0` (cerca de 5 min) e `batch 1` (cerca de 2 min); as notas de relevância do
+         mesmo `local` vieram. Resposta vazia não passa para o próximo provedor (desenho da 1.0.x). 📝 Sugestões: recomendar
+         `LLM_DISABLE_THINKING=1` no bloco do servidor do Nuati, e/ou um ajuste para tratar "vazio" como falha e seguir a cadeia.
+      3. **"Sem LLM" por `LLM_SOMENTE=nenhum` funciona, mas não está documentado.** O runner daqui passou a depender disso
+         (`0a74ddb`): 65/65 em 3 s, contra 60/3 com o `secrets.toml` global. 📝 Documentar no README como o jeito oficial de
+         desligar o LLM em teste (ou criar um nome próprio, ex. `LLM_DESLIGADO=1`).
+      4. **Branding em app público.** O README do branding diz que app aberto ao público mostra só a marca, sem assinatura de
+         unidade; os apps do Streamlit são públicos (D-C26) e o `rodape()` padrão mostra a assinatura (checklist e buscador).
+         📝 Esclarecer a regra para esses apps (ou `rodape(unidades=())`).
+      5. 📝 **Receita do passe (§3/PASSE-POR-APP, passo 2):** instalar o `requirements.txt` do app antes da linha de base. Aqui o
+         Python do PC do trabalho não tinha `ddgs`, e a linha de base pareceu regressão (LESSONS de 01/10).
 - [ ] **Depois da reunião de 29/09** (o Rodrigo decide; nada disso é do agente sozinho): `BLOCKED-ON-RODRIGO.md` B-08
       (trocar a chave Groq), B-09 (versão nova para os apps ao vivo + visibilidade dos apps de teste), B-05 (pedido ao LexML).
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).
@@ -193,7 +220,8 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
             por mutante). É o mesmo item da linha "(T2, Step 11b)" das sobras da execução, abaixo.
       - [ ] tela: agrupar o detalhe do TCU por fonte (é idêntico por keyword) — **aberto**; conversa com o "relatório
             enxuto" da frente 4.
-      - [ ] runner sem LLM de verdade (`st.secrets` vence a variável vazia) — **aberto, frente 5** (é o insumo (c) de lá;
+      - [x] runner sem LLM de verdade (`st.secrets` vence a variável vazia): ✅ **01/10**, `LLM_SOMENTE=nenhum` no runner (`0a74ddb`);
+            antes: **aberto, frente 5** (é o insumo (c) de lá;
             não duplicar). ⚠ Agravante medido na execução: as chaves de LLM estão **definidas no ambiente da máquina**
             (`~/.claude/ENVIRONMENT.md`, 23/09) — o runner as zera, o app lançado à mão não.
       - [ ] reduzir os ~390s dos testes LIVE — **aberto**. Medido na T3: o custo é **paginação** do TCU (~114s por busca),

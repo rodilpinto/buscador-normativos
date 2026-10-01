@@ -2,6 +2,25 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-10-01] migração | passe por app do nuati-framework: `main`/`homologacao`, framework na homologação
+
+Sessão no PC do trabalho, prompt do passe (framework @ `56d7eb0`, branch `homologacao` do framework; sem tag `v0.1.0`).
+- Passo 0: `master` local estava 11 commits atrás; `git fetch` + fast-forward até `e22822e`. Cópia do `llm_cadeia` = 7/7 hashes
+  do framework @ `b301593`. Mapeamento confirmado pelo Rodrigo (D-C27); branding incluído (D-C28).
+- Passo 1: tags `pre-framework-2026-10-01-deploy` (`e2cd56a`) e `pre-framework-2026-10-01-master` (`e22822e`).
+- Passo 2: linha de base vermelha **por ambiente** (LESSONS de 01/10); golden OK.
+- Passo 3 (`homologacao`): `9fd1939` llm_cadeia 1.1.0 (9/9 hashes) · `1a9ddb7` branding 1.0.0 (29/29) · `0a74ddb` runner com
+  `LLM_SOMENTE=nenhum` · `e6861b3` tempo_economizado 1.0.0 (6/6) no Passo 5 (D-C29). Runner TUDO VERDE (416 testes, 6 min),
+  golden OK. `python -m llm_cadeia`: local, gemini, gemini-2, groq-2, cerebras-2, openrouter-2 responderam. App local: palavras-chave
+  e notas pelo `local (google/gemma-4)`; categorização vazia (LESSONS).
+- Passo 4: `main` = `e2cd56a` (= `deploy` = v1.0.1), sem framework.
+- Passos 6-7: Rodrigo recriou `buscador-normativos` (`main`) e criou `buscador-normativos-homologacao` (`homologacao`).
+  Conferido no ar: produção igual a antes (título "NUATI", só Gemini, 30 palavras-chave); homologação com branding, cadeia na
+  barra lateral, "Última resposta: gemini (gemini-3.5-flash-lite)", 30 palavras-chave. A cadeia de lá não tem `local` (B-12).
+- Passo 8 (ok do Rodrigo): `main` padrão no GitHub; apagadas `master`, `deploy`, `frente2/trilha-a`, `frente2/trilha-b`
+  (remoto) e `master`, `llm-cadeia-1.0.1` (local). App `-teste`: B-11.
+- Pedidos ao framework (`_TODO.md`, seção "Pedidos ao nuati-framework").
+
 ## [2026-09-29] decisão | D-C26 = `a`: apps seguem públicos; faturamento desligado nos dois projetos Google
 
 Rodrigo conferiu no console: faturamento desligado nos projetos das duas chaves Gemini. Pior caso de uso por terceiros = cota

@@ -1,7 +1,7 @@
 ---
 title: "Bloqueios no humano — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-29
+last_updated: 2026-10-01
 related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -154,15 +154,6 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 
 ---
 
-## 🟢 B-07 · Apagar as branches remotas da execução da frente 2 (opcional)
-
-- **Aberto em:** 2026-09-23 · **Bloqueia:** nada (limpeza).
-- `origin/frente2/trilha-a` e `origin/frente2/trilha-b` foram backups das trilhas; o conteúdo está em `master` (as pontas
-  remotas `3751b2a`/`6178f9d` são mais antigas que os merges `08d9d8c`/`9e259ca`, e todas são ancestrais de `master`). Se quiser limpar: `git push origin --delete frente2/trilha-a frente2/trilha-b` e depois
-  `git branch -D frente2/trilha-a frente2/trilha-b`. Deixar também não custa nada.
-
----
-
 ## 🔴 B-08 · Trocar a chave `GROQ_API_KEY_2` (apareceu na conversa) — depois da reunião
 
 - **Aberto em:** 2026-09-28 · **Bloqueia:** nada; é higiene de segredo.
@@ -174,6 +165,10 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 ---
 
 ## 🔴 B-09 · Depois da reunião de 29/09: levar a versão nova para os apps ao vivo?
+
+> ✅ **01/10, passe por app feito:** apps recriados por você (`buscador-normativos` em `main`, `buscador-normativos-homologacao`
+> em `homologacao`) e conferidos no ar. **O que continua aqui:** o ok para promover `homologacao` → `main` (a produção segue
+> v1.0.1, só Gemini), que espera a `v0.1.0` do framework (F-A3 de lá).
 
 > ✅ **29/09 — forma decidida (D-C22/D-C23):** a promoção acontece no **passe por app**, depois da sessão do framework, já
 > com `main`/`homologacao`. O que **continua** com o Rodrigo neste item: o ok de cada promoção para `main`, recriar os apps
@@ -204,7 +199,25 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 
 ---
 
+## 🔴 B-11 · Apagar o app `buscador-normativos-teste` no share.streamlit.io
+
+- **Aberto em:** 2026-10-01 · **Bloqueia:** nada (limpeza). A branch `master` que ele seguia foi apagada em 01/10 (com o seu ok);
+  o app perdeu o papel para o `buscador-normativos-homologacao`. Só você tem o painel.
+
+---
+
+## 🟢 B-12 · Completar os Secrets da homologação com o bloco padrão (opcional)
+
+- **Aberto em:** 2026-10-01 · **Bloqueia:** nada. Visto no ar em 01/10: a cadeia do `buscador-normativos-homologacao` começa no
+  `gemini` (faltam `LLM_BASE_URL`, `LLM_MODEL` e as chaves sem sufixo de Groq, Cerebras e OpenRouter). Na nuvem o `local` é
+  inalcançável de qualquer jeito. Bloco: `segredos.exemplo.toml` do framework. Depois: **Reboot app**.
+
+---
+
 ## ✅ DONE
+
+- [x] **2026-10-01 · B-07 · Branches da frente 2 apagadas** (junto com `master`, `deploy` e `llm-cadeia-1.0.1`, na limpeza do
+      passe por app, com o seu ok e os dois apps no ar). Pontas guardadas nas tags `pre-framework-2026-10-01-*`.
 
 - [x] **2026-09-22 · Repo A aposentado (T9).** Tag `levantamento-v1-streamlit` no remoto de B; README de
       arquivamento (`af88593`); `rodilpinto/levantamento-normativos` privado e arquivado, confirmado por

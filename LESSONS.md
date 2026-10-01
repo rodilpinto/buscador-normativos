@@ -4,6 +4,41 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-10-01 · O runner "sem LLM" chamava o LLM de verdade no PC do trabalho (e a linha de base parecia regressão)
+
+**Problema.** Linha de base do passe por app (`master` @ `e22822e`, PC do trabalho): runner vermelho, cerca de 20 min.
+`test_llm_phase3.py` 60/3 numa rodada e 59/4 na seguinte (`(0.5, 'modelo')` onde o teste esperava `heuristica`), levando
+12-14 min; `test_phase4.py` 91 de 94 e `test_fontes_indisponiveis.py` 58/8.
+
+**Causa-raiz.** Duas, sem relação com o código: (1) o `st.secrets` lê o `~/.streamlit/secrets.toml` **global** mesmo fora
+do `streamlit run`, e vence a variável vazia que o runner passava: as suítes "sem LLM" chamavam o Gemma local e o Gemini;
+(2) o Python deste PC não tinha `ddgs` (do `requirements.txt`) nem `markdown-it-py` (os 3 testes do Markdown são
+`importorskip`, então "passam" pulando e o runner acusa só o encolhimento).
+
+**Conserto.** (1) runner passa `LLM_SOMENTE=nenhum` (llm_cadeia 1.1.0; nenhum `secrets.toml` define esse nome, então o
+ambiente vale e a cadeia nasce vazia): 65/65 em 3 s; runner inteiro em 6 min. (2) `py -m pip install ddgs markdown-it-py`.
+
+**Regra.** Antes de chamar uma linha de base de "regressão", rode a suíte vermelha sozinha e leia a falha. Teste de "sem
+LLM" se garante pelo ambiente que o código lê **primeiro**, não pela variável vazia. Contagem que varia entre rodadas = teste
+dependendo de rede ou de LLM.
+
+## 2026-10-01 · `git branch -d` recusa branch "não totalmente integrada" comparando com a HEAD, não com o remoto
+
+**Problema.** Na limpeza, `git branch -d master llm-cadeia-1.0.1` recusou as duas, com a HEAD em `main` (= v1.0.1).
+**Causa-raiz.** O `-d` confere contra a branch atual (e o upstream dela); as duas estavam dentro de `homologacao`, não de `main`.
+**Regra.** Conferir antes com `git merge-base --is-ancestor <branch> <destino>` contra o destino certo e só então usar `-D`;
+deixar uma tag nas pontas (aqui, `pre-framework-2026-10-01-*`).
+
+## 2026-10-01 · O Gemma local devolve resposta vazia na categorização (raciocínio ligado)
+
+**Problema.** Busca real no app local da `homologacao` (PC do trabalho, cadeia começando no `local`): palavras-chave e notas
+de relevância vieram do `local (google/gemma-4)`, mas a categorização voltou **vazia** nos lotes 0 e 1 (log:
+`Gemini returned empty response for categorize batch 0/1`, cerca de 5 min e 2 min). Pelo desenho do `llm_cadeia`, resposta
+vazia **não** passa para o próximo provedor; a categoria cai no padrão do app.
+**Causa-raiz.** 📝 Provável: o modelo gasta a saída raciocinando (mesma família da lição de 28/09); não isolado.
+**Regra.** No servidor do Nuati, testar `LLM_DISABLE_THINKING=1` (medido 27,1 s → 3,8 s no framework em 29/09) antes de
+dar o `local` como primeiro da cadeia. Pedido 2 ao framework.
+
 ## 2026-09-28 · Modelo que "pensa" devolve resposta VAZIA com orçamento de tokens pequeno — e o diagnóstico só viu porque chamou de verdade
 
 **Problema.** O primeiro `python -m llm_cadeia` (1 chamada por modelo, `max_tokens=16`) mostrou `gemini-2.5-flash` e

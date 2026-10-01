@@ -1,7 +1,7 @@
 ---
 title: "Decisões abertas — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-09-29
+last_updated: 2026-10-01
 related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -231,6 +231,29 @@ ida da versão nova para produção acontece no passe por app da D-C23.
 
 ---
 
+## 🟢 Decididas em 2026-10-01 (passe por app do nuati-framework)
+
+- **D-C27 · Mapeamento de branches confirmado e executado** (Rodrigo, 01/10, passo 0 do passe): `deploy` (v1.0.1) → `main`,
+  sem mudança de código; `master` → `homologacao`. As branches que ficaram fora (`llm-cadeia-1.0.1`, `frente2/trilha-a`,
+  `frente2/trilha-b`) saem junto na limpeza. Limpeza autorizada por ele com os dois apps no ar (01/10): `main` padrão no
+  GitHub; `master`, `deploy`, `frente2/*` e `llm-cadeia-1.0.1` apagadas. Tags de volta: `pre-framework-2026-10-01-deploy`
+  (`e2cd56a`) e `pre-framework-2026-10-01-master` (`e22822e`).
+- **D-C28 · Branding da Câmara entra na homologação** (Rodrigo, 01/10, passo 0: "Incluir na homologacao"). O padrão das notas
+  do passe era deixá-lo de fora. 📝 Como foi aplicado (escolhas do Claude, a revisar na homologação): sai o CSS verde/dourado e o
+  "NUATI" (MIV p.14: sem siglas), entram `configurar_pagina`/`cabecalho`/`rodape`, subtítulo "Tema, palavras-chave, busca nas
+  fontes, triagem e planilha-registro", fica a linha "Feito por Rodrigo Pinto". ⚠ O README do branding diz que app aberto ao
+  público mostra só a marca, sem assinatura de unidade; o rodapé daqui mostra a assinatura (como o checklist). Pedido 4 ao framework.
+- **D-C29 · Tempo economizado no Passo 5, com o esboço de etapas** (Rodrigo, 01/10: "Adotar agora na homologacao" e "Usar o
+  esboço como está"). Etapas e minutos (esboço do Claude aceito pelo Rodrigo): tema → palavras-chave 20 min (só quando a IA
+  gerou) · buscar uma palavra-chave numa fonte 5 min × (palavras-chave × fontes) · ler a ementa de cada normativo encontrado
+  2 min · registrar cada selecionado na planilha 3 min; menos o tempo da ferramenta (geração das palavras-chave + busca,
+  cronometrado). Código: `app.py` `_estimar_tempo`.
+- **D-C24 encerrada** (01/10): `levantamento-normativos/llm_cadeia/` virou cópia do `nuati-framework` (1.1.0 @ `56d7eb0`, mesmos
+  hashes git). A origem é o framework; a cópia está no registro §4 de lá. Continua valendo: **não editar a cópia**.
+- 📝 **Proposta em uso · runner sem LLM por `LLM_SOMENTE=nenhum`** (Claude, 01/10; o prompt do passe sugeria o `LLM_SOMENTE` no
+  lugar do truque de variável vazia). Um nome que não é provedor monta a cadeia vazia. Comportamento não documentado no
+  `llm_cadeia`: pedido 3 ao framework.
+
 ## 🟢 Decididas em 2026-09-29 (depois da reunião): ambientes e framework central
 
 - **D-C22 · Dois ambientes por app, e só dois.** Rodrigo, 29/09: *"only two, one is a stable version and the other one our
@@ -250,7 +273,7 @@ ida da versão nova para produção acontece no passe por app da D-C23.
   copiar e colar (D-C18); **muda só onde mora a origem**. Sequência (Rodrigo, 29/09): commit+push das 4 sessões nas branches
   de trabalho → sessão nova do framework → uma sessão por app, que **no mesmo passe** adota o framework **e** migra para
   `main`/`homologacao` (um só recriar de apps por projeto).
-- **D-C24 · Congelamento de `llm_cadeia/` neste repo a partir de 29/09.** Ninguém edita a pasta aqui (nem nas cópias dos
+- **D-C24 · Congelamento de `llm_cadeia/` neste repo a partir de 29/09.** ✅ **Encerrada em 01/10** (a pasta virou cópia; ver D-C27 a D-C29). Ninguém edita a pasta aqui (nem nas cópias dos
   outros apps); defeito achado vira pedido à sessão do framework. O framework parte da versão **1.0.1** deste repo (commit
   citado no `log.md` de 29/09); a cópia do checklist é 1.0.0 e **não** serve de fonte.
 

@@ -90,13 +90,13 @@ Depois: se o usuário já deu uma tarefa, siga; senão pergunte **"Qual a tarefa
   Python falha em silêncio.
 - **Auto-memória exige autorização explícita** do Rodrigo antes de qualquer escrita.
 - Separar fato de sugestão: marcar `📝` o que for proposta não validada.
-- **`levantamento-normativos/llm_cadeia/` NÃO se edita aqui** (D-C24): a origem do que é compartilhado é o repo
-  `rodilpinto/nuati-framework` (D-C23). Defeito achado nela vira pedido ao framework; o buscador recebe por recópia.
-- **Ambientes (D-C22):** `main` = estável/produção, `homologacao` = playground. Até a migração do passe por app, os nomes
-  antigos valem — conferir o estado na §6 do state file.
-- **Push em `master` redeploya o app de teste; push na `deploy` muda o app ao vivo** — este, só com ok do Rodrigo.
-- **Chaves de LLM nunca passam pelo chat nem pelo repo.** Para teste local, carregar `~/.llm-chaves.toml` no ambiente de
-  dentro do processo Python, sem imprimir (receita em `~/.claude/ENVIRONMENT.md`).
+- **`levantamento-normativos/{llm_cadeia,branding,tempo_economizado}/` são cópias e NÃO se editam aqui**: a origem é o
+  repo `rodilpinto/nuati-framework` (D-C23). Defeito ou falta vira pedido ao framework; o buscador recebe por recópia.
+- **Ambientes (D-C22, migrados em 01/10):** `main` = produção (padrão no GitHub), `homologacao` = trabalho.
+- **Push em `homologacao` redeploya o app de homologação; push em `main` muda a produção**, e este só com ok do Rodrigo e tag.
+- **Chaves de LLM nunca passam pelo chat nem pelo repo.** Para teste local, carregar o arquivo de chaves da máquina dentro do
+  processo Python, sem imprimir (PC do trabalho: `%USERPROFILE%\.streamlit\secrets.toml`, receita no README do framework §1;
+  outra máquina: `~/.llm-chaves.toml`, receita em `~/.claude/ENVIRONMENT.md`).
 
 Até existir uma tarefa, NÃO: editar arquivos · começar a implementar · commitar · explorar além
 dos documentos acima.
