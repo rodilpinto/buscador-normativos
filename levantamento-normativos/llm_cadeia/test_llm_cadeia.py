@@ -77,7 +77,7 @@ def test_cota_diaria_espera_ate_a_meia_noite_do_pacifico(provs, monkeypatch):
 
 def test_rede_e_chave_invalida_param_o_provedor_inteiro(provs, monkeypatch):
     chamados = _dublar(monkeypatch, {
-        "A/m1": ConnectionError("10.10.111.125 inalcancavel"),
+        "A/m1": ConnectionError("servidor-local inalcancavel"),
         "B/m1": RuntimeError("400 API_KEY_INVALID"),
     })
     assert cadeia.gerar("p").texto == "ok-C/m1"
@@ -161,13 +161,13 @@ def test_provedor_do_usuario_incompleto_e_none():
 def test_montar_le_os_segredos_na_ordem(monkeypatch):
     if cadeia._sdk == "none":
         pytest.skip("sem SDK Gemini instalado")
-    valores = {"LLM_BASE_URL": "http://10.10.111.125:1234/v1/", "LLM_MODEL": "gemma, qwen",
+    valores = {"LLM_BASE_URL": "http://servidor-local:1234/v1/", "LLM_MODEL": "gemma, qwen",
                "GEMINI_API_KEY": "k1", "GEMINI_API_KEY_2": "k2", "OPENROUTER_API_KEY": "k3",
                "GROQ_API_KEY": "k4", "GROQ_API_KEY_2": "k5", "GROQ_MODELS": "x"}
     monkeypatch.setattr(cadeia, "_segredo", lambda n: valores.get(n, ""))
     ps = cadeia._montar_provedores()
     assert [p["nome"] for p in ps] == ["local", "gemini", "gemini-2", "groq", "groq-2", "openrouter"]
-    assert ps[0]["base_url"] == "http://10.10.111.125:1234/v1"
+    assert ps[0]["base_url"] == "http://servidor-local:1234/v1"
     assert ps[0]["modelos"] == ["gemma", "qwen"]
     assert ps[1]["modelos"] == cadeia.GEMINI_MODELOS_PADRAO
     assert ps[3]["modelos"] == ps[4]["modelos"] == ["x"]
@@ -308,3 +308,145 @@ def test_diagnostico_lista_cada_modelo_e_ignora_esperas(provs, monkeypatch):
                                                ("C", "m1"), ("C", "m2")]
     assert linhas[0][2] == "ok" and linhas[2][2] == "resposta vazia"
     assert "404" in linhas[1][2] and "segredo-A" not in linhas[1][2]
+
+
+# --- 1.1.0: pedidos do checklist (a-e) ----------------------------------------
+
+def _montar_com(monkeypatch, valores):
+    monkeypatch.setattr(cadeia, "_segredo", lambda n: valores.get(n, ""))
+    return {p["nome"]: p for p in cadeia._montar_provedores()}
+
+
+class _Post:
+    """Dublê de requests.post: devolve as respostas na ordem e guarda cada corpo/timeout."""
+
+    def __init__(self, *respostas):
+        self.respostas = list(respostas)
+        self.corpos, self.timeouts = [], []
+
+    def __call__(self, url, headers, json, timeout):
+        self.corpos.append(dict(json))
+        self.timeouts.append(timeout)
+        return self.respostas.pop(0)
+
+
+def test_a_local_espera_300s_por_padrao_e_LLM_TIMEOUT_S_troca(monkeypatch):
+    base = {"LLM_BASE_URL": "http://servidor-local:1234/v1", "LLM_MODEL": "g", "GROQ_API_KEY": "k"}
+    ps = _montar_com(monkeypatch, base)
+    assert ps["local"]["timeout"] == 300.0
+    assert ps["groq"]["timeout"] == cadeia._TIMEOUT_NUVEM_S == 120.0
+    assert _montar_com(monkeypatch, {**base, "LLM_TIMEOUT_S": "600"})["local"]["timeout"] == 600.0
+    assert _montar_com(monkeypatch, {**base, "LLM_TIMEOUT_S": "abc"})["local"]["timeout"] == 300.0
+    assert _montar_com(monkeypatch, {**base, "LLM_TIMEOUT_S": "-1"})["local"]["timeout"] == 300.0
+
+    import requests
+    post = _Post(_RespostaFake("ok"))
+    monkeypatch.setattr(requests, "post", post)
+    p = _montar_com(monkeypatch, {**base, "LLM_TIMEOUT_S": "600"})["local"]
+    assert cadeia._gerar_openai(p, "g", "p", None, False, 0.0, 10) == "ok"
+    assert post.timeouts == [(5.0, 600.0)]
+
+
+def test_b_desligar_raciocinio_so_no_local(monkeypatch):
+    base = {"LLM_BASE_URL": "http://servidor-local:1234/v1", "LLM_MODEL": "g", "GROQ_API_KEY": "k"}
+    assert _montar_com(monkeypatch, base)["local"]["sem_raciocinio"] is False
+    ps = _montar_com(monkeypatch, {**base, "LLM_DISABLE_THINKING": "1"})
+    assert ps["local"]["sem_raciocinio"] is True
+    assert ps["groq"]["sem_raciocinio"] is False
+
+    import requests
+    post = _Post(_RespostaFake("ok"), _RespostaFake("ok"))
+    monkeypatch.setattr(requests, "post", post)
+    cadeia._gerar_openai(ps["local"], "g", "p", None, False, 0.0, 10)
+    cadeia._gerar_openai(ps["groq"], "m", "p", None, False, 0.0, 10)
+    assert post.corpos[0]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "chat_template_kwargs" not in post.corpos[1]
+
+
+def test_b_servidor_que_recusa_o_campo_recebe_a_chamada_de_novo_sem_ele(monkeypatch):
+    import requests
+    p = _prov("local", "openai")
+    p["sem_raciocinio"] = True
+    post = _Post(_Resposta400("Unrecognized request argument supplied: chat_template_kwargs"), _RespostaFake("ok"))
+    monkeypatch.setattr(requests, "post", post)
+    assert cadeia._gerar_openai(p, "g", "p", None, False, 0.0, 10) == "ok"
+    assert "chat_template_kwargs" in post.corpos[0]
+    assert "chat_template_kwargs" not in post.corpos[1]
+
+
+def test_d_LLM_SOMENTE_usa_so_os_listados_nessa_ordem(monkeypatch):
+    if cadeia._sdk == "none":
+        pytest.skip("sem SDK Gemini instalado")
+    base = {"LLM_BASE_URL": "http://servidor-local:1234/v1", "LLM_MODEL": "g", "GEMINI_API_KEY": "k1",
+            "GROQ_API_KEY": "k2", "GROQ_API_KEY_2": "k3", "LLM_ORDEM": "gemini"}
+    valores = {**base, "LLM_SOMENTE": "groq-2, gemini, nao-existe"}
+    monkeypatch.setattr(cadeia, "_segredo", lambda n: valores.get(n, ""))
+    assert [p["nome"] for p in cadeia._montar_provedores()] == ["groq-2", "gemini"]
+    valores["LLM_SOMENTE"] = ""   # sem LLM_SOMENTE, LLM_ORDEM volta a pôr os omitidos no fim
+    assert [p["nome"] for p in cadeia._montar_provedores()] == ["gemini", "local", "groq", "groq-2"]
+
+
+def test_d_recarregar_remonta_a_cadeia(monkeypatch):
+    monkeypatch.setattr(cadeia, "_provedores", cadeia._provedores)   # devolvido no fim do teste
+    valores = {"GROQ_API_KEY": "k", "CEREBRAS_API_KEY": "k", "LLM_SOMENTE": "cerebras"}
+    monkeypatch.setattr(cadeia, "_segredo", lambda n: valores.get(n, ""))
+    cadeia.usar_contexto(None)
+    import llm_cadeia
+    llm_cadeia.recarregar()
+    assert [c.split(" ")[0] for c in cadeia.descrever()] == ["cerebras"]
+
+
+def test_e_gemini_tem_tempo_limite(monkeypatch):
+    if cadeia._sdk != "genai":
+        pytest.skip("sem google-genai")
+    criado = {}
+
+    class Cliente:
+        def __init__(self, api_key, http_options=None):
+            criado["http_options"] = http_options
+            self.models = self
+
+        def generate_content(self, model, contents, config):
+            return type("R", (), {"text": "ok"})()
+
+    monkeypatch.setattr(cadeia._genai_new, "Client", Cliente)
+    p = _prov("B")
+    assert p["timeout"] == cadeia._TIMEOUT_NUVEM_S
+    assert cadeia._gerar_gemini(p, "m", "p", None, False, 0.0, 10) == "ok"
+    assert criado["http_options"].timeout == int(cadeia._TIMEOUT_NUVEM_S * 1000)   # a SDK usa milissegundos
+
+
+def test_e_timeout_do_gemini_para_o_provedor_como_falha_de_rede(provs, monkeypatch):
+    class ReadTimeout(Exception):   # o nome do tipo é o que o httpx levanta
+        pass
+
+    _dublar(monkeypatch, {"B/m1": ReadTimeout("The read operation timed out")})
+    provs[0]["bloqueado_ate"] = time.time() + 999
+    assert cadeia.gerar("p").texto == "ok-C/m1"
+    assert 0 < provs[1]["bloqueado_ate"] - time.time() <= cadeia._ESPERA_REDE_S + 1
+
+
+def test_c_pasta_sem_dado_interno():
+    """A pasta tem de poder ir para um repo público sem exceção na trava de publicação.
+
+    Os padrões são montados em partes para este arquivo não conter o que procura.
+    """
+    import re
+    from pathlib import Path
+
+    padroes = {
+        "IP de rede privada": re.compile(
+            r"\b(?:10|192\.168|172\.(?:1[6-9]|2\d|3[01]))(?:\.\d{1,3}){2,3}\b(?!\.)"),
+        "login institucional": re.compile("nuati" + r"[.@]" + "secin", re.IGNORECASE),
+        "servidor git interno": re.compile("git" + r"\." + "camara", re.IGNORECASE),
+    }
+    pasta = Path(__file__).parent
+    achados = []
+    for arquivo in sorted(pasta.rglob("*")):
+        if not arquivo.is_file() or "__pycache__" in arquivo.parts:
+            continue
+        texto = arquivo.read_text(encoding="utf-8", errors="ignore")
+        for nome, padrao in padroes.items():
+            for m in padrao.finditer(texto):
+                achados.append(f"{arquivo.name}: {nome}: {m.group(0)}")
+    assert achados == []

@@ -3,22 +3,26 @@
 Nao importa nada do projeto: so stdlib, ``requests`` e (opcional) ``google-genai``.
 Para levar a outro app, copie a PASTA ``llm_cadeia/`` inteira (ver README.md dela) e
 chame ``gerar(prompt)``. Nasceu em ``llm/cadeia.py`` do buscador-normativos (23-25/09);
-virou pacote em 28/09.
+virou pacote em 28/09; a origem passou para o nuati-framework em 29/09.
 
 Ordem padrao de tentativa:
 
     usuario       chave que o proprio usuario digitou na tela (so na sessao dele)
     local         LLM_BASE_URL + LLM_MODEL (+ LLM_API_KEY) — servidor OpenAI-compativel
-                  (LM Studio da Camara 10.10.111.125:1234/v1 — intranet: a nuvem NAO alcanca)
-    gemini        GEMINI_API_KEY     (convencao: login nuati.secin)
-    gemini-2      GEMINI_API_KEY_2   (convencao: login rodilpinto; so soma cota se for OUTRO projeto Google)
+                  da rede interna (intranet: a nuvem NAO alcanca)
+    gemini        GEMINI_API_KEY     (conta institucional)
+    gemini-2      GEMINI_API_KEY_2   (segunda conta; so soma cota se for OUTRO projeto Google)
     groq, groq-2              GROQ_API_KEY, GROQ_API_KEY_2
     cerebras, cerebras-2      CEREBRAS_API_KEY, CEREBRAS_API_KEY_2
     openrouter, openrouter-2  OPENROUTER_API_KEY, OPENROUTER_API_KEY_2
 
-``LLM_ORDEM`` (ex.: "local,gemini,groq") troca a ordem; "usuario" vem sempre primeiro.
+``LLM_ORDEM`` (ex.: "local,gemini,groq") troca a ordem (omitidos vao para o fim);
+``LLM_SOMENTE`` (ex.: "groq") usa so os listados. "usuario" vem sempre primeiro.
 Cada provedor tem uma LISTA de modelos (``<NOME>_MODELS``, separados por virgula, troca o
 padrao sem deploy). Dentro de um provedor, os modelos sao tentados em ordem.
+
+Tempo limite de resposta: ``local`` = ``LLM_TIMEOUT_S`` (padrao 300 s); nuvem = 120 s.
+``LLM_DISABLE_THINKING=1`` desliga o raciocinio do ``local`` (chat_template_kwargs).
 
 Por que rodar entre modelos: a cota do Gemini e "per project" e por modelo — os quotaId
 do 429 sao ``GenerateRequestsPerDayPerProjectPerModel`` / ``...PerMinutePerProjectPerModel``
@@ -80,7 +84,7 @@ except ImportError:
 
 # Gemini: ordem = maior vazao gratuita primeiro, qualidade depois, Gemma por ultimo (cota grande).
 # gemini-3.5-flash-lite: since 2026-09-22. The API answered 404 "gemini-2.5-flash-lite is no longer
-#   available to new users" for a key created that day (project nuati.secin) and suggested this
+#   available to new users" for a key created that day (institutional project) and suggested this
 #   model; verified with a real call. Free-tier limits NOT re-verified.
 # History (limits measured when chosen, Mar/2026 — may be stale):
 #   gemini-2.5-flash-lite: best free-tier throughput (15 RPM, 1000/day) — retired for new users
@@ -132,6 +136,13 @@ _ESPERA_AUTH_S = 6 * 3600.0
 _ESPERA_REDE_S = 5 * 60.0
 _ESPERA_OUTRO_S = 5 * 60.0
 
+# Tempo limite de cada chamada. Conexao curta: servidor inalcancavel (ex.: o local visto da
+# nuvem) falha em 5 s. Resposta: o local e lento — medido 28/09 no checklist, 5.000 caracteres
+# de normativo: 154 s com raciocinio, 54 s sem; o app antigo usava 300 s.
+_TIMEOUT_CONEXAO_S = 5.0
+_TIMEOUT_NUVEM_S = 120.0
+_TIMEOUT_LOCAL_PADRAO_S = 300.0
+
 # ---------------------------------------------------------------------------
 # Leitura de configuracao
 # ---------------------------------------------------------------------------
@@ -150,21 +161,37 @@ def _lista(valor: str) -> list[str]:
     return [v.strip() for v in valor.split(",") if v.strip()]
 
 
-def _novo_provedor(nome: str, tipo: str, chave: str, modelos: list[str], base_url: str = "") -> dict:
+def _novo_provedor(nome: str, tipo: str, chave: str, modelos: list[str], base_url: str = "",
+                   timeout: float = _TIMEOUT_NUVEM_S, sem_raciocinio: bool = False) -> dict:
     return {
         "nome": nome, "tipo": tipo, "chave": chave, "modelos": list(modelos),
         "base_url": base_url.rstrip("/"), "bloqueado_ate": 0.0, "modelo_bloqueado_ate": {},
-        "cliente": None,
+        "cliente": None, "timeout": timeout, "sem_raciocinio": sem_raciocinio,
     }
 
 
+def _timeout_local() -> float:
+    """LLM_TIMEOUT_S (seconds, > 0) or the 300 s default."""
+    try:
+        valor = float(_segredo("LLM_TIMEOUT_S"))
+    except ValueError:
+        return _TIMEOUT_LOCAL_PADRAO_S
+    return valor if valor > 0 else _TIMEOUT_LOCAL_PADRAO_S
+
+
+def _ligado(nome: str) -> bool:
+    return _segredo(nome).lower() in ("1", "true", "sim", "yes", "on")
+
+
 def _montar_provedores() -> list[dict]:
-    """Build the chain from secrets/env, in LLM_ORDEM (or default) order."""
+    """Build the chain from secrets/env: LLM_SOMENTE (only those), else LLM_ORDEM (or default) order."""
     disponiveis: dict[str, dict] = {}
 
     base_url, modelos = _segredo("LLM_BASE_URL"), _lista(_segredo("LLM_MODEL"))
     if base_url and modelos:
-        disponiveis["local"] = _novo_provedor("local", "openai", _segredo("LLM_API_KEY"), modelos, base_url)
+        disponiveis["local"] = _novo_provedor(
+            "local", "openai", _segredo("LLM_API_KEY"), modelos, base_url,
+            timeout=_timeout_local(), sem_raciocinio=_ligado("LLM_DISABLE_THINKING"))
 
     if _sdk != "none":
         modelos_gemini = _lista(_segredo("GEMINI_MODELS")) or GEMINI_MODELOS_PADRAO
@@ -181,12 +208,21 @@ def _montar_provedores() -> list[dict]:
                 disponiveis[nome + sufixo_nome] = _novo_provedor(
                     nome + sufixo_nome, "openai", chave, modelos, preset["base_url"])
 
-    ordem = _lista(_segredo("LLM_ORDEM")) or ORDEM_PADRAO
+    somente = _lista(_segredo("LLM_SOMENTE"))
+    if somente:   # para teste/comparacao de modelos: nenhum outro entra
+        return [disponiveis[n] for n in somente if n in disponiveis]
+    ordem = _lista(_segredo("LLM_ORDEM")) or list(ORDEM_PADRAO)
     ordem += [n for n in ORDEM_PADRAO if n not in ordem]   # nome esquecido na LLM_ORDEM ainda entra, no fim
     return [disponiveis[n] for n in ordem if n in disponiveis]
 
 
 _provedores: list[dict] = _montar_provedores()
+
+
+def recarregar() -> None:
+    """Rebuild the chain from secrets/env (it is built at import). Also clears the waits."""
+    global _provedores
+    _provedores = _montar_provedores()
 
 # ---------------------------------------------------------------------------
 # Chave do usuario — por SESSAO, nunca global
@@ -217,10 +253,10 @@ def provedor_do_usuario(tipo: str, chave: str, modelo: str = "", base_url: str =
             return None
         return _novo_provedor("usuario", "openai", chave, modelos or PRESETS[tipo]["modelos"],
                               PRESETS[tipo]["base_url"])
-    if tipo == "openai":
+    if tipo == "openai":   # "Outro": em geral um servidor proprio, lento como o local
         if not base_url.strip() or not modelos:
             return None
-        return _novo_provedor("usuario", "openai", chave, modelos, base_url.strip())
+        return _novo_provedor("usuario", "openai", chave, modelos, base_url.strip(), timeout=_timeout_local())
     return None
 
 
@@ -352,6 +388,12 @@ def _gerar_openai(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
     "max_completion_tokens") and to temperature != 1. On that 400 the call is repeated ONCE
     with max_completion_tokens and without temperature. ⚠ Built from the OpenAI error texts;
     covered by a mocked test, NOT verified live (no OpenAI key available on 28/09).
+
+    p["sem_raciocinio"] (LLM_DISABLE_THINKING, local only) sends
+    chat_template_kwargs={"enable_thinking": false} (Gemma/Qwen chat templates). A server that
+    answers 400 naming that field gets the call again ONCE without it (mocked test only).
+    Verified live 29/09 with google/gemma-4 on the local server: field accepted, same prompt
+    27.1 s -> 3.8 s.
     """
     import requests
     headers = {"Content-Type": "application/json"}
@@ -366,16 +408,22 @@ def _gerar_openai(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
         # modelos de raciocinio (gpt-oss, qwen) gastam tokens pensando antes da resposta
         "max_tokens": max(max_tokens, 4096),
     }
+    if p.get("sem_raciocinio"):
+        corpo["chat_template_kwargs"] = {"enable_thinking": False}
 
     def enviar():
         return requests.post(
             f"{p['base_url']}/chat/completions",
             headers=headers,
             json=corpo,
-            timeout=(5, 120),  # connect fast-fails an unreachable server; local models are slow to answer
+            # connect fast-fails an unreachable server; the read timeout is per provider
+            timeout=(_TIMEOUT_CONEXAO_S, p.get("timeout", _TIMEOUT_NUVEM_S)),
         )
 
     resp = enviar()
+    if resp.status_code == 400 and "chat_template_kwargs" in (resp.text or ""):
+        corpo.pop("chat_template_kwargs", None)
+        resp = enviar()
     if resp.status_code == 400 and _pede_parametros_de_raciocinio(resp.text):
         corpo["max_completion_tokens"] = corpo.pop("max_tokens")
         corpo.pop("temperature")
@@ -392,8 +440,13 @@ def _gerar_gemini(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
     max_output_tokens has a 4096 floor, like the OpenAI path: thinking models
     (gemini-2.5-flash, gemma-4) spend the budget thinking and return EMPTY text when
     it is small — measured 28/09: 16 tokens -> None, 512 -> "ok" (gemma-4-31b-it).
+
+    Timeout p["timeout"] (120 s): without it, a call hung ~7.5 min in the checklist v2 (28/09).
+    The genai SDK takes milliseconds; a timeout raises a *Timeout* error, which parks the
+    provider 5 min like any network failure.
     """
     max_tokens = max(max_tokens, 4096)
+    timeout_s = p.get("timeout", _TIMEOUT_NUVEM_S)
     extras = {}
     if sistema:
         extras["system_instruction"] = sistema
@@ -401,7 +454,8 @@ def _gerar_gemini(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
         extras["response_mime_type"] = "application/json"
     if _sdk == "genai":
         if p["cliente"] is None:
-            p["cliente"] = _genai_new.Client(api_key=p["chave"])
+            p["cliente"] = _genai_new.Client(
+                api_key=p["chave"], http_options=_genai_types.HttpOptions(timeout=int(timeout_s * 1000)))
         response = p["cliente"].models.generate_content(
             model=modelo,
             contents=prompt,
@@ -423,6 +477,7 @@ def _gerar_gemini(p: dict, modelo: str, prompt: str, sistema: Optional[str], jso
             max_output_tokens=max_tokens,
             **({"response_mime_type": "application/json"} if json_ else {}),
         ),
+        request_options={"timeout": timeout_s},
     )
     return _limpar(response.text or "", json_)
 

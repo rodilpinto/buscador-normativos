@@ -4,7 +4,7 @@
     r = gerar("prompt", sistema="...", json=True)   # nunca levanta excecao
     r.texto, r.origem, r.tentativas
 
-Pasta copiavel: a ORIGEM vive em buscador-normativos/levantamento-normativos/llm_cadeia/.
+Pasta copiavel: a ORIGEM vive em github.com/rodilpinto/nuati-framework, pasta llm_cadeia/.
 Nao edite uma copia — melhore a origem, suba __version__ e recopie.
 """
 
@@ -17,14 +17,15 @@ from .nucleo import (
     gerar,
     novo_contexto,
     provedor_do_usuario,
+    recarregar,
     ultimo_usado,
     usar_contexto,
 )
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 __all__ = [
     "gerar", "Resposta", "disponivel", "descrever", "ultimo_usado",
-    "provedor_do_usuario", "novo_contexto", "usar_contexto",
+    "provedor_do_usuario", "novo_contexto", "usar_contexto", "recarregar",
     "PRESETS", "GEMINI_MODELOS_PADRAO", "__version__",
 ]
