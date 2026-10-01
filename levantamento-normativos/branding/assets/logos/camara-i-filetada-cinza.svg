@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Ícone" data-name="Ícone" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 620">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #414042;
+      }
+    </style>
+  </defs>
+  <path id="I_-_Stroke_Cinza" data-name="I - Stroke Cinza" class="cls-1" d="M-.35-.46v620h620V-.46H-.35ZM20.65,19.54h580v320H180.92c48.88,49.63,106.64,90.48,170.7,120H120.65V59.54h-60v180H20.65V19.54ZM20.65,279.54h40v180H20.65v-180ZM600.65,600.54H20.65v-101h0v1h580v-1h0v101Z"/>
+</svg>

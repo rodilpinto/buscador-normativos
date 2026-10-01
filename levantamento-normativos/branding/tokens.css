@@ -1,0 +1,25 @@
+/* Identidade visual Camara dos Deputados para apps internos.
+   Valores e fontes: branding/tokens.json. Regras de uso: branding/README.md */
+
+@import url("https://fonts.googleapis.com/css2?family=REM:wght@300;400;500;600;700&display=swap");
+
+:root {
+  /* Marca (oficiais, MIV p.5) */
+  --cd-verde:  #00B142;
+  --cd-azul:   #0095D4;
+  --cd-cinza:  #414042;
+  --cd-branco: #FFFFFF;
+
+  /* Interface (adaptacoes digitais com contraste WCAG AA) */
+  --cd-verde-acao:   #2F7958;
+  --cd-verde-escuro: #004A2F;
+  --cd-verde-tinta:  #E5F7EC;
+  --cd-texto:        #414042;
+  --cd-texto-suave:  #6D6C6F;
+  --cd-borda:        #D6D6D6;
+  --cd-fundo:        #FFFFFF;
+  --cd-erro:         #DC3545;
+
+  /* Tipografia (MIV p.4) */
+  --cd-fonte: "REM", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Ícone" data-name="Ícone" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 620">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        fill: #0095d4;
+      }
+
+      .cls-3 {
+        fill: #00b142;
+      }
+    </style>
+  </defs>
+  <g id="I_-_Colorida" data-name="I - Colorida">
+    <rect id="Contorno_Branco" data-name="Contorno Branco" class="cls-1" x="-.35" width="620" height="620"/>
+    <rect id="Céu" class="cls-2" x="20.65" y="20" width="580" height="460"/>
+    <rect id="Grama" class="cls-3" x="20.65" y="500" width="580" height="100"/>
+    <path id="Prédio" class="cls-1" d="M180.92,340c48.88,49.63,106.64,90.49,170.7,120H120.65V60h-60v180H10.65v40h50v180H10.65v40h600v-160H180.92Z"/>
+  </g>
+</svg>

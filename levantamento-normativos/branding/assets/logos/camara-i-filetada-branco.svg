@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Ícone" data-name="Ícone" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 620">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+    </style>
+  </defs>
+  <path id="I_-_Stroke_Branco" data-name="I - Stroke Branco" class="cls-1" d="M-.35-.2v620h620V-.2H-.35ZM20.65,19.8h580v320H180.92c48.88,49.63,106.64,90.48,170.7,120H120.65V59.8h-60v180H20.65V19.8ZM20.65,279.8h40v180H20.65v-180ZM600.65,600.8H20.65v-101h0v1h580v-1h0v101Z"/>
+</svg>

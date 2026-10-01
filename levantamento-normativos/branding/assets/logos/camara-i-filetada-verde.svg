@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Ícone" data-name="Ícone" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 620">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #00b142;
+      }
+    </style>
+  </defs>
+  <path id="I_-_Stroke_Verde" data-name="I - Stroke Verde" class="cls-1" d="M-.35.27v620h620V.27H-.35ZM20.65,20.27h580v320H180.92c48.88,49.63,106.64,90.48,170.7,120H120.65V60.27h-60v180H20.65V20.27ZM20.65,280.27h40v180H20.65v-180ZM600.65,601.27H20.65v-102h0v1h580v-1h0v102Z"/>
+</svg>

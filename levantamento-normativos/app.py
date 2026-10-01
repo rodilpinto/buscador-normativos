@@ -28,6 +28,7 @@ from models import (KeywordStatus, NormativoResult, ORIGENS_RELEVANCIA, e_indisp
 from searchers import LexMLSearcher, TCUSearcher, GoogleSearcher
 from llm import gemini_client
 from llm_cadeia.painel_streamlit import painel_llm
+from branding.streamlit_cd import cd_brand
 from llm.gemini_client import is_available as llm_available
 from deduplicator import deduplicate
 from excel_export import generate_excel
@@ -54,66 +55,10 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Page config (must be the first Streamlit call)
+# Page config (must be the first Streamlit call) — identidade visual da Camara
+# (branding/ do nuati-framework; cores do tema em .streamlit/config.toml)
 # ---------------------------------------------------------------------------
-st.set_page_config(
-    page_title="Levantamento de Normativos - NUATI",
-    layout="wide",
-    page_icon="https://www2.camara.leg.br/favicon.ico",
-)
-
-# ---------------------------------------------------------------------------
-# CSS — Identidade visual da Camara dos Deputados (verde/dourado)
-# ---------------------------------------------------------------------------
-st.markdown("""
-<style>
-    /* Header: verde com faixa dourada na base */
-    header[data-testid="stHeader"] {
-        background: linear-gradient(
-            to bottom,
-            #4a8c4a 0%, #4a8c4a 92%,
-            #c8a415 92%, #c8a415 100%
-        ) !important;
-    }
-
-    /* Sidebar: fundo verde claro, borda dourada */
-    section[data-testid="stSidebar"] {
-        background-color: #e8f0e8 !important;
-        border-right: 3px solid #c8a415 !important;
-    }
-
-    /* Botao primario */
-    .stButton > button[kind="primary"],
-    .stButton > button[data-testid="stBaseButton-primary"] {
-        background-color: #4CAF50 !important;
-        border-color: #4CAF50 !important;
-        color: white !important;
-    }
-    .stButton > button[kind="primary"]:hover,
-    .stButton > button[data-testid="stBaseButton-primary"]:hover {
-        background-color: #388E3C !important;
-        border-color: #388E3C !important;
-    }
-
-    /* Botoes secundarios */
-    .stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]) {
-        border-color: #4CAF50 !important;
-        color: #2e7d32 !important;
-    }
-
-    /* Links */
-    a { color: #2e7d32 !important; }
-    a:hover { color: #1b5e20 !important; }
-
-    /* Expanders */
-    details[data-testid="stExpander"] {
-        border-color: #c8a41566 !important;
-    }
-
-    /* Dividers */
-    .stDivider { border-color: #c8a41544 !important; }
-</style>
-""", unsafe_allow_html=True)
+cd_brand.configurar_pagina("Levantamento de Normativos")
 
 # ---------------------------------------------------------------------------
 # Session state defaults
@@ -222,28 +167,19 @@ _STEPS: list[str] = [
 ]
 
 with st.sidebar:
-    st.markdown(
-        '<h2 style="color:#2e7d32;margin-bottom:0;">Levantamento de Normativos</h2>'
-        '<p style="color:#c8a415;font-size:14px;margin-top:0;">'
-        'NUATI &middot; C&acirc;mara dos Deputados</p>',
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-
     current = st.session_state["wizard_step"]
     lines: list[str] = []
     for i, label in enumerate(_STEPS, start=1):
         if i == current:
             lines.append(
                 f'<p style="margin:4px 0;font-size:15px;">'
-                f'<span style="color:#4CAF50;font-size:18px;">&#9679;</span> '
+                f'<span style="color:#2F7958;font-size:18px;">&#9679;</span> '
                 f'<b>Passo {i}:</b> {label}</p>'
             )
         elif i < current:
             lines.append(
                 f'<p style="margin:4px 0;font-size:14px;color:#888;">'
-                f'<span style="color:#4CAF50;">&#10003;</span> '
+                f'<span style="color:#2F7958;">&#10003;</span> '
                 f'Passo {i}: {label}</p>'
             )
         else:
@@ -1478,6 +1414,11 @@ def render_step5() -> None:
 # ===========================================================================
 # Main area: render the active wizard step
 # ===========================================================================
+cd_brand.cabecalho(
+    "Levantamento de Normativos",
+    "Tema, palavras-chave, busca nas fontes, triagem e planilha-registro",
+)
+
 step = st.session_state["wizard_step"]
 
 if step == 1:
@@ -1494,10 +1435,5 @@ elif step == 5:
 # ---------------------------------------------------------------------------
 # Footer
 # ---------------------------------------------------------------------------
-st.markdown("---")
-st.markdown(
-    '<p style="text-align:center;color:#888;font-size:13px;">'
-    'Feito por Rodrigo Pinto &middot; NUATI &middot; '
-    'C&acirc;mara dos Deputados</p>',
-    unsafe_allow_html=True,
-)
+cd_brand.rodape()
+st.caption("Feito por Rodrigo Pinto")
