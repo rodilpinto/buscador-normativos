@@ -45,3 +45,6 @@ desktop.ini
 
 # Evidencia do gate visual V11 (tools/dirigir_app.py): PNG de sessao, NAO versionado
 tests/evidencia/
+
+# servidor_nuati: log do app no servidor do Nuati
+logs/

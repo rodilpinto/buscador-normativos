@@ -1,0 +1,25 @@
+# Configuracao do servidor_nuati para ESTE app. Copie para servidor_nuati.conf na RAIZ do repo do app.
+# CHAVE=valor; # comenta a linha. Vai para o git (nao tem segredo); os segredos ficam no .env/secrets.toml.
+# Caminhos relativos: PASTA_APP a raiz do repo; ARQUIVO_APP, REQUIREMENTS e CONFIG a PASTA_APP.
+
+# Nome da tarefa no Agendador do Windows (so letras, numeros, _ e -). Tambem nomeia a regra de firewall.
+NOME_TAREFA=MeuApp
+
+# Porta do Streamlit. Confira antes no servidor quais estao livres (README do servidor_nuati) e registre
+# a escolhida no registro de portas do framework (segredos.exemplo.toml).
+PORTA=8409
+
+# Onde fica o app dentro do repo (o iniciar.cmd faz cd para ca) e o arquivo que o Streamlit roda.
+PASTA_APP=.
+ARQUIVO_APP=app.py
+REQUIREMENTS=requirements.txt
+
+# Configuracao do app: basta existir um destes (dentro de PASTA_APP). A tarefa roda como SYSTEM: um
+# secrets.toml no seu ~/.streamlit/ NAO vale la.
+CONFIG=.env,.streamlit/secrets.toml
+
+# Branch que o servidor roda (D-C22: o servidor espelha a main).
+RAMO=main
+
+# Acima disso, ao subir, logs\app.log vira logs\app.log.1 (uma copia antiga so).
+LOG_MAX_MB=20
