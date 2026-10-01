@@ -125,11 +125,10 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       `master`, `deploy`, `frente2/*` e `llm-cadeia-1.0.1` apagadas (tags `pre-framework-2026-10-01-*` guardam as pontas).
       `llm_cadeia/` deixou de ser origem: é **cópia** (D-C24 encerrada). Pendências que ficaram: ver abaixo.
 - [ ] **Depois do passe por app (01/10):**
-      - [ ] (Rodrigo) apagar o app `buscador-normativos-teste` no share.streamlit.io (a branch `master` que ele seguia já não existe).
+      - [ ] (Rodrigo) apagar o app `buscador-normativos-teste` no share.streamlit.io (a branch `master` que ele seguia já não existe). Rodrigo perguntou em 01/10 e recebeu o ok para apagar.
       - [ ] (Rodrigo, opcional) completar os Secrets da homologação com o bloco padrão (`LLM_BASE_URL`, `LLM_MODEL`, chaves sem
             sufixo de Groq/Cerebras/OpenRouter); hoje a cadeia de lá começa no `gemini`. Reboot depois.
-      - [ ] (Rodrigo) promover `homologacao` → `main` quando o framework tiver a `v0.1.0` (F-A3 do framework) e ele der o ok;
-            receita: README do framework §3, "Depois da migração". Produção hoje: v1.0.1, só Gemini.
+      - [x] promover `homologacao` → `main`: ✅ **feito em 01/10**, `v1.1.0` (`829e71e`), D-C30.
       - [ ] 📝 Categorização vazia com o Gemma local (raciocínio ligado): visto em 01/10 no app local; provar
             `LLM_DISABLE_THINKING=1` nos Secrets do servidor do Nuati quando ele existir (pedido 2 ao framework).
       - [ ] 📝 O `gemini_client.py` importa `_segredo` (interno) do `llm_cadeia`: trocar quando o framework expuser uma

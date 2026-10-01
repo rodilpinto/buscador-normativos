@@ -164,11 +164,10 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 
 ---
 
-## 🔴 B-09 · Depois da reunião de 29/09: levar a versão nova para os apps ao vivo?
+## ✅ B-09 · Depois da reunião de 29/09: levar a versão nova para os apps ao vivo?
 
-> ✅ **01/10, passe por app feito:** apps recriados por você (`buscador-normativos` em `main`, `buscador-normativos-homologacao`
-> em `homologacao`) e conferidos no ar. **O que continua aqui:** o ok para promover `homologacao` → `main` (a produção segue
-> v1.0.1, só Gemini), que espera a `v0.1.0` do framework (F-A3 de lá).
+> ✅ **01/10, resolvido:** passe por app feito e `homologacao` promovida para `main` como **`v1.1.0`** (D-C30), com os Secrets da
+> homologação colados antes na produção. Conferido no ar.
 
 > ✅ **29/09 — forma decidida (D-C22/D-C23):** a promoção acontece no **passe por app**, depois da sessão do framework, já
 > com `main`/`homologacao`. O que **continua** com o Rodrigo neste item: o ok de cada promoção para `main`, recriar os apps
@@ -215,6 +214,8 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 ---
 
 ## ✅ DONE
+
+- [x] **2026-10-01 · B-09 · Versão nova no app ao vivo.** `main` = `v1.1.0` (`829e71e`), conferida no ar (D-C30).
 
 - [x] **2026-10-01 · B-07 · Branches da frente 2 apagadas** (junto com `master`, `deploy` e `llm-cadeia-1.0.1`, na limpeza do
       passe por app, com o seu ok e os dois apps no ar). Pontas guardadas nas tags `pre-framework-2026-10-01-*`.

@@ -248,6 +248,12 @@ ida da versão nova para produção acontece no passe por app da D-C23.
   gerou) · buscar uma palavra-chave numa fonte 5 min × (palavras-chave × fontes) · ler a ementa de cada normativo encontrado
   2 min · registrar cada selecionado na planilha 3 min; menos o tempo da ferramenta (geração das palavras-chave + busca,
   cronometrado). Código: `app.py` `_estimar_tempo`.
+- **D-C30 · Promover `homologacao` → `main` como `v1.1.0`** (Rodrigo, 01/10: *"vamos subir o homologação para main uma vez q ele
+  está estável"*). Junto, ele **aprovou a F-A3 do framework** (promover o framework a `v0.1.0`), resolvendo a regra 5 do §2 de lá
+  ("produção só copia de `main`/tag do framework"): as cópias daqui são idênticas às de `56d7eb0`, e o framework só mudou o README
+  depois disso. Ordem seguida: Rodrigo colou na produção os Secrets da homologação e deu Reboot → fast-forward de `main` para
+  `829e71e` → tag anotada `v1.1.0` → push. Conferido no ar: título e rodapé da Câmara, cadeia na barra lateral, "Última resposta:
+  gemini (gemini-3.5-flash-lite)". Tag nomeada `v1.1.0` (📝 sugestão do Claude aceita).
 - **D-C24 encerrada** (01/10): `levantamento-normativos/llm_cadeia/` virou cópia do `nuati-framework` (1.1.0 @ `56d7eb0`, mesmos
   hashes git). A origem é o framework; a cópia está no registro §4 de lá. Continua valendo: **não editar a cópia**.
 - 📝 **Proposta em uso · runner sem LLM por `LLM_SOMENTE=nenhum`** (Claude, 01/10; o prompt do passe sugeria o `LLM_SOMENTE` no

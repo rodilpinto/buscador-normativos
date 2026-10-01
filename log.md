@@ -2,6 +2,14 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-10-01] promoção | `homologacao` → `main` como `v1.1.0`
+
+Ok do Rodrigo ("subir o homologação para main uma vez q ele está estável"), com a F-A3 do framework aprovada junto (D-C30). Ele
+colou na produção os Secrets da homologação e deu Reboot; depois fast-forward `main` `e2cd56a` → `829e71e`, tag anotada `v1.1.0`,
+push. Conferido no ar: `buscador-normativos.streamlit.app` com título e rodapé da Câmara, cadeia na barra lateral, geração de
+palavras-chave com "Última resposta: gemini (gemini-3.5-flash-lite)". O contador do Passo 5 é o mesmo código conferido na
+homologação. App `-teste`: Rodrigo pode apagar (B-11).
+
 ## [2026-10-01] migração | passe por app do nuati-framework: `main`/`homologacao`, framework na homologação
 
 Sessão no PC do trabalho, prompt do passe (framework @ `56d7eb0`, branch `homologacao` do framework; sem tag `v0.1.0`).
