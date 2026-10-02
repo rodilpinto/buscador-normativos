@@ -248,6 +248,11 @@ ida da versão nova para produção acontece no passe por app da D-C23.
   gerou) · buscar uma palavra-chave numa fonte 5 min × (palavras-chave × fontes) · ler a ementa de cada normativo encontrado
   2 min · registrar cada selecionado na planilha 3 min; menos o tempo da ferramenta (geração das palavras-chave + busca,
   cronometrado). Código: `app.py` `_estimar_tempo`.
+- **D-C31 · Servidor do Nuati: espelho no Gitea, `servidor_nuati` na `main` antes da v0.2.0, porta 8404** (Rodrigo, 01/10, passo 0
+  do passe do servidor). F-A11 = **a**: ele criou `Nuati-SECIN/buscador-normativos` vazio no Gitea; remoto `camara` deste repo,
+  que recebe `main`, `homologacao` e as tags a cada promoção (push da sessão principal). F-A12 = **sim** (exceção à regra 5 do §2
+  do framework: a pasta só serve ao servidor). Porta **8404**, conferida livre por ele no servidor. Promoção `homologacao` → `main`
+  como **`v1.1.1`** (`57f6b08`), com o ok dele.
 - **D-C30 · Promover `homologacao` → `main` como `v1.1.0`** (Rodrigo, 01/10: *"vamos subir o homologação para main uma vez q ele
   está estável"*). Junto, ele **aprovou a F-A3 do framework** (promover o framework a `v0.1.0`), resolvendo a regra 5 do §2 de lá
   ("produção só copia de `main`/tag do framework"): as cópias daqui são idênticas às de `56d7eb0`, e o framework só mudou o README

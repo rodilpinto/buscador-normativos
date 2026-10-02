@@ -150,6 +150,14 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
          📝 Esclarecer a regra para esses apps (ou `rodape(unidades=())`).
       5. 📝 **Receita do passe (§3/PASSE-POR-APP, passo 2):** instalar o `requirements.txt` do app antes da linha de base. Aqui o
          Python do PC do trabalho não tinha `ddgs`, e a linha de base pareceu regressão (LESSONS de 01/10).
+- [ ] **Depois do passe do servidor (01/10):**
+      - [ ] (Rodrigo) conferir no `logspp.log` do servidor se a categorização voltou vazia pelo `local` (evidência da F-A8 do
+            framework); a tela não mostra (tabela em canvas).
+      - [ ] Pedidos ao framework (passe do servidor): (6) `instalar_tarefa.ps1`/`atualizar.ps1` validarem o TOML da configuração
+            (hoje só conferem que existe; com BOM o app sobe "sem LLM" sem aviso); (7) README do `servidor_nuati` avisar do BOM do
+            Notepad e trazer o bloco que regrava sem BOM; (8) nos comandos de diagnóstico, caminho absoluto (`[IO.File]` resolve
+            relativo a `system32`); (9) 📝 o runner do app não roda os testes do `servidor_nuati` (ele roda as suítes de dentro de
+            `levantamento-normativos/`): rodar à parte, da raiz.
 - [ ] **Depois da reunião de 29/09** (o Rodrigo decide; nada disso é do agente sozinho): `BLOCKED-ON-RODRIGO.md` B-08
       (trocar a chave Groq), B-09 (versão nova para os apps ao vivo + visibilidade dos apps de teste), B-05 (pedido ao LexML).
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).

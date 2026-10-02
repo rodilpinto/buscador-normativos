@@ -2,6 +2,17 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-10-01] servidor | buscador no servidor do Nuati (`servidor_nuati` 1.0.0, porta 8404, `v1.1.1`)
+
+Passe do servidor (framework @ `36e888a`). D-C31: espelho no Gitea (F-A11 = a), `servidor_nuati` na `main` antes da v0.2.0
+(F-A12), porta 8404. Linha de base TUDO VERDE (416), golden OK. `57f6b08`: `servidor_nuati/` (9/9 hashes), `.conf`, `logs/` no
+`.gitignore`, `.gitattributes` (`.ps1`/`.cmd` CRLF); 32 testes do recurso. Remoto `camara` criado; `main` = `v1.1.1` = `57f6b08`
+no GitHub e no Gitea. No servidor (Rodrigo): `instalar_tarefa.ps1` ok; health `ok` e página 200 vistos deste PC; app subiu
+**sem LLM** por BOM no `secrets.toml` (LESSONS) e sem `LLM_MODEL`, corrigido; `atualizar.ps1` ok (2x). Busca vista deste PC:
+cadeia começando no `local`; 29 palavras-chave em 44 s e relevância 22/22 `(modelo)` pelo `local (google/gemma-4)`
+(`LLM_DISABLE_THINKING=1`); busca inteira 140 s; LexML/TCU indisponíveis ou parciais; tempo economizado 9h22min. Categorização:
+não legível pela tela (tabela em canvas); conferir no `logspp.log` do servidor. Registro no framework: `937b9a0`.
+
 ## [2026-10-01] promoção | `homologacao` → `main` como `v1.1.0`
 
 Ok do Rodrigo ("subir o homologação para main uma vez q ele está estável"), com a F-A3 do framework aprovada junto (D-C30). Ele

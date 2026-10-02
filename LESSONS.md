@@ -4,6 +4,20 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-10-01 · No servidor, o `secrets.toml` gravado pelo Notepad tinha BOM e o app subiu "sem LLM", sem avisar
+
+**Problema.** Passe do servidor do Nuati: `instalar_tarefa.ps1` deu tudo `[OK]` (inclusive "configuracao encontrada"), mas a
+barra lateral dizia "IA: nenhum provedor configurado". `tomllib` no `.venv` do servidor: `Invalid statement (at line 1,
+column 1)`. Primeiros bytes: `EF BB BF`.
+**Causa-raiz.** O Notepad daquele Windows grava "UTF-8 com BOM"; o TOML com BOM não é lido, e o `llm_cadeia` engole o erro do
+`st.secrets` (de propósito: nunca levanta) e segue sem LLM. Editar de novo no Notepad devolveu o BOM. Faltava também o
+`LLM_MODEL` (sem ele não há provedor `local`).
+**Conserto.** Regravar sem BOM pelo .NET (`[IO.File]::ReadAllText(...).TrimStart([char]0xFEFF)` →
+`WriteAllText(..., UTF8Encoding $false)`), validar com o Python do `.venv` (lista só os **nomes** preenchidos) e então
+`atualizar.ps1`. ⚠ No PowerShell, `[IO.File]` resolve caminho relativo a partir de `system32`: use caminho absoluto.
+**Regra.** Depois de criar ou editar a configuração no servidor, valide o TOML **antes** de reiniciar e confira a barra
+lateral. Pedido ao framework: os scripts validarem o TOML.
+
 ## 2026-10-01 · O runner "sem LLM" chamava o LLM de verdade no PC do trabalho (e a linha de base parecia regressão)
 
 **Problema.** Linha de base do passe por app (`master` @ `e22822e`, PC do trabalho): runner vermelho, cerca de 20 min.

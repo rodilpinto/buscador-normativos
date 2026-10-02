@@ -126,6 +126,13 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
 
 ## 🔴 B-06 · Três fatos do servidor do Nuati que só você (ou o Alexandro) sabe
 
+> ✅ **01/10, em grande parte resolvido pelo passe do servidor:** o app roda no servidor do Nuati como tarefa agendada
+> (`servidor_nuati`), clonado do espelho no Gitea `https://git.camara.gov.br/Nuati-SECIN/buscador-normativos.git`, em
+> `E:ppsuscador-normativos`, porta **8404**, tarefa `BuscadorNormativos`; quem opera é o Rodrigo (instala e roda o
+> `atualizar.ps1` a cada promoção). Item 1: o app **não** roda no host do LM Studio (outro servidor), e alcança o `local` pela
+> rede. Item 3: o servidor tem saída para a internet (Gemini e Google responderam); LexML e TCU deram indisponível/parcial lá,
+> como no PC. Resta só o bônus abaixo, já respondido na prática (Gitea = espelho).
+
 - **Aberto em:** 2026-09-22 · **Origem:** D-C14 (deploy) · **Bloqueia:** só a frente de deploy pós-v2.0.
 
 1. O app pode rodar **no mesmo host** do LM Studio (`10.10.111.125`)? Se sim, `base_url` vira `localhost`.

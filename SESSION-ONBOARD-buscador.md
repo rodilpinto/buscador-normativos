@@ -23,7 +23,9 @@ board de 16/09 (decisão D-C2).
 
 ✅ **Dois ambientes (D-C22), migrados em 01/10:** **`main`** = produção = **`v1.1.0`** (`829e71e`, promovida em 01/10, D-C30; antes v1.0.1),
 branch padrão no GitHub, app `https://buscador-normativos.streamlit.app/`; **`homologacao`** = trabalho do dia a dia, app
-`https://buscador-normativos-homologacao.streamlit.app/` (todo push redeploya). `master`, `deploy`, `frente2/*` não existem mais.
+`https://buscador-normativos-homologacao.streamlit.app/` (todo push redeploya). **Servidor do Nuati** (desde 01/10, D-C31):
+`main` roda como tarefa `BuscadorNormativos`, porta 8404, clonada do espelho `camara` (Gitea); a cada promoção, push da `main`
+para `origin` **e** `camara` (da sessão principal) e o Rodrigo roda `servidor_nuatitualizar.ps1` lá. `master`, `deploy`, `frente2/*` não existem mais.
 ✅ **Framework adotado** (`rodilpinto/nuati-framework` @ `56d7eb0`, aprovado como `v0.1.0` pelo Rodrigo em 01/10), em `homologacao` e `main`: `llm_cadeia` 1.1.0, `branding` 1.0.0,
 `tempo_economizado` 1.0.0, pastas dentro de `levantamento-normativos/`. São **cópias**: não se editam; a origem é o framework e o
 registro de cópias é o README §4 de lá. Defeito ou falta → pedido ao framework (`_TODO.md`, "Pedidos ao nuati-framework").
@@ -110,7 +112,7 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 ## 6. Próximo movimento
 
 ▶ **Trabalhar em `homologacao`** (push → o app de homologação atualiza). Promover para `main` só com ok do Rodrigo e tag
-(README do framework §3, "Depois da migração"). Última promoção: `v1.1.0` (01/10).
+(README do framework §3, "Depois da migração"). Última promoção: `v1.1.1` (01/10).
 ▶ **Primeiro passo agêntico:** o insumo (f) da frente 5 (`ementa None` em `gemini_client.py`), menor, com teste óbvio.
 ▶ **Com o Rodrigo:** B-11 (apagar o app `-teste`), B-12 (Secrets completos na homologação, opcional), B-08 (chave Groq) e a
 🔴 **D-C17**, que venceu o prazo.
