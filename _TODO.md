@@ -151,8 +151,11 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
       5. 📝 **Receita do passe (§3/PASSE-POR-APP, passo 2):** instalar o `requirements.txt` do app antes da linha de base. Aqui o
          Python do PC do trabalho não tinha `ddgs`, e a linha de base pareceu regressão (LESSONS de 01/10).
 - [ ] **Depois do passe do servidor (01/10):**
-      - [ ] (Rodrigo) conferir no `logspp.log` do servidor se a categorização voltou vazia pelo `local` (evidência da F-A8 do
-            framework); a tela não mostra (tabela em canvas).
+      - [x] categorização pelo `local` no servidor: ✅ sem aviso de vazio no log (05/10), com `LLM_DISABLE_THINKING=1`.
+      - [ ] **Busca web no servidor não funciona** (05/10: todos os buscadores do `ddgs` com 10051/10054). (Rodrigo/infra) o
+            servidor sai para a internet por proxy? 📝 Se sim, testar `HTTPS_PROXY`/`HTTP_PROXY` no ambiente da tarefa (pedido ao
+            framework: o `servidor_nuati` não tem onde pôr variável de ambiente do processo).
+      - [ ] (Rodrigo) fechar o e2e no servidor: uma busca até "Gerar Excel" e baixar o `.xlsx`, conferindo a coluna Categoria.
       - [ ] Pedidos ao framework (passe do servidor): (6) `instalar_tarefa.ps1`/`atualizar.ps1` validarem o TOML da configuração
             (hoje só conferem que existe; com BOM o app sobe "sem LLM" sem aviso); (7) README do `servidor_nuati` avisar do BOM do
             Notepad e trazer o bloco que regrava sem BOM; (8) nos comandos de diagnóstico, caminho absoluto (`[IO.File]` resolve

@@ -130,8 +130,11 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
 > (`servidor_nuati`), clonado do espelho no Gitea `https://git.camara.gov.br/Nuati-SECIN/buscador-normativos.git`, em
 > `E:ppsuscador-normativos`, porta **8404**, tarefa `BuscadorNormativos`; quem opera é o Rodrigo (instala e roda o
 > `atualizar.ps1` a cada promoção). Item 1: o app **não** roda no host do LM Studio (outro servidor), e alcança o `local` pela
-> rede. Item 3: o servidor tem saída para a internet (Gemini e Google responderam); LexML e TCU deram indisponível/parcial lá,
-> como no PC. Resta só o bônus abaixo, já respondido na prática (Gitea = espelho).
+> rede. Item 3: ⚠ **CORRIGIDO em 05/10** (o texto de 01/10 dizia "Gemini e Google responderam", o que estava errado): no
+> `logspp.log` do servidor, **todos os buscadores web do `ddgs` falham** (10051 "unreachable network" e 10054 "connection
+> forcibly closed": DuckDuckGo, Brave, Yahoo, Mojeek, Startpage, Wikipedia), então a fonte web aberta não funciona lá; o TCU é
+> alcançado (500/timeout, como em todo lugar); o Gemini não foi exercitado (o `local` respondeu tudo). 📝 Hipótese não
+> conferida: o servidor precisa de proxy para sair; perguntar à infra. Resta isso e o bônus abaixo (Gitea = espelho, na prática).
 
 - **Aberto em:** 2026-09-22 · **Origem:** D-C14 (deploy) · **Bloqueia:** só a frente de deploy pós-v2.0.
 

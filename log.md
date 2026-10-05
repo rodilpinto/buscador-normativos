@@ -2,6 +2,15 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-10-05] correção | servidor: a busca web NÃO funciona lá; categorização sem vazio
+
+Log do servidor (`logspp.log`, colado pelo Rodrigo em 05/10): (1) **nenhum** "empty response for categorize" depois da
+busca de 01/10: com `LLM_DISABLE_THINKING=1` a categorização pelo `local` não voltou vazia (evidência da F-A8 do framework;
+o app só registra a falha, então a prova é a ausência do aviso). (2) **Correção:** a entrada de 01/10 e a B-06 diziam que o
+Google/Gemini responderam no servidor: errado. Todos os buscadores do `ddgs` falham lá (10051/10054); os 22 resultados
+vieram do TCU (parcial). Hipótese 📝: falta proxy. Também em 05/10: o Rodrigo começou uma busca no servidor (30 palavras-chave
+pelo LLM; TCU com timeout e 500).
+
 ## [2026-10-01] servidor | buscador no servidor do Nuati (`servidor_nuati` 1.0.0, porta 8404, `v1.1.1`)
 
 Passe do servidor (framework @ `36e888a`). D-C31: espelho no Gitea (F-A11 = a), `servidor_nuati` na `main` antes da v0.2.0
