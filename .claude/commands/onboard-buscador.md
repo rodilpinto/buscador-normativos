@@ -19,7 +19,7 @@ com o onboard, siga com ela após o resumo; senão, NÃO comece nada até ele da
 
 **Se a §2/§6 disser que uma frente está EM EXECUÇÃO:** ler em seguida `spec/<frente>/execucao/CONTEXTO.md`
 (objetivo, regras de papel, trilhas) e `execucao/TODOS.md` (status por task — SSOT da execução; o `_TODO.md`
-aponta para ele). Conferir o trabalho em voo com `git worktree list` e `git -C <worktree> log --oneline master..`.
+aponta para ele). Conferir o trabalho em voo com `git worktree list` e `git -C <worktree> log --oneline homologacao..`.
 
 ### Passo 2 — Ledgers
 - `_TODO.md` — status por task (**exceto** frente em execução: aí o SSOT é `spec/<frente>/execucao/TODOS.md`).

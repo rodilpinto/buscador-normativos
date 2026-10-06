@@ -81,7 +81,9 @@ configurado; A está arquivado no GitHub. A tag `levantamento-v1-streamlit` exis
 
 **Ferramentas:** `python tools/run_all_tests.py` (≈5 min, medido 23/09: 4m49s — as suítes LIVE batem em fontes quebradas) e
 `python tools/golden_master.py comparar`. O app v1.0: `python -m streamlit run app.py` em
-`levantamento-normativos/`.
+`levantamento-normativos/`. ⚠ **No PC do trabalho** `python` no PATH é o atalho da Microsoft Store (não roda): use **`py`**
+(Python 3.13) no lugar de `python` em todos os comandos; não há `.venv` no repo; dependências: `py -m pip install -r
+levantamento-normativos/requirements.txt` (+ `markdown-it-py` para 3 testes do `test_phase4.py`).
 
 ## 3. Achados críticos (não perder)
 
@@ -92,7 +94,9 @@ configurado; A está arquivado no GitHub. A tag `levantamento-v1-streamlit` exis
 7. **LLM local inalcançável desta máquina** (`10.10.111.125:1234`, timeout); **alcançável do PC do trabalho** (Gemma
    verificado ao vivo em 28/09 pela sessão do scopediagram). Detalhe e a regra do `timeout` em tupla:
    `~/.claude/ENVIRONMENT.md`. Chaves de LLM para teste local: `~/.llm-chaves.toml` (fora do repo; receita no mesmo
-   `ENVIRONMENT.md`) — **nunca imprimir o conteúdo**.
+   `ENVIRONMENT.md`) — **nunca imprimir o conteúdo**. ⚠ Isso vale para a outra máquina: **no PC do trabalho** não existem
+   `~/.claude/ENVIRONMENT.md` nem `~/.llm-chaves.toml`; as chaves ficam em `%USERPROFILE%\.streamlit\secrets.toml`
+   (carregar dentro do processo Python, sem imprimir: README do framework §1) e o LLM local é alcançável.
 8. Histórico (não é greenfield; B2 revertida; emendas/ordem do plano de 16/09; fontes quebradas em 22/09; fixtures
    reais): arquivado no `log.md`, entrada de 23/09 (review da T10). Estado das fontes: a frente 2 consertou (23/09) o
    que dava; o que resta está em B-04/B-05 (`BLOCKED-ON-RODRIGO.md`).
@@ -106,10 +110,11 @@ revisado (mar/2026)."* — ou seja, o estado **ANTES** da consolidação.
 ```bash
 cd ~/Documents/projeto-nuati-normativos-levantamento && git checkout levantamento-v1-streamlit
 ```
+O repo A só existe na outra máquina; **neste repo a mesma tag existe** (`eb91277`): `git checkout levantamento-v1-streamlit`.
 
 **Pontos de retorno neste repo (22/09, empurrados):** `v1.0` → `eb91277` (= `levantamento-v1-streamlit`) ·
 **`v1.0.1`** → `e2cd56a`: estado **funcional** (IA na nuvem confirmada pelo Rodrigo), com LexML/TCU ainda quebrados.
-`git checkout v1.0.1`. **Desde 01/10 a produção segue `main`** (= `v1.0.1`); voltar atrás = commit de reversão em `main`
+`git checkout v1.0.1`. **Desde 01/10 a produção segue `main`** (versão atual: §2); voltar atrás = commit de reversão em `main`
 (`git revert`), nunca push forçado (README do framework §3). Marcos da migração: tags `pre-framework-2026-10-01-deploy`
 (`e2cd56a`) e `pre-framework-2026-10-01-master` (`e22822e`). ⚠ A mensagem da tag `v1.0.1` diz "branch master" — escrita antes
 de a nuvem passar para `deploy`; tag não se edita, a correção está na D-C14.
@@ -157,7 +162,7 @@ frente 2, ledgers, superados). A tabela antiga desta seção foi arquivada no `l
 | Caminho de A | `~/Documents/projeto-nuati-normativos-levantamento/` — ⚠ o código fica em `levantamento-normativos/` **dentro** dele, não na raiz |
 | Cliente de LLM | `llm/gemini_client.py` (prompts e parsing do buscador) → transporte em **`llm_cadeia/`** (cópia do `nuati-framework`, 1.1.0 na `homologacao`; ⛔ não editar) |
 | Rodar o app | `python -m streamlit run app.py`, a partir da pasta do código |
-| **Chave do LLM no app da nuvem** | Valores **nunca** passam pelo chat nem pelo repo. **Produção (`main`, v1.0.1):** só `GEMINI_API_KEY` (conta nuati.secin), modelo fixo `gemini-3.5-flash-lite`. **Homologação:** nomes do `llm_cadeia` (README da pasta; bloco padrão = `segredos.exemplo.toml` do framework); em 01/10 a cadeia de lá começa no `gemini` (B-12). Os dois leem também `GOOGLE_API_KEY`/`GOOGLE_CSE_ID` (opcionais). ⚠ Segredo lido **no import**: mudou Secrets → **Reboot app**. ⛔ **Não criar `levantamento-normativos/.streamlit/secrets.toml`** (`st.secrets` vence o ambiente). Neste PC o `~/.streamlit/secrets.toml` global tem as chaves de teste: o `st.secrets` o lê mesmo fora do `streamlit run`. |
+| **Chave do LLM nos apps** | Valores **nunca** passam pelo chat nem pelo repo. **Produção e homologação (Streamlit Cloud)**, desde a `v1.1.0` (D-C30): nomes do `llm_cadeia` (README da pasta; bloco padrão = `segredos.exemplo.toml` **da raiz do framework**, `~/Documents/solucoes/nuati-framework`); os Secrets da homologação foram colados na produção em 01/10; nas duas a cadeia começa no `gemini` (sem `LLM_BASE_URL`, B-12). **Servidor do Nuati:** `levantamento-normativos/.streamlit/secrets.toml` **lá no servidor** (com `LLM_BASE_URL`, `LLM_MODEL`, `LLM_DISABLE_THINKING="1"`), UTF-8 **sem BOM** (LESSONS 01/10). Todos leem também `GOOGLE_API_KEY`/`GOOGLE_CSE_ID` (opcionais). ⚠ Segredo lido **no import**: mudou Secrets → **Reboot app** (nuvem) ou `atualizar.ps1` (servidor). ⛔ **Não criar `levantamento-normativos/.streamlit/secrets.toml` no PC de desenvolvimento** (o `st.secrets` vence o ambiente); no servidor ele é o lugar certo. Neste PC o `~/.streamlit/secrets.toml` global tem as chaves de teste: o `st.secrets` o lê mesmo fora do `streamlit run`. |
 | Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
 | **Espelho na Câmara** | Desde 01/10 (D-C31): remoto **`camara`** = `https://git.camara.gov.br/Nuati-SECIN/buscador-normativos.git` (criado vazio pelo Rodrigo; recebeu `main`, `homologacao` e as tags). Só alcançável do **PC do trabalho** (rede da Câmara). O GitHub (`origin`) continua a origem; a cada promoção, push de `main`, `homologacao` e da tag para os dois. ⚠ Push para o `camara` **da sessão principal**, não de subagente (de subagente dá "Authentication failed"); a falha de autenticação também aparece às vezes na sessão principal e passa ao repetir (06/10: `git fetch --all` falhou no `camara`; o push de 01/10 passou). Conferir com `git ls-remote camara`. Segredos fora do git nos dois lados. O servidor do Nuati clona daqui (B-06). |
 | **Cópias dos recursos do framework** | Registro único: README do `rodilpinto/nuati-framework`, §4 (o que cada app tem, versão medida, situação). Este repo não é mais origem de nada. |

@@ -105,6 +105,11 @@ não task. Cobertura insuficiente conta como **falha**, não como limitação co
 - **Aberto em:** 2026-09-22 · **Origem:** decisão D-C13, depois de medir o bloqueio
 - **Bloqueia:** nada do código. A frente 2 detecta e avisa; a frente 3 traz fonte substituta.
 
+> ⚠ **O diagnóstico mudou (05-06/10):** o SRU agora responde **HTTP 404** (`busca/SRU`, `sru/SRU`, `srw/SRU`, de qualquer
+> lugar: PC e servidor; o app classifica como `endpoint_inexistente`), não mais o desafio de JavaScript descrito abaixo.
+> Antes de formular este pedido, a próxima sessão confere o endereço atual da API (`_TODO.md`, "Debug das fontes na
+> `homologacao`", item 1) e reescreve o texto pronto abaixo com o diagnóstico novo.
+
 ✅ **Medido em 2026-09-22:** o serviço SRU do LexML (`https://www.lexml.gov.br/busca/SRU`) está
 atrás de um **desafio de JavaScript** ("Verificação de segurança — Senado Federal"). Devolve
 HTTP 200 com `text/html` em vez de XML. A home do `lexml.gov.br` abre normalmente — é só o
