@@ -1,7 +1,7 @@
 ---
 title: "Bloqueios no humano — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-10-01
+last_updated: 2026-10-06
 related: [_DECISOES-PENDENTES.md, _TODO.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -128,13 +128,18 @@ serviço de busca. User-Agent descritivo não muda nada. Não há OAI-PMH (`/oai
 
 > ✅ **01/10, em grande parte resolvido pelo passe do servidor:** o app roda no servidor do Nuati como tarefa agendada
 > (`servidor_nuati`), clonado do espelho no Gitea `https://git.camara.gov.br/Nuati-SECIN/buscador-normativos.git`, em
-> `E:ppsuscador-normativos`, porta **8404**, tarefa `BuscadorNormativos`; quem opera é o Rodrigo (instala e roda o
+> `E:\apps\buscador-normativos`, porta **8404**, tarefa `BuscadorNormativos`; quem opera é o Rodrigo (instala e roda o
 > `atualizar.ps1` a cada promoção). Item 1: o app **não** roda no host do LM Studio (outro servidor), e alcança o `local` pela
 > rede. Item 3: ⚠ **CORRIGIDO em 05/10** (o texto de 01/10 dizia "Gemini e Google responderam", o que estava errado): no
-> `logspp.log` do servidor, **todos os buscadores web do `ddgs` falham** (10051 "unreachable network" e 10054 "connection
+> `logs\app.log` do servidor, **todos os buscadores web do `ddgs` falham** (10051 "unreachable network" e 10054 "connection
 > forcibly closed": DuckDuckGo, Brave, Yahoo, Mojeek, Startpage, Wikipedia), então a fonte web aberta não funciona lá; o TCU é
-> alcançado (500/timeout, como em todo lugar); o Gemini não foi exercitado (o `local` respondeu tudo). 📝 Hipótese não
-> conferida: o servidor precisa de proxy para sair; perguntar à infra. Resta isso e o bônus abaixo (Gitea = espelho, na prática).
+> alcançado (500/timeout, como em todo lugar); o Gemini não foi exercitado (o `local` respondeu tudo). ~~📝 Hipótese não
+> conferida: o servidor precisa de proxy para sair~~ **Respondido em 06/10:** o srv-nuati02 **bloqueia toda saída que não
+> esteja numa whitelist** (Rodrigo). Testes de 05-06/10 no servidor: WinHTTP sem proxy; `Test-NetConnection` na porta 443
+> passa para `html.duckduckgo.com` e para `dados-abertos.apps.tcu.gov.br`, mas o HTTPS para o DuckDuckGo dá 403 no PowerShell
+> e a conexão é derrubada no TLS pelo Python (10054); o servidor não tem IPv6 (os 10051). O que fazer com a web aberta lá:
+> 🔴 **D-C32**. ❓ Ainda não testado se os provedores de LLM de reserva (Gemini, Groq, Cerebras, OpenRouter) passam pela
+> whitelist. O bônus abaixo está respondido na prática (Gitea = espelho).
 
 - **Aberto em:** 2026-09-22 · **Origem:** D-C14 (deploy) · **Bloqueia:** só a frente de deploy pós-v2.0.
 
@@ -220,6 +225,20 @@ como espelho pelo PC do trabalho — registrado no state file §8.)
 - **Aberto em:** 2026-10-01 · **Bloqueia:** nada. Visto no ar em 01/10: a cadeia do `buscador-normativos-homologacao` começa no
   `gemini` (faltam `LLM_BASE_URL`, `LLM_MODEL` e as chaves sem sufixo de Groq, Cerebras e OpenRouter). Na nuvem o `local` é
   inalcançável de qualquer jeito. Bloco: `segredos.exemplo.toml` do framework. Depois: **Reboot app**.
+
+---
+
+## 🔴 B-13 · Servidor do Nuati: whitelist de saída (web aberta e LLM de reserva)
+
+- **Aberto em:** 2026-10-06 · **Bloqueia:** a fonte web aberta no servidor (e, se também barrados, os LLMs de reserva lá).
+- O srv-nuati02 só deixa sair para destinos de uma whitelist (você, 06/10). O que o agente já fez: diagnóstico de rede (B-06,
+  `log.md` 06/10) e as opções na 🔴 **D-C32**.
+- **O que fazer:** (1) decidir a D-C32; (2) se a decisão pedir liberação, levar à infra a lista exata de domínios que ela
+  definir; (3) 📝 antes, testar no servidor se os LLMs de reserva passam (em `E:\apps\buscador-normativos`, uma URL por vez:
+  `.\.venv\Scripts\python.exe -c "import requests; print(requests.get('<url>', timeout=15).status_code)"` para
+  `https://generativelanguage.googleapis.com`, `https://api.groq.com`, `https://api.cerebras.ai`, `https://openrouter.ai`;
+  qualquer código HTTP = passou, erro de conexão = barrado).
+- **Destrava:** busca web no servidor; LLM de reserva no servidor.
 
 ---
 

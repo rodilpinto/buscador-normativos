@@ -1,6 +1,6 @@
 ---
 title: Buscador de Base Normativa — TODOs
-last_audit: 2026-10-01
+last_audit: 2026-10-06
 related: [_DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, SESSION-ONBOARD-buscador.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -152,15 +152,32 @@ Motivo em `log.md` (entrada de 16/09) e na spec de consolidação §1.1.
          Python do PC do trabalho não tinha `ddgs`, e a linha de base pareceu regressão (LESSONS de 01/10).
 - [ ] **Depois do passe do servidor (01/10):**
       - [x] categorização pelo `local` no servidor: ✅ sem aviso de vazio no log (05/10), com `LLM_DISABLE_THINKING=1`.
-      - [ ] **Busca web no servidor não funciona** (05/10: todos os buscadores do `ddgs` com 10051/10054). (Rodrigo/infra) o
-            servidor sai para a internet por proxy? 📝 Se sim, testar `HTTPS_PROXY`/`HTTP_PROXY` no ambiente da tarefa (pedido ao
-            framework: o `servidor_nuati` não tem onde pôr variável de ambiente do processo).
+      - [ ] **Busca web no servidor não funciona** (05/10: todos os buscadores do `ddgs` com 10051/10054). ~~Proxy?~~ 06/10: não há
+            proxy; o srv-nuati02 só sai para uma **whitelist** (Rodrigo). Decisão: 🔴 **D-C32**; ação com a infra: B-13.
       - [ ] (Rodrigo) fechar o e2e no servidor: uma busca até "Gerar Excel" e baixar o `.xlsx`, conferindo a coluna Categoria.
-      - [ ] Pedidos ao framework (passe do servidor): (6) `instalar_tarefa.ps1`/`atualizar.ps1` validarem o TOML da configuração
+            ⚠ 05/10: tentou e **não deu**: nenhuma fonte entregou resultado (LexML 404, TCU timeout, web barrada), então o app
+            não oferece a planilha. Destrava com o debug das fontes, abaixo.
+- [ ] **Debug das fontes na `homologacao`** (pauta da próxima sessão, combinada com o Rodrigo em 06/10; ordem = prioridade):
+      1. **LexML:** o SRU `https://www.lexml.gov.br/busca/SRU` (e `sru/SRU`, `srw/SRU`) dá **404 de qualquer lugar** (PC e servidor,
+         05-06/10). Achar o endereço atual da API e ajustar `searchers/lexml_searcher.py`, com teste sem rede e fixture real; é
+         `gov.br`, então tende a passar pela whitelist do servidor. Relacionado: B-05 (acesso oficial ao LexML).
+      2. **TCU:** `https://dados-abertos.apps.tcu.gov.br/api/atonormativo/recupera-atos-normativos` dá 500 (PC, 0,6 s, 05/10) e
+         timeout no servidor. Conferir se persiste e se há endpoint alternativo; o app já declara o erro corretamente.
+      3. **Web aberta no servidor:** conforme a D-C32.
+      Cada conserto: runner + golden → push na `homologacao` (origin e camara) → app de homologação → promoção com ok e tag →
+      o Rodrigo roda `atualizar.ps1` no servidor.
+      - [ ] **Recopiar o `servidor_nuati` 1.0.1** (framework `homologacao` @ `cf1bfda`, 05/10: atende os pedidos 6 a 9 abaixo, com
+            `validar_config.py` que recusa BOM/UTF-16/TOML inválido e mostra só os nomes) na `homologacao` daqui: comparar a cópia
+            1.0.0 com `36e888a` (hash git), trocar a pasta por `git archive`, testes da raiz, registro §4 do framework. Levar à `main`
+            segue a exceção F-A12 ou espera a v0.2.0 (perguntar ao Rodrigo). No framework também nasceu a F-A13 (o `llm_cadeia`
+            engole em silêncio o erro de leitura do `st.secrets`), ligada ao mesmo incidente.
+      - [x] Pedidos ao framework (passe do servidor), 6 a 9 ✅ atendidos na 1.0.1 acima; o 10 segue aberto: (6) `instalar_tarefa.ps1`/`atualizar.ps1` validarem o TOML da configuração
             (hoje só conferem que existe; com BOM o app sobe "sem LLM" sem aviso); (7) README do `servidor_nuati` avisar do BOM do
             Notepad e trazer o bloco que regrava sem BOM; (8) nos comandos de diagnóstico, caminho absoluto (`[IO.File]` resolve
             relativo a `system32`); (9) 📝 o runner do app não roda os testes do `servidor_nuati` (ele roda as suítes de dentro de
-            `levantamento-normativos/`): rodar à parte, da raiz.
+            `levantamento-normativos/`): rodar à parte, da raiz; (10) 📝 o `servidor_nuati` não tem onde definir variável de
+            ambiente do processo da tarefa (útil para `HTTPS_PROXY` ou ajustes de app); e a receita do §3 poderia incluir um teste
+            de saída (whitelist) antes de instalar.
 - [ ] **Depois da reunião de 29/09** (o Rodrigo decide; nada disso é do agente sozinho): `BLOCKED-ON-RODRIGO.md` B-08
       (trocar a chave Groq), B-09 (versão nova para os apps ao vivo + visibilidade dos apps de teste), B-05 (pedido ao LexML).
 - [ ] **Tag `v1.x`** ao fim das 5 frentes (D-C10) → checkpoint → v2.0 (T4, T7, T8 do plano de 16/09).

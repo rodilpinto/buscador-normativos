@@ -2,9 +2,20 @@
 
 <!-- entradas mais recentes no topo · formato: ## [data] operação | título -->
 
+## [2026-10-06] checkpoint | servidor sem fontes que respondam; whitelist; pauta de debug na homologacao
+
+Busca do Rodrigo no servidor (05/10): "nenhuma fonte entregou resultado"; a planilha não é oferecida. Diagnóstico (05-06/10):
+LexML 404 e TCU 500 também **deste PC** (`curl`, 05/10), ou seja, quebrados em todo lugar; a web aberta falha **só no
+servidor**. No servidor: WinHTTP sem proxy; `Test-NetConnection :443` passa para DuckDuckGo e TCU; o PowerShell recebe 403 do
+DuckDuckGo; o Python tem a conexão derrubada no TLS (10054); sem IPv6 (os 10051 do `ddgs`). Este PC sai direto, sem proxy.
+Rodrigo (06/10): o srv-nuati02 só sai para uma **whitelist**. Abertas: 🔴 D-C32 (web aberta no servidor: a/b/c) e B-13
+(infra). Pauta combinada: debug na `homologacao`, LexML → TCU → web (`_TODO.md`). Corrigido neste checkpoint: caracteres de
+controle (`\a`, `\b` viraram BEL/BS) em caminhos do Windows no state file, no BLOCKED e neste log (LESSONS). Pedido 10 ao
+framework (variável de ambiente da tarefa; teste de saída na receita).
+
 ## [2026-10-05] correção | servidor: a busca web NÃO funciona lá; categorização sem vazio
 
-Log do servidor (`logspp.log`, colado pelo Rodrigo em 05/10): (1) **nenhum** "empty response for categorize" depois da
+Log do servidor (`logs\app.log`, colado pelo Rodrigo em 05/10): (1) **nenhum** "empty response for categorize" depois da
 busca de 01/10: com `LLM_DISABLE_THINKING=1` a categorização pelo `local` não voltou vazia (evidência da F-A8 do framework;
 o app só registra a falha, então a prova é a ausência do aviso). (2) **Correção:** a entrada de 01/10 e a B-06 diziam que o
 Google/Gemini responderam no servidor: errado. Todos os buscadores do `ddgs` falham lá (10051/10054); os 22 resultados
@@ -20,7 +31,7 @@ no GitHub e no Gitea. No servidor (Rodrigo): `instalar_tarefa.ps1` ok; health `o
 **sem LLM** por BOM no `secrets.toml` (LESSONS) e sem `LLM_MODEL`, corrigido; `atualizar.ps1` ok (2x). Busca vista deste PC:
 cadeia começando no `local`; 29 palavras-chave em 44 s e relevância 22/22 `(modelo)` pelo `local (google/gemma-4)`
 (`LLM_DISABLE_THINKING=1`); busca inteira 140 s; LexML/TCU indisponíveis ou parciais; tempo economizado 9h22min. Categorização:
-não legível pela tela (tabela em canvas); conferir no `logspp.log` do servidor. Registro no framework: `937b9a0`.
+não legível pela tela (tabela em canvas); conferir no `logs\app.log` do servidor. Registro no framework: `937b9a0`.
 
 ## [2026-10-01] promoção | `homologacao` → `main` como `v1.1.0`
 

@@ -4,6 +4,28 @@
      Lição de MÁQUINA (vale em qualquer projeto) vai para ~/.claude/ENVIRONMENT.md, e aqui fica só
      um ponteiro de uma linha. Lição de ÁREA fica no runbook da área. Aqui: as transversais. -->
 
+## 2026-10-06 · Porta 443 aberta não quer dizer que o HTTPS passa (servidor com whitelist)
+
+**Problema.** No servidor do Nuati, a web aberta falhava (`ddgs`: 10054 e 10051), mas o `Test-NetConnection <host> -Port 443`
+dava `True` para o DuckDuckGo, e o WinHTTP dizia "sem proxy". Parecia rede livre.
+**Causa-raiz.** O srv-nuati02 filtra a saída por destino (whitelist, Rodrigo, 06/10): a conexão TCP abre e o filtro age depois,
+no TLS (Python: conexão derrubada no handshake) ou na resposta (PowerShell: 403). Os 10051 vinham de outra coisa: o servidor
+não tem IPv6, e o `ddgs` tenta IPv6 em alguns buscadores.
+**Conserto.** Nenhum no app; decisão D-C32 e pedido à infra (B-13).
+**Regra.** Para saber se um app sai para um destino, teste **o mesmo cliente que o app usa** (o Python do `.venv`, com
+`requests.get(url)`), não só a porta. Antes de levar um app ao servidor, liste os destinos externos dele e teste cada um.
+Cobertura: medido só no buscador; o checklist (porta 8401) não usa web aberta. Pedido 10 ao framework.
+
+## 2026-10-06 · Editar Markdown por script Python: `\a` e `\b` em caminho do Windows viram caracteres de controle
+
+**Problema.** Em edições feitas por `py - <<'EOF'` com o texto dentro de string Python, `E:\apps\buscador` virou
+`E:<BEL>pps<BS>uscador` e `servidor_nuati\atualizar` perdeu o `\a`: invisível na leitura, quebra a cópia do comando.
+**Causa-raiz.** Dentro de uma string Python comum, `\a` e `\b` são escapes (BEL, BS).
+**Conserto.** Varredura de controle (`re.finditer(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', texto)`) nos `.md`; 6 trocados de volta
+em 06/10 (state file, BLOCKED, log).
+**Regra.** Texto com caminho do Windows vai por edição exata (ferramenta de edição) ou em string `r"..."`; depois de editar
+por script, rode a varredura de caracteres de controle. Cobertura: só os `.md` da raiz e o comando de onboard foram varridos.
+
 ## 2026-10-01 · No servidor, o `secrets.toml` gravado pelo Notepad tinha BOM e o app subiu "sem LLM", sem avisar
 
 **Problema.** Passe do servidor do Nuati: `instalar_tarefa.ps1` deu tudo `[OK]` (inclusive "configuracao encontrada"), mas a

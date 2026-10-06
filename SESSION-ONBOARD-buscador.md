@@ -1,7 +1,7 @@
 ---
 title: Buscador de Base Normativa — state snapshot
 maintained_by: sessões do Claude Code; humanos podem editar
-last_updated: 2026-10-01
+last_updated: 2026-10-06
 related: [levantamento-normativos/llm_cadeia/README.md, _TODO.md, _DECISOES-PENDENTES.md, log.md, LESSONS.md, BLOCKED-ON-RODRIGO.md, decisions/DECISIONS-LOG.md, docs/superpowers/specs/2026-09-16-consolidacao-buscador-design.md, docs/superpowers/plans/2026-09-16-consolidacao-fase1.md]
 ---
 
@@ -19,18 +19,28 @@ palavras-chave → busca → **triagem em poucas decisões** → download → or
 pronto; este **constrói**. Projetos distintos, declarado pelo Rodrigo em 08/09 e reconfirmado no
 board de 16/09 (decisão D-C2).
 
-## 2. Estado na última pausa (2026-10-01, passe por app do nuati-framework feito)
+## 2. Estado na última pausa (2026-10-06, servidor do Nuati no ar; as três fontes de busca falham lá)
 
-✅ **Dois ambientes (D-C22), migrados em 01/10:** **`main`** = produção = **`v1.1.0`** (`829e71e`, promovida em 01/10, D-C30; antes v1.0.1),
+🔴 **O app roda no servidor do Nuati, mas lá a busca não traz nada hoje** (busca do Rodrigo em 05/10: "nenhuma fonte entregou
+resultado"). Três causas distintas, medidas em 05-06/10 (detalhe: `log.md` 06/10 e B-06): **LexML** responde 404 em todo lugar
+(endereço da API mudou; B-05); **TCU** dá 500/timeout em todo lugar (instável do lado deles); **web aberta** (`ddgs`) é barrada
+**só no servidor**: o srv-nuati02 só deixa sair para destinos de uma whitelist (fato informado pelo Rodrigo em 06/10). O LLM local
+funciona lá (palavras-chave, relevância e categorização, 01/10). 🔴 **D-C32** (o que fazer com a web aberta no servidor) está
+aberta. Próximo trabalho: debug na `homologacao`, LexML primeiro (§6).
+
+✅ **Dois ambientes (D-C22), migrados em 01/10:** **`main`** = produção = **`v1.1.1`** (`57f6b08`: `v1.1.0` = `829e71e` levou o framework, D-C30; `v1.1.1` o `servidor_nuati`, D-C31),
 branch padrão no GitHub, app `https://buscador-normativos.streamlit.app/`; **`homologacao`** = trabalho do dia a dia, app
 `https://buscador-normativos-homologacao.streamlit.app/` (todo push redeploya). **Servidor do Nuati** (desde 01/10, D-C31):
 `main` roda como tarefa `BuscadorNormativos`, porta 8404, clonada do espelho `camara` (Gitea); a cada promoção, push da `main`
-para `origin` **e** `camara` (da sessão principal) e o Rodrigo roda `servidor_nuatitualizar.ps1` lá. `master`, `deploy`, `frente2/*` não existem mais.
+para `origin` **e** `camara` (da sessão principal) e o Rodrigo roda `servidor_nuati\atualizar.ps1` lá. `master`, `deploy`, `frente2/*` não existem mais.
 ✅ **Framework adotado** (`rodilpinto/nuati-framework` @ `56d7eb0`, aprovado como `v0.1.0` pelo Rodrigo em 01/10), em `homologacao` e `main`: `llm_cadeia` 1.1.0, `branding` 1.0.0,
-`tempo_economizado` 1.0.0, pastas dentro de `levantamento-normativos/`. São **cópias**: não se editam; a origem é o framework e o
-registro de cópias é o README §4 de lá. Defeito ou falta → pedido ao framework (`_TODO.md`, "Pedidos ao nuati-framework").
-Runner TUDO VERDE (416 testes, cerca de 6 min; `LLM_SOMENTE=nenhum` garante "sem LLM"). Pendências: `_TODO.md` ("Depois do passe por
-app"), B-11, B-12. Registro: `log.md` 01/10.
+`tempo_economizado` 1.0.0, pastas dentro de `levantamento-normativos/`; e `servidor_nuati` 1.0.0 (@ `36e888a`) na **raiz** do repo,
+com o `servidor_nuati.conf`. São **cópias**: não se editam; a origem é o framework e o registro de cópias é o README §4 de lá.
+Defeito ou falta → pedido ao framework (`_TODO.md`, "Pedidos ao nuati-framework" e "Depois do passe do servidor").
+Runner TUDO VERDE (contagem: `BASELINE` em `tools/run_all_tests.py`; `LLM_SOMENTE=nenhum` garante "sem LLM"). Os testes do
+`servidor_nuati` ficam fora do runner: `python -m pytest servidor_nuati -q`, da raiz. Registro: `log.md` 01/10 a 06/10.
+**Esta sessão (01/10 a 06/10):** `git log --oneline e22822e..HEAD`. ⚠ O SHA mais novo citado aqui está sempre um ou mais commits
+atrás dos que gravaram este arquivo: a cadeia real termina em `git log --oneline -3`.
 
 ### Estado anterior (2026-09-29, dia da reunião — cadeia de LLM entregue, versão ao vivo congelada)
 
@@ -113,9 +123,16 @@ duráveis → commitar **e pushar** (decisão D-C7). Retomar com `/onboard-busca
 
 ▶ **Trabalhar em `homologacao`** (push → o app de homologação atualiza). Promover para `main` só com ok do Rodrigo e tag
 (README do framework §3, "Depois da migração"). Última promoção: `v1.1.1` (01/10).
-▶ **Primeiro passo agêntico:** o insumo (f) da frente 5 (`ementa None` em `gemini_client.py`), menor, com teste óbvio.
-▶ **Com o Rodrigo:** B-11 (apagar o app `-teste`), B-12 (Secrets completos na homologação, opcional), B-08 (chave Groq) e a
-🔴 **D-C17**, que venceu o prazo.
+▶ **Pauta da próxima sessão (combinada com o Rodrigo em 06/10): debug das fontes na `homologacao`**, nesta ordem:
+(1) **LexML**: achar o endereço atual da API (o SRU `www.lexml.gov.br/busca/SRU` dá 404 de qualquer lugar) e ajustar o
+`searchers/lexml_searcher.py`, com teste sem rede; é `gov.br`, então tende a passar pela whitelist do servidor;
+(2) **TCU**: conferir se o 500 persiste e se há outro endpoint; (3) **web aberta no servidor**: depende da 🔴 **D-C32**.
+Cada conserto: teste → runner + golden → push na `homologacao` → conferir no app de homologação → promover (ok do Rodrigo, tag)
+→ push para `origin` e `camara` → o Rodrigo roda `atualizar.ps1` no servidor.
+▶ Antes ou junto: recopiar o `servidor_nuati` 1.0.1 do framework (`_TODO.md`, "Depois do passe do servidor").
+▶ Depois: o insumo (f) da frente 5 (`ementa None` em `gemini_client.py`), menor, com teste óbvio.
+▶ **Com o Rodrigo:** D-C32, B-11 (apagar o app `-teste`), B-12 (Secrets completos na homologação, opcional), B-08 (chave Groq)
+e a 🔴 **D-C17**, que venceu o prazo.
 
 🔴 **D-C17 aberta e declarada** (dedup fuzzy funde acórdãos distintos: 26 de 900 numa amostra real; perda silenciosa).
 Opções `a` / `a'` / `b` / `c` em `_DECISOES-PENDENTES.md`. Qualquer escolha vira **task própria** no passo fuzzy de
@@ -142,7 +159,7 @@ frente 2, ledgers, superados). A tabela antiga desta seção foi arquivada no `l
 | Rodar o app | `python -m streamlit run app.py`, a partir da pasta do código |
 | **Chave do LLM no app da nuvem** | Valores **nunca** passam pelo chat nem pelo repo. **Produção (`main`, v1.0.1):** só `GEMINI_API_KEY` (conta nuati.secin), modelo fixo `gemini-3.5-flash-lite`. **Homologação:** nomes do `llm_cadeia` (README da pasta; bloco padrão = `segredos.exemplo.toml` do framework); em 01/10 a cadeia de lá começa no `gemini` (B-12). Os dois leem também `GOOGLE_API_KEY`/`GOOGLE_CSE_ID` (opcionais). ⚠ Segredo lido **no import**: mudou Secrets → **Reboot app**. ⛔ **Não criar `levantamento-normativos/.streamlit/secrets.toml`** (`st.secrets` vence o ambiente). Neste PC o `~/.streamlit/secrets.toml` global tem as chaves de teste: o `st.secrets` o lê mesmo fora do `streamlit run`. |
 | Acervo de consulta | `~/Documents/projetos-nuati/referencias/` |
-| **Espelho na Câmara** | `git.camara.gov.br` **não é alcançável desta máquina**; é do PC do trabalho. Fluxo decidido em 22/09: este GitHub (B) é a origem → no PC do trabalho `git pull` + `git push camara master`. ⚠ **A URL do projeto lá e o `git remote add camara <url>` não estão registrados** — só o Rodrigo sabe (B-06). O push para B a cada task **continua**; a Câmara é espelho, nunca única cópia. Segredos fora do git nos dois lados. |
+| **Espelho na Câmara** | Desde 01/10 (D-C31): remoto **`camara`** = `https://git.camara.gov.br/Nuati-SECIN/buscador-normativos.git` (criado vazio pelo Rodrigo; recebeu `main`, `homologacao` e as tags). Só alcançável do **PC do trabalho** (rede da Câmara). O GitHub (`origin`) continua a origem; a cada promoção, push de `main`, `homologacao` e da tag para os dois. ⚠ Push para o `camara` **da sessão principal**, não de subagente (de subagente dá "Authentication failed"); a falha de autenticação também aparece às vezes na sessão principal e passa ao repetir (06/10: `git fetch --all` falhou no `camara`; o push de 01/10 passou). Conferir com `git ls-remote camara`. Segredos fora do git nos dois lados. O servidor do Nuati clona daqui (B-06). |
 | **Cópias dos recursos do framework** | Registro único: README do `rodilpinto/nuati-framework`, §4 (o que cada app tem, versão medida, situação). Este repo não é mais origem de nada. |
 | Hospedagem / deploy | Streamlit Community Cloud, apps **públicos** (D-C26), `main file` = `levantamento-normativos/app.py`. **Produção:** `https://buscador-normativos.streamlit.app/` ← `main`. **Homologação:** `https://buscador-normativos-homologacao.streamlit.app/` ← `homologacao`. Recriados pelo Rodrigo em 01/10 (o Streamlit não troca a branch de um app: apagar e recriar). App antigo `-teste` sem papel (B-11). Deploy em PaaS não deixa rastro no repo (`LESSONS.md` 22/09). Servidor do Nuati (espelho de `main`): B-06. |
 

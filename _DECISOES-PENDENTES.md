@@ -1,7 +1,7 @@
 ---
 title: "Decisões abertas — Buscador de Base Normativa"
 maintained_by: sessões do Claude Code; só o Rodrigo resolve
-last_updated: 2026-10-01
+last_updated: 2026-10-06
 related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG.md]
 ---
 
@@ -12,6 +12,27 @@ related: [_TODO.md, SESSION-ONBOARD-buscador.md, log.md, decisions/DECISIONS-LOG
 
 > **Legenda de estados usada neste arquivo:** 🔴 ABERTA · 🟡 EM ANÁLISE · 🟢 DECIDIDA · ⛔ bloqueada
 > em autorização. Ao procurar o que está aberto, procure **🔴 e 🟡 e ⛔**, não só 🔴.
+
+## 🔴 D-C32 — Web aberta no servidor do Nuati: aceitar sem ela, ou pedir liberação na whitelist?
+
+- **Onde aparece:** 05-06/10. No servidor, a busca do Rodrigo voltou sem nenhum resultado. A web aberta (`ddgs`, que alterna entre
+  DuckDuckGo, Brave, Yahoo, Mojeek, Startpage, Wikipedia…) é barrada lá: o srv-nuati02 só deixa sair para destinos de uma
+  whitelist (Rodrigo, 06/10). Diagnóstico de rede: B-06 e `log.md` 06/10. As fontes catalogadas também falharam, mas por causa
+  delas, em todo lugar (LexML 404, TCU 500/timeout), e isso é debug na `homologacao` (`_TODO.md`).
+- **Trava:** a fonte web aberta **no servidor** (no Streamlit Cloud e no PC ela funciona). B-13 depende desta decisão.
+
+| Opção | Efeito |
+|---|---|
+| **a · aceitar o servidor sem web aberta** | Nada a pedir à infra. O app já diz na tela que a fonte está indisponível. O servidor depende das fontes catalogadas, que precisam do debug (LexML, TCU). |
+| **b · liberar um domínio só: a API de busca do Google** (`www.googleapis.com`) | O app já lê `GOOGLE_API_KEY`/`GOOGLE_CSE_ID` (hoje sem uso). Precisa criar a chave e o mecanismo de busca no Google e pôr os dois no `secrets.toml` do servidor. ⚠ Não conferido se essa API ainda aceita projetos novos: conferir antes de pedir. |
+| **c · liberar os buscadores do `ddgs`** | Lista longa e instável (o `ddgs` troca de buscador sozinho); o Python ainda tenta IPv6, que o servidor não tem. Mais pedido à infra, menos previsível. |
+
+📝 **Recomendação:** `a` agora (o que mais destrava o servidor é consertar o LexML, que é `gov.br`) e avaliar `b` depois de
+conferir a API do Google. Não é decisão minha.
+
+**Decisão tomada:** _(pendente)_
+
+---
 
 ## 🟢 D-C26 — Os apps são PÚBLICOS e usam as chaves de LLM do app: manter assim?
 
@@ -224,8 +245,8 @@ ida da versão nova para produção acontece no passe por app da D-C23.
 
 ## ⛔ Bloqueadas em autorização (não são escolhas, são permissões)
 
-- **Escrever o snapshot de memória do checkpoint de 29/09** (e marcar o de 22/09 como superado no `MEMORY.md` deste
-  projeto) — pedido ao Rodrigo em 29/09; sem resposta, a auto-memória segue apontando o snapshot de 22/09 ("o repo manda").
+- ✅ ~~Escrever o snapshot de memória~~ **resolvido em 06/10:** o Rodrigo autorizou no `/checkpoint`; snapshot
+  `buscador_state_2026-10-06.md` gravado e o de 09/09 marcado como superado no `MEMORY.md` deste projeto.
 - **Registrar este repo no `MEMORY.md` do `projetos-nuati`** — é auto-memória, e a regra global
   `memory-write-policy` exige autorização explícita do Rodrigo. Item no `_TODO.md` §P3.
 

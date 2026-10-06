@@ -74,7 +74,7 @@ Depois: se o usuário já deu uma tarefa, siga; senão pergunte **"Qual a tarefa
 ## Regras deste projeto
 
 - **Uma task = um chunk.** Rodar a suíte + o golden-master, atualizar duráveis, commitar **e
-  pushar**, e só então a próxima. Fechar com `/checkpoint`. ⚠ **Antes de empurrar `master`, leia a §6 do state file:**
+  pushar**, e só então a próxima. Fechar com `/checkpoint`. ⚠ **Antes de empurrar, leia a §6 do state file:**
   se ela declarar congelamento, commite e **não** empurre até o ok explícito do Rodrigo.
 - **TDD é do plano, não é sugestão:** teste que falha → ver falhar → implementar → ver passar →
   commit. Os passos estão escritos.
@@ -90,10 +90,14 @@ Depois: se o usuário já deu uma tarefa, siga; senão pergunte **"Qual a tarefa
   Python falha em silêncio.
 - **Auto-memória exige autorização explícita** do Rodrigo antes de qualquer escrita.
 - Separar fato de sugestão: marcar `📝` o que for proposta não validada.
-- **`levantamento-normativos/{llm_cadeia,branding,tempo_economizado}/` são cópias e NÃO se editam aqui**: a origem é o
-  repo `rodilpinto/nuati-framework` (D-C23). Defeito ou falta vira pedido ao framework; o buscador recebe por recópia.
-- **Ambientes (D-C22, migrados em 01/10):** `main` = produção (padrão no GitHub), `homologacao` = trabalho.
+- **`levantamento-normativos/{llm_cadeia,branding,tempo_economizado}/` e `servidor_nuati/` são cópias e NÃO se editam
+  aqui**: a origem é o repo `rodilpinto/nuati-framework` (D-C23). Defeito ou falta vira pedido ao framework; o buscador recebe
+  por recópia.
+- **Ambientes (D-C22):** `main` = produção (padrão no GitHub), `homologacao` = trabalho. Fatos de infraestrutura (apps,
+  servidor do Nuati, espelho `camara`): state file §8.
 - **Push em `homologacao` redeploya o app de homologação; push em `main` muda a produção**, e este só com ok do Rodrigo e tag.
+  Dois remotos: `origin` (GitHub, origem) e `camara` (Gitea, espelho que o servidor do Nuati usa); push para o `camara` só da
+  sessão principal, nunca de subagente.
 - **Chaves de LLM nunca passam pelo chat nem pelo repo.** Para teste local, carregar o arquivo de chaves da máquina dentro do
   processo Python, sem imprimir (PC do trabalho: `%USERPROFILE%\.streamlit\secrets.toml`, receita no README do framework §1;
   outra máquina: `~/.llm-chaves.toml`, receita em `~/.claude/ENVIRONMENT.md`).
